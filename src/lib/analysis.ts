@@ -65,7 +65,8 @@ function calcRaioOperacional(densidade: number): number {
 export function runAnalysis(
   codigoInep: string,
   censoData: EscolaData[],
-  demoData: DemograficaData[]
+  demoData: DemograficaData[],
+  customRadiusKm?: number | null
 ): AnalysisResult | null {
   const escola = censoData.find(e => String(e['Código Inep']) === String(codigoInep));
   if (!escola) return null;
