@@ -225,7 +225,7 @@ export default function PageCapa({ censoData, onSearch, onCompare }: Props) {
               {filterResults.map(s => (
                 <button
                   key={s['Código Inep']}
-                  onClick={() => { setShowFilter(false); onSearch(String(s['Código Inep'])); }}
+                  onClick={() => { setShowFilter(false); onSearch(String(s['Código Inep']), getCustomRadius()); }}
                   className="w-full text-left px-3 py-2 hover:bg-teal-light rounded-lg text-xs sm:text-sm border-b"
                 >
                   <span className="font-semibold">{s['Código Inep']}</span>

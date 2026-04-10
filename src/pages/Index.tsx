@@ -43,9 +43,9 @@ export default function Index() {
     setPage('capa');
   }, []);
 
-  const handleSearch = useCallback((codigo: string) => {
+  const handleSearch = useCallback((codigo: string, customRadiusKm?: number | null) => {
     setError('');
-    const result = runAnalysis(codigo.trim(), censo, demo);
+    const result = runAnalysis(codigo.trim(), censo, demo, customRadiusKm);
     if (!result) {
       setError(`Escola não encontrada para o Código Inep: ${codigo}. Verifique o código e tente novamente.`);
       return;
