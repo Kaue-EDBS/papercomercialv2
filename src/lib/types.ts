@@ -58,6 +58,7 @@ export interface AnalysisResult {
   demografica: DemograficaData | null;
   densidadeEscolar: number;
   raioOperacional: number;
+  raioCustom: number | null;
   concorrentes: ConcorrenteInfo[];
   escolasMunicipio: EscolaData[];
   marketShare: MarketShareData;

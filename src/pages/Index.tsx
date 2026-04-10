@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
 import { useDataLoader } from '@/hooks/useDataLoader';
 import { runAnalysis } from '@/lib/analysis';
 import { AppPage, PresentationType, AnalysisResult } from '@/lib/types';
@@ -43,9 +44,9 @@ export default function Index() {
     setPage('capa');
   }, []);
 
-  const handleSearch = useCallback((codigo: string) => {
+  const handleSearch = useCallback((codigo: string, customRadiusKm?: number | null) => {
     setError('');
-    const result = runAnalysis(codigo.trim(), censo, demo);
+    const result = runAnalysis(codigo.trim(), censo, demo, customRadiusKm);
     if (!result) {
       setError(`Escola não encontrada para o Código Inep: ${codigo}. Verifique o código e tente novamente.`);
       return;
@@ -188,7 +189,16 @@ export default function Index() {
             {page === 'mensalidade' && analysis && <PageMensalidade analysis={analysis} />}
             {page === 'socioeconomico' && analysis && <PageSocioeconomico analysis={analysis} />}
             {page === 'insights' && analysis && <PageInsights analysis={analysis} />}
-            {page === 'encerramento' && <PageEncerramento />}
+            {page === 'encerramento' && (
+              <PageEncerramento
+                onExportPDF={() => {
+                  toast.info('A exportação em PDF será implementada em breve.');
+                }}
+                onExportPPT={() => {
+                  toast.info('A exportação em PPT será implementada em breve.');
+                }}
+              />
+            )}
           </>
         )}
       </main>

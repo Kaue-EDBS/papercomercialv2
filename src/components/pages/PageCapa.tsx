@@ -4,7 +4,7 @@ import { EscolaData } from '@/lib/types';
 
 interface Props {
   censoData: EscolaData[];
-  onSearch: (codigo: string) => void;
+  onSearch: (codigo: string, customRadiusKm?: number | null) => void;
   onCompare: (c1: string, c2: string) => void;
 }
 
@@ -16,6 +16,10 @@ export default function PageCapa({ censoData, onSearch, onCompare }: Props) {
   const [comp2, setComp2] = useState('');
   const [comp1Focused, setComp1Focused] = useState(false);
   const [comp2Focused, setComp2Focused] = useState(false);
+
+  // Régua de Concorrência
+  const [reguaMode, setReguaMode] = useState<'padrao' | 'personalizado'>('padrao');
+  const [reguaKm, setReguaKm] = useState('');
 
   // Advanced filter individual fields
   const [filterUF, setFilterUF] = useState('');
@@ -66,6 +70,7 @@ export default function PageCapa({ censoData, onSearch, onCompare }: Props) {
       })
       .slice(0, 15);
   }, [filterUF, filterCidade, filterBairro, filterCEP, filterEndereco, filterEscola, filterLat, filterLng, censoData, hasAnyFilter]);
+  const getCustomRadius = () => reguaMode === 'personalizado' && reguaKm ? parseFloat(reguaKm) : null;
 
   const filterInputClass = "w-full px-3 py-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary";
 
@@ -85,7 +90,7 @@ export default function PageCapa({ censoData, onSearch, onCompare }: Props) {
               placeholder="Digite o Código Inep..."
               value={codigo}
               onChange={e => setCodigo(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && codigo && onSearch(codigo)}
+              onKeyDown={e => e.key === 'Enter' && codigo && onSearch(codigo, getCustomRadius())}
               className="w-full px-4 py-3 rounded-xl border bg-card text-foreground text-center text-base sm:text-lg font-medium focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {suggestions.length > 0 && (
@@ -93,7 +98,7 @@ export default function PageCapa({ censoData, onSearch, onCompare }: Props) {
                 {suggestions.map(s => (
                   <button
                     key={s['Código Inep']}
-                    onClick={() => { setCodigo(String(s['Código Inep'])); onSearch(String(s['Código Inep'])); }}
+                    onClick={() => { setCodigo(String(s['Código Inep'])); onSearch(String(s['Código Inep']), getCustomRadius()); }}
                     className="w-full text-left px-3 sm:px-4 py-2 hover:bg-teal-light text-xs sm:text-sm border-b last:border-0"
                   >
                     <span className="font-semibold">{s['Código Inep']}</span>
@@ -104,8 +109,61 @@ export default function PageCapa({ censoData, onSearch, onCompare }: Props) {
               </div>
             )}
           </div>
+
+          {/* Régua de Concorrência */}
+          <div className="bg-card border rounded-xl p-4 space-y-3">
+            <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'hsl(var(--navy))' }}>
+              Régua de Concorrência
+            </label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setReguaMode('padrao')}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition border ${
+                  reguaMode === 'padrao'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background text-foreground border-border hover:bg-accent'
+                }`}
+              >
+                Padrão
+              </button>
+              <button
+                onClick={() => setReguaMode('personalizado')}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition border ${
+                  reguaMode === 'personalizado'
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : 'bg-background text-foreground border-border hover:bg-accent'
+                }`}
+              >
+                Personalizado
+              </button>
+            </div>
+            {reguaMode === 'personalizado' && (
+              <div className="space-y-1">
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  placeholder="Informe o raio em km..."
+                  value={reguaKm}
+                  onChange={e => setReguaKm(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                {reguaKm && parseFloat(reguaKm) <= 0 && (
+                  <p className="text-xs" style={{ color: 'hsl(0, 84%, 40%)' }}>Informe um valor positivo.</p>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground italic">
+              {reguaMode === 'padrao'
+                ? '📐 Raio definido pela régua padrão (densidade escolar)'
+                : reguaKm && parseFloat(reguaKm) > 0
+                  ? `📏 Raio definido manualmente pelo consultor: ${reguaKm} km`
+                  : '📏 Informe o raio desejado em quilômetros'}
+            </p>
+          </div>
+
           <button
-            onClick={() => codigo && onSearch(codigo)}
+            onClick={() => codigo && onSearch(codigo, getCustomRadius())}
             className="w-full py-3 rounded-xl font-semibold text-primary-foreground bg-primary hover:opacity-90 transition"
           >
             Gerar Análise
@@ -167,7 +225,7 @@ export default function PageCapa({ censoData, onSearch, onCompare }: Props) {
               {filterResults.map(s => (
                 <button
                   key={s['Código Inep']}
-                  onClick={() => { setShowFilter(false); onSearch(String(s['Código Inep'])); }}
+                  onClick={() => { setShowFilter(false); onSearch(String(s['Código Inep']), getCustomRadius()); }}
                   className="w-full text-left px-3 py-2 hover:bg-teal-light rounded-lg text-xs sm:text-sm border-b"
                 >
                   <span className="font-semibold">{s['Código Inep']}</span>
