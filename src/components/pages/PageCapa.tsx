@@ -17,6 +17,10 @@ export default function PageCapa({ censoData, onSearch, onCompare }: Props) {
   const [comp1Focused, setComp1Focused] = useState(false);
   const [comp2Focused, setComp2Focused] = useState(false);
 
+  // Régua de Concorrência
+  const [reguaMode, setReguaMode] = useState<'padrao' | 'personalizado'>('padrao');
+  const [reguaKm, setReguaKm] = useState('');
+
   // Advanced filter individual fields
   const [filterUF, setFilterUF] = useState('');
   const [filterCidade, setFilterCidade] = useState('');
@@ -66,6 +70,7 @@ export default function PageCapa({ censoData, onSearch, onCompare }: Props) {
       })
       .slice(0, 15);
   }, [filterUF, filterCidade, filterBairro, filterCEP, filterEndereco, filterEscola, filterLat, filterLng, censoData, hasAnyFilter]);
+  const getCustomRadius = () => reguaMode === 'personalizado' && reguaKm ? parseFloat(reguaKm) : null;
 
   const filterInputClass = "w-full px-3 py-2 rounded-lg border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary";
 
