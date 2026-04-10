@@ -4,7 +4,7 @@ import { EscolaData } from '@/lib/types';
 
 interface Props {
   censoData: EscolaData[];
-  onSearch: (codigo: string) => void;
+  onSearch: (codigo: string, customRadiusKm?: number | null) => void;
   onCompare: (c1: string, c2: string) => void;
 }
 
