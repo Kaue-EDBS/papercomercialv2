@@ -86,7 +86,8 @@ export function runAnalysis(
 
   const areaKm2 = demografica ? parseBrNumber(demografica['Área KM²']) : 0;
   const densidadeEscolar = calcDensidadeEscolar(escolasMunicipio.length, areaKm2);
-  const raioOperacional = calcRaioOperacional(densidadeEscolar);
+  const raioOperacional = customRadiusKm && customRadiusKm > 0 ? customRadiusKm : calcRaioOperacional(densidadeEscolar);
+  const raioCustom = customRadiusKm && customRadiusKm > 0 ? customRadiusKm : null;
 
   // Get school segments and mensalidade
   const escolaSegmentos = getSegmentos(escola);
@@ -190,6 +191,7 @@ export function runAnalysis(
     demografica,
     densidadeEscolar,
     raioOperacional,
+    raioCustom,
     concorrentes,
     escolasMunicipio,
     marketShare,
