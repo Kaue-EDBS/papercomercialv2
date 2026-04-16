@@ -1,11 +1,4 @@
-import { FileText, Presentation } from 'lucide-react';
-
-interface Props {
-  onExportPDF?: () => void;
-  onExportPPT?: () => void;
-}
-
-export default function PageEncerramento({ onExportPDF, onExportPPT }: Props) {
+export default function PageEncerramento() {
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="max-w-2xl w-full text-center space-y-10">
@@ -37,25 +30,6 @@ export default function PageEncerramento({ onExportPDF, onExportPPT }: Props) {
           <p className="text-xl sm:text-2xl font-semibold italic" style={{ color: 'hsl(var(--teal))' }}>
             "Conte com a Editora do Brasil para crescer junto."
           </p>
-        </div>
-
-        {/* Export buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-center px-4">
-          <button
-            onClick={onExportPDF}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition border-2 hover:opacity-90"
-            style={{ borderColor: 'hsl(var(--navy))', color: 'hsl(var(--navy))' }}
-          >
-            <FileText className="w-5 h-5" />
-            Exportar em PDF
-          </button>
-          <button
-            onClick={onExportPPT}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition text-primary-foreground bg-primary hover:opacity-90"
-          >
-            <Presentation className="w-5 h-5" />
-            Exportar em PPT
-          </button>
         </div>
 
         {/* Decorative line */}
