@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { AnalysisResult } from '@/lib/types';
 import { num, formatNumber, formatDistance, getSegmentos, getMensalidadeFaixa } from '@/lib/analysis';
-import { Check, Settings2 } from 'lucide-react';
+import { Check, Settings2, ChevronDown, ChevronRight, Info } from 'lucide-react';
 
 interface Props {
   analysis: AnalysisResult;
@@ -18,6 +19,7 @@ interface Props {
 export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fromRaioAdjust, onConfirm, onChangeRaio }: Props) {
   const { escola, concorrentes } = analysis;
   const essenciaisSet = new Set(essenciaisInep.map(String));
+  const [expandedInep, setExpandedInep] = useState<string | null>(null);
 
   return (
     <div className="max-w-5xl mx-auto py-8 sm:py-10 px-3 sm:px-4 space-y-5">
@@ -42,9 +44,10 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
         <div className="overflow-x-auto">
           <table className="table-executive w-full">
             <thead>
-              <tr>
+              <tr className="sticky top-0 z-10" style={{ background: 'hsl(var(--teal-light))' }}>
+                <th className="w-8" aria-label="Expandir"></th>
                 <th className="min-w-[200px]">Escola</th>
-                <th className="w-24">Origem</th>
+                <th className="w-28" title="Como esta escola entrou na lista de concorrentes">Origem</th>
                 <th className="w-24">Matr.</th>
                 <th className="w-28">Distância</th>
                 <th className="w-32">Segmentos</th>
@@ -57,27 +60,59 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
                 const isEss = essenciaisSet.has(inep);
                 const segs = getSegmentos(c.escola);
                 const mesmaFaixa = getMensalidadeFaixa(escola.Mensalidade) === getMensalidadeFaixa(c.escola.Mensalidade);
+                const isOpen = expandedInep === inep;
+                const segsComum = c.segmentosComum || [];
+                const distanciaTipo = c.distancia !== null ? 'real' : (c.proximidadeCEP ? 'cep' : 'sem');
+                const criterio = isEss
+                  ? 'Incluída manualmente pelo consultor (essencial).'
+                  : (distanciaTipo === 'real'
+                      ? 'Selecionada por proximidade geográfica e segmentos em comum.'
+                      : distanciaTipo === 'cep'
+                        ? 'Selecionada automaticamente por proximidade estimada (CEP) e segmentos em comum.'
+                        : 'Selecionada automaticamente pelo critério da área de influência.');
+                const semMensalidade = !c.escola.Mensalidade || c.escola.Mensalidade === '0';
                 return (
-                  <tr key={inep}>
+                  <>
+                  <tr
+                    key={inep}
+                    onClick={() => setExpandedInep(isOpen ? null : inep)}
+                    className={`cursor-pointer transition-colors hover:bg-[hsl(var(--teal-light))] focus-within:bg-[hsl(var(--teal-light))] ${isOpen ? 'bg-[hsl(var(--teal-light))]' : ''}`}
+                    style={isOpen ? { boxShadow: 'inset 3px 0 0 0 hsl(var(--teal))' } : undefined}
+                    aria-expanded={isOpen}
+                    title="Clique para ver os critérios desta seleção"
+                  >
+                    <td className="text-center align-middle">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setExpandedInep(isOpen ? null : inep); }}
+                        aria-label={isOpen ? 'Recolher detalhes' : 'Expandir detalhes'}
+                        className="p-1 rounded hover:bg-background/60 focus-visible:ring-2 focus-visible:ring-primary"
+                      >
+                        {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </button>
+                    </td>
                     <td>
                       <div className="font-medium text-sm" style={{ color: 'hsl(var(--navy))' }}>{c.escola.Escola}</div>
-                      <div className="text-[11px] text-muted-foreground">Inep {inep}</div>
+                      <div className="text-[11px] text-muted-foreground tabular-nums">Inep {inep}</div>
                     </td>
                     <td>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                        style={{
-                          background: isEss ? 'hsl(var(--teal))' : 'hsl(var(--teal-light))',
-                          color: isEss ? 'white' : 'hsl(var(--navy))',
-                        }}>
-                        {isEss ? 'Essencial' : 'Automático'}
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+                        title={isEss ? 'Selecionada manualmente pelo consultor' : 'Selecionada automaticamente pelo sistema'}
+                        style={
+                          isEss
+                            ? { background: 'hsl(var(--teal))', color: 'white', borderColor: 'hsl(var(--teal))' }
+                            : { background: 'hsl(var(--beige))', color: 'hsl(var(--navy))', borderColor: 'hsl(var(--teal-light))' }
+                        }>
+                        {isEss ? '★ Essencial' : 'Automático'}
                       </span>
                     </td>
-                    <td className="font-semibold">{formatNumber(num(c.escola['Alunado Total']))}</td>
+                    <td className="font-semibold tabular-nums">{formatNumber(num(c.escola['Alunado Total']))}</td>
                     <td>
                       {c.distancia !== null ? (
-                        <span className="text-sm">{formatDistance(c.distancia)}</span>
+                        <span className="text-sm tabular-nums">{formatDistance(c.distancia)}</span>
                       ) : c.proximidadeCEP ? (
-                        <span className="text-[11px] italic text-muted-foreground">Estimado por CEP</span>
+                        <span className="text-[11px] italic text-muted-foreground" title="Distância estimada com base no CEP — sem coordenadas precisas">~ estimado por CEP</span>
                       ) : (
                         <span className="text-[11px] italic text-muted-foreground">Sem distância</span>
                       )}
@@ -88,19 +123,72 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
                       </div>
                     </td>
                     <td>
-                      <span className="text-xs">
-                        {c.escola.Mensalidade === '0' || !c.escola.Mensalidade ? 'N/D' : c.escola.Mensalidade}
-                        {mesmaFaixa && <span className="ml-1 text-[10px]" style={{ color: 'hsl(var(--teal))' }}>● mesma faixa</span>}
-                      </span>
+                      {semMensalidade ? (
+                        <span className="text-[11px] italic text-muted-foreground" title="Dado não disponível na base fornecida">
+                          Dado não disponível
+                        </span>
+                      ) : (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-xs font-medium tabular-nums" style={{ color: 'hsl(var(--navy))' }}>{c.escola.Mensalidade}</span>
+                          {mesmaFaixa && (
+                            <span className="text-[10px] inline-flex items-center gap-1" style={{ color: 'hsl(var(--teal))' }}>● mesma faixa</span>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
+                  {isOpen && (
+                    <tr key={inep + '-detail'} style={{ background: 'hsl(var(--beige) / 0.5)' }}>
+                      <td colSpan={7} className="px-4 py-3">
+                        <div className="rounded-lg border bg-card p-3 sm:p-4 space-y-3" style={{ borderColor: 'hsl(var(--teal-light))' }}>
+                          <div className="flex items-start gap-2">
+                            <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--teal))' }} />
+                            <div>
+                              <div className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--teal))' }}>
+                                Por que esta escola foi incluída?
+                              </div>
+                              <p className="text-sm mt-0.5" style={{ color: 'hsl(var(--navy))' }}>{criterio}</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                            <DetailItem label="Origem">
+                              {isEss ? 'Essencial (consultor)' : 'Automático (sistema)'}
+                            </DetailItem>
+                            <DetailItem label="Distância">
+                              {distanciaTipo === 'real' && <span className="tabular-nums">{formatDistance(c.distancia!)} (coordenadas)</span>}
+                              {distanciaTipo === 'cep' && <span className="italic text-muted-foreground">Estimado por CEP</span>}
+                              {distanciaTipo === 'sem' && <span className="italic text-muted-foreground">Dado não disponível</span>}
+                            </DetailItem>
+                            <DetailItem label="Segmentos em comum">
+                              {segsComum.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {segsComum.map(s => (
+                                    <span key={s} className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'hsl(var(--teal))', color: 'white' }}>{s}</span>
+                                  ))}
+                                </div>
+                              ) : <span className="italic text-muted-foreground">Nenhum em comum</span>}
+                            </DetailItem>
+                            <DetailItem label="Faixa de mensalidade">
+                              {semMensalidade
+                                ? <span className="italic text-muted-foreground">Dado não disponível na base fornecida.</span>
+                                : <span>{c.escola.Mensalidade}{mesmaFaixa && <span className="ml-1 text-[10px]" style={{ color: 'hsl(var(--teal))' }}>● mesma faixa da analisada</span>}</span>}
+                            </DetailItem>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </>
                 );
               })}
               {concorrentes.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-6 text-sm text-muted-foreground italic">Nenhum concorrente encontrado com o raio atual.</td></tr>
+                <tr><td colSpan={7} className="text-center py-6 text-sm text-muted-foreground italic">Nenhum concorrente encontrado com o raio atual.</td></tr>
               )}
             </tbody>
           </table>
+        </div>
+        <div className="px-3 py-2 text-[11px] text-muted-foreground border-t" style={{ background: 'hsl(var(--beige))' }}>
+          Dica: <strong>clique em uma linha</strong> para ver os critérios usados na seleção.
         </div>
       </div>
 
@@ -112,7 +200,7 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
             style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--navy))' }}
           >
             <Settings2 className="w-4 h-4" />
-            Mudar raio
+            Alterar raio
           </button>
         )}
         <button
@@ -121,7 +209,7 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
           style={{ background: 'hsl(var(--teal))' }}
         >
           <Check className="w-4 h-4" />
-          {fromRaioAdjust ? 'Confirmar e seguir' : 'Confirmar'}
+          Confirmar e seguir
         </button>
       </div>
     </div>
@@ -133,6 +221,15 @@ function Indicator({ label, value }: { label: string; value: string }) {
     <div className="card-indicator">
       <span className="card-indicator-label !mt-0">{label}</span>
       <div className="card-indicator-value" style={{ color: 'hsl(var(--navy))' }}>{value}</div>
+    </div>
+  );
+}
+
+function DetailItem({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">{label}</div>
+      <div className="text-sm" style={{ color: 'hsl(var(--navy))' }}>{children}</div>
     </div>
   );
 }
