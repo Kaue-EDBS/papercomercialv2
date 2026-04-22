@@ -134,16 +134,24 @@
     background: hsl(var(--lime-light));
   }
   .nav-pill {
-    @apply px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer;
+    @apply px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
     color: hsl(var(--muted-foreground));
   }
   .nav-pill:hover {
     background: hsl(var(--teal-light));
     color: hsl(var(--teal-dark));
   }
+  .nav-pill:focus-visible {
+    outline: 2px solid hsl(var(--teal));
+    outline-offset: 2px;
+  }
   .nav-pill-active {
     background: hsl(var(--teal));
     color: hsl(var(--primary-foreground));
+    box-shadow: 0 2px 8px -2px hsl(var(--teal) / 0.5);
   }
   .nav-pill-active:hover {
     background: hsl(var(--teal-dark));
