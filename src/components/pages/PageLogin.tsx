@@ -1,14 +1,14 @@
 import { useState, useMemo } from 'react';
 import logo from '@/assets/ebsa_logo.png';
-import { Consultor, ConsultorSession } from '@/lib/types';
-import { useConsultores } from '@/hooks/useConsultores';
+import { ConsultorSession } from '@/lib/types';
+import { useConsultoresFromSetor, ConsultorSetor } from '@/hooks/useConsultoresFromSetor';
 
 interface Props {
   onConfirm: (session: ConsultorSession) => void;
 }
 
 export default function PageLogin({ onConfirm }: Props) {
-  const { consultores, loading } = useConsultores();
+  const { consultores, loading, findByCodigo } = useConsultoresFromSetor();
   const [codigo, setCodigo] = useState('');
   const [focused, setFocused] = useState(false);
   const [erro, setErro] = useState('');
@@ -17,7 +17,10 @@ export default function PageLogin({ onConfirm }: Props) {
     if (!focused || codigo.length < 2) return [];
     const q = codigo.toLowerCase();
     return consultores
-      .filter(c => String(c['CÓD PROTHEUS']).includes(codigo) || String(c['NOME DO CONSULTOR']).toLowerCase().includes(q))
+      .filter(c =>
+        c.codigos.some(k => k.toLowerCase().includes(q)) ||
+        c.nome.toLowerCase().includes(q)
+      )
       .slice(0, 8);
   }, [codigo, focused, consultores]);
 
@@ -25,26 +28,26 @@ export default function PageLogin({ onConfirm }: Props) {
     setErro('');
     const value = (cod ?? codigo).trim();
     if (!value) { setErro('Digite seu código Protheus para continuar.'); return; }
-    const c = consultores.find(x => String(x['CÓD PROTHEUS']).trim() === value);
+    const c = findByCodigo(value);
     if (!c) {
       setErro(`Não encontramos o código "${value}" na base de consultores. Confira o número e tente novamente.`);
       return;
     }
     onConfirm({
-      codigo: String(c['CÓD PROTHEUS']),
-      nome: String(c['NOME DO CONSULTOR']),
-      gestor: String(c['GESTOR DIRETO'] || ''),
+      codigo: value.toUpperCase(),
+      nome: c.nome,
+      gestor: c.gestor,
     });
   };
 
-  const pickSuggestion = (c: Consultor) => {
-    const cod = String(c['CÓD PROTHEUS']);
+  const pickSuggestion = (c: ConsultorSetor) => {
+    const cod = c.codigos[0];
     setCodigo(cod);
     setFocused(false);
     onConfirm({
       codigo: cod,
-      nome: String(c['NOME DO CONSULTOR']),
-      gestor: String(c['GESTOR DIRETO'] || ''),
+      nome: c.nome,
+      gestor: c.gestor,
     });
   };
 
@@ -80,14 +83,17 @@ export default function PageLogin({ onConfirm }: Props) {
               <div className="absolute top-full left-0 right-0 mt-1 bg-card border rounded-xl shadow-lg z-10 max-h-72 overflow-y-auto">
                 {suggestions.map(c => (
                   <button
-                    key={String(c['CÓD PROTHEUS'])}
+                    key={c.nome}
                     onMouseDown={e => e.preventDefault()}
                     onClick={() => pickSuggestion(c)}
                     className="w-full text-left px-4 py-2.5 hover:bg-teal-light text-sm border-b last:border-0"
                   >
-                    <span className="font-semibold">{String(c['CÓD PROTHEUS'])}</span>
-                    <span className="text-muted-foreground ml-2">{c['NOME DO CONSULTOR']}</span>
-                    {c['GESTOR DIRETO'] && <div className="text-[10px] text-muted-foreground">Gestor: {c['GESTOR DIRETO']}</div>}
+                    <span className="font-semibold">{c.codigos[0]}{c.codigos.length > 1 && <span className="text-[10px] font-normal text-muted-foreground"> +{c.codigos.length - 1}</span>}</span>
+                    <span className="text-muted-foreground ml-2">{c.nome}</span>
+                    <div className="text-[10px] text-muted-foreground">
+                      {c.gestor && <>Gestor: {c.gestor} · </>}
+                      {c.carteiraSize} escola{c.carteiraSize !== 1 ? 's' : ''}
+                    </div>
                   </button>
                 ))}
               </div>

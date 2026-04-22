@@ -18,15 +18,17 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
   const [picked, setPicked] = useState<string[] | null>(null);
   const [confirmEscola, setConfirmEscola] = useState<SetorizacaoRow | null>(null);
 
-  // Filter rows belonging to the consultor (by COD CONSULTOR or CONSULTOR name)
+  // Filtra escolas da carteira: usa o NOME do consultor como chave principal
+  // (um consultor pode ter vários códigos protheus na setorização). Fallback para código.
   const minhaCarteira = useMemo(() => {
     if (!rows.length) return [];
-    const cod = String(session.codigo).trim();
+    const cod = String(session.codigo).trim().toUpperCase();
     const nome = (session.nome || '').toLowerCase().trim();
     return rows.filter(r => {
-      const c1 = String(r['COD CONSULTOR'] ?? '').trim();
-      const c2 = String(r['CONSULTOR'] ?? '').toLowerCase().trim();
-      return c1 === cod || (nome && c2 === nome);
+      const rNome = String(r['CONSULTOR'] ?? '').toLowerCase().trim();
+      if (nome && rNome === nome) return true;
+      const rCod = String(r['COD CONSULTOR'] ?? '').trim().toUpperCase();
+      return rCod === cod;
     });
   }, [rows, session]);
 
