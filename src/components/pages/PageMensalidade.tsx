@@ -1,5 +1,5 @@
 import { AnalysisResult } from '@/lib/types';
-import { parseBrNumber, num, formatNumber, getMensalidadeFaixa } from '@/lib/analysis';
+import { num, getMensalidadeFaixa } from '@/lib/analysis';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface Props {
@@ -18,7 +18,7 @@ const FAIXAS_LABELS: Record<string, string> = {
 const FAIXAS_ORDER = ['até 399', '400 a 799', '800 a 1.399', '1.400 a 2.399', 'acima de R$ 2.400'];
 
 export default function PageMensalidade({ analysis }: Props) {
-  const { escola, concorrentes, demografica } = analysis;
+  const { escola, concorrentes } = analysis;
 
   const escolaFaixa = escola.Mensalidade;
   const escolaFaixaIdx = getMensalidadeFaixa(escolaFaixa);
@@ -164,34 +164,31 @@ export default function PageMensalidade({ analysis }: Props) {
         </div>
       </div>
 
-      {/* Análise Econômica */}
+      {/* Leitura competitiva — síntese da posição da escola no grupo concorrencial */}
       <div className="bg-card rounded-xl border p-4 sm:p-6 space-y-3">
-        <h3 className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Análise Econômica do Município</h3>
-        <p className="text-[10px] sm:text-xs text-muted-foreground italic">Esta análise se refere ao município da escola analisada ({escola.Município}/{escola.UF}), e não à área de influência.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-sm">
-          <div className="card-indicator">
-            <div className="card-indicator-value text-base sm:text-lg" style={{ color: 'hsl(var(--teal))' }}>
-              {rendaMedia ? `R$ ${parseBrNumber(rendaMedia).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'N/D'}
-            </div>
-            <div className="card-indicator-label text-[10px] sm:text-xs">Renda Média</div>
-          </div>
-          <div className="card-indicator">
-            <div className="card-indicator-value text-base sm:text-lg" style={{ color: 'hsl(var(--navy))' }}>
-              {idhRenda || 'N/D'}
-            </div>
-            <div className="card-indicator-label text-[10px] sm:text-xs">IDH Renda</div>
-          </div>
-          <div className="card-indicator">
-            <div className="card-indicator-value text-base sm:text-lg" style={{ color: 'hsl(var(--lime))' }}>
-              {escolaFaixaLabel}
-            </div>
-            <div className="card-indicator-label text-[10px] sm:text-xs">Mensalidade da Escola</div>
-          </div>
-        </div>
-        {rendaMedia && escolaFaixaIdx > 0 && (
+        <h3 className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>
+          Leitura competitiva da mensalidade
+        </h3>
+        <p className="text-[10px] sm:text-xs text-muted-foreground italic">
+          Posição da escola dentro do grupo concorrencial selecionado na Etapa 2.
+        </p>
+        {escolaFaixaIdx > 0 ? (
           <div className="insight-box text-xs sm:text-sm">
-            <p>A escola opera na faixa <strong>{escolaFaixaLabel}</strong> em um município com renda média de <strong>R$ {parseBrNumber(rendaMedia).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> e IDH de renda classificado como <strong>{idhRenda}</strong>. Essa combinação indica {parseBrNumber(rendaMedia) > 4000 ? 'boa aderência ao poder aquisitivo local' : 'oportunidade de posicionamento competitivo via preço'}.</p>
+            <p>
+              A escola opera na faixa <strong>{escolaFaixaLabel}</strong>.
+              {' '}Há <strong>{mesmaFaixa.length}</strong> concorrente{mesmaFaixa.length !== 1 ? 's' : ''} na mesma faixa,
+              {' '}<strong>{acima.length}</strong> em faixa{acima.length !== 1 ? 's' : ''} superior{acima.length !== 1 ? 'es' : ''} e
+              {' '}<strong>{abaixo.length}</strong> em faixa{abaixo.length !== 1 ? 's' : ''} inferior{abaixo.length !== 1 ? 'es' : ''}.
+              {' '}A faixa modal do grupo concorrencial é <strong>{FAIXAS_LABELS[faixaModal] || faixaModal}</strong>
+              {faixaModal && getMensalidadeFaixa(faixaModal) === escolaFaixaIdx
+                ? ', alinhada à da escola — posicionamento competitivo coerente.'
+                : faixaModal && getMensalidadeFaixa(faixaModal) > escolaFaixaIdx
+                  ? ', acima da escola — espaço para reposicionamento de valor.'
+                  : ', abaixo da escola — oportunidade para sustentar premium pedagógico.'}
+            </p>
           </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">Mensalidade da escola não informada — leitura competitiva indisponível.</p>
         )}
       </div>
     </div>

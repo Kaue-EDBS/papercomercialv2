@@ -26,9 +26,12 @@ export default function PageEncerramento() {
         </div>
 
         {/* Highlight CTA */}
-        <div className="py-6">
+        <div className="py-6 space-y-3">
           <p className="text-xl sm:text-2xl font-semibold italic" style={{ color: 'hsl(var(--teal))' }}>
             "Conte com a Editora do Brasil para crescer junto."
+          </p>
+          <p className="text-base sm:text-lg font-semibold tracking-wide" style={{ color: 'hsl(var(--navy))' }}>
+            Transformando o país pela educação.
           </p>
         </div>
 
