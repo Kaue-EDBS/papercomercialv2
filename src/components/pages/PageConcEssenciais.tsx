@@ -60,9 +60,9 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
         <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--teal))' }}>
           Etapa 2 · Validação de Concorrência (1/3)
         </span>
-        <h2 className="page-title text-xl sm:text-2xl">Concorrentes essenciais</h2>
+        <h2 className="page-title text-xl sm:text-2xl">Quais concorrentes você quer garantir na apresentação?</h2>
         <p className="page-subtitle text-sm">
-          Quais escolas concorrentes são essenciais para a apresentação? Você pode buscar por <strong>nome da escola</strong> ou <strong>código Inep</strong>.
+          Digite o <strong>nome da escola</strong> ou o <strong>Código Inep</strong>. O sistema completa os demais concorrentes automaticamente.
         </p>
       </header>
 

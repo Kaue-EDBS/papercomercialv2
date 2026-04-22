@@ -243,7 +243,7 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
                       onClick={() => setSelectedIdx(i)}
                       onDoubleClick={() => setConfirmEscola(row)}
                       aria-selected={sel}
-                      className={`cursor-pointer transition-colors hover:bg-[hsl(var(--teal-light))] ${sel ? 'bg-[hsl(var(--teal-light))]' : ''}`}
+                      className={`cursor-pointer transition-colors hover:bg-[hsl(var(--teal-light))] focus-within:bg-[hsl(var(--teal-light))] ${sel ? 'bg-[hsl(var(--teal-light))]' : (i % 2 === 1 ? 'bg-[hsl(var(--beige)/0.35)]' : '')}`}
                       style={sel ? { boxShadow: 'inset 3px 0 0 0 hsl(var(--teal))' } : undefined}
                       title="Clique para selecionar · clique duplo para confirmar"
                     >

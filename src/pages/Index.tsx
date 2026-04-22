@@ -257,6 +257,7 @@ export default function Index() {
           raioMode={raioCustom !== null ? 'personalizado' : 'padrao'}
           presentationType={presentationType}
           etapaLabel="2 · Validação de Concorrência"
+          compact
         />
       )}
       {showEtapa2Nav && (
