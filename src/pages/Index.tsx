@@ -224,6 +224,7 @@ export default function Index() {
   }
 
   const showNav = PAGE_ORDER.includes(page) && !isComparative;
+  const showEtapa2Nav = ETAPA2_PAGES.includes(page) && !isComparative;
   const pageIdx = PAGE_ORDER.indexOf(page);
 
   return (
@@ -233,6 +234,15 @@ export default function Index() {
         <NavigationBar
           currentPage={page}
           onNavigate={setPage}
+          onBack={handleBack}
+          onNewSearch={handleNewSearch}
+        />
+      )}
+      {showEtapa2Nav && (
+        <NavigationBar
+          currentPage={page}
+          onNavigate={() => {}}
+          isEtapa2
           onBack={handleBack}
           onNewSearch={handleNewSearch}
         />
