@@ -203,13 +203,16 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
       {rows.length > 0 && (
         <div className="bg-card rounded-xl border overflow-hidden">
           <div className="overflow-x-auto max-h-[65vh] overflow-y-auto">
-            <table className="w-full text-sm">
+            <table className="table-premium">
               <thead className="sticky top-0 z-10">
                 <tr>
                   {visibleCols.map(c => (
-                    <th key={c} className="text-left font-semibold py-2 px-3 border-b-2 whitespace-nowrap"
-                      style={{ color: 'hsl(var(--navy))', borderColor: 'hsl(var(--teal))', background: 'hsl(var(--teal-light))' }}>
-                      <button onClick={() => toggleSort(c)} className="inline-flex items-center gap-1 hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded">
+                    <th key={c}>
+                      <button
+                        onClick={() => toggleSort(c)}
+                        aria-label={`Ordenar por ${c}`}
+                        className="inline-flex items-center gap-1 hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded"
+                      >
                         {c}
                         {sortCol === c && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                       </button>
@@ -218,7 +221,7 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
                 </tr>
                 <tr>
                   {visibleCols.map(c => (
-                    <th key={c + '-f'} className="py-1 px-2 border-b" style={{ background: 'hsl(var(--card))' }}>
+                    <th key={c + '-f'} className="!py-1 !px-2 !bg-card !border-b !border-t-0">
                       <div className="relative">
                         <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input
@@ -227,7 +230,7 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
                           placeholder="Filtrar..."
                           value={colFilters[c] || ''}
                           onChange={e => setColFilter(c, e.target.value)}
-                          className="w-full pl-7 pr-2 py-1 rounded border text-xs font-normal bg-background focus:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                          className="w-full pl-7 pr-2 py-1.5 rounded border text-xs font-normal bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                         />
                       </div>
                     </th>
@@ -243,14 +246,11 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
                       onClick={() => setSelectedIdx(i)}
                       onDoubleClick={() => setConfirmEscola(row)}
                       aria-selected={sel}
-                      className={`cursor-pointer transition-colors hover:bg-[hsl(var(--teal-light))] focus-within:bg-[hsl(var(--teal-light))] ${sel ? 'bg-[hsl(var(--teal-light))]' : (i % 2 === 1 ? 'bg-[hsl(var(--beige)/0.35)]' : '')}`}
-                      style={sel ? { boxShadow: 'inset 3px 0 0 0 hsl(var(--teal))' } : undefined}
-                      title="Clique para selecionar · clique duplo para confirmar"
+                      className={`cursor-pointer ${sel ? 'row-selected' : ''}`}
+                      title="Clique para selecionar"
                     >
                       {visibleCols.map(c => (
-                        <td key={c} className="py-2 px-3 border-b text-xs whitespace-nowrap" style={{ borderColor: 'hsl(var(--border))' }}>
-                          {String(row[c] ?? '')}
-                        </td>
+                        <td key={c} className="whitespace-nowrap">{String(row[c] ?? '')}</td>
                       ))}
                     </tr>
                   );
@@ -264,7 +264,7 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
             </div>
           )}
           <div className="px-3 py-2 text-xs text-muted-foreground border-t" style={{ background: 'hsl(var(--beige))' }}>
-            Dica: <strong>clique</strong> em uma escola para selecionar e depois em <strong>"Gerar paper desta escola"</strong>. Você também pode dar clique duplo como atalho.
+            Dica: <strong>clique</strong> em uma escola para selecionar e depois em <strong>"Gerar paper desta escola"</strong>.
           </div>
         </div>
       )}

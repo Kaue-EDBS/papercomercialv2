@@ -113,6 +113,65 @@
   .table-executive tr:hover td {
     background: hsl(var(--teal-light));
   }
+  .table-executive tbody tr:nth-child(even) td {
+    background: hsl(var(--beige) / 0.45);
+  }
+  .table-executive tbody tr:hover td {
+    background: hsl(var(--teal-light));
+  }
+  /* Premium table base for stage tables (carteira/concorrentes) */
+  .table-premium {
+    @apply w-full text-sm border-separate;
+    border-spacing: 0;
+  }
+  .table-premium thead th {
+    @apply text-left font-semibold py-2.5 px-3 whitespace-nowrap;
+    color: hsl(var(--navy));
+    background: hsl(var(--teal-light));
+    border-bottom: 2px solid hsl(var(--teal));
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    letter-spacing: 0.01em;
+  }
+  .table-premium tbody td {
+    @apply py-2.5 px-3 text-xs;
+    border-bottom: 1px solid hsl(var(--border));
+    color: hsl(var(--foreground));
+  }
+  .table-premium tbody tr {
+    transition: background-color 120ms ease, box-shadow 120ms ease;
+  }
+  .table-premium tbody tr:nth-child(even) td {
+    background: hsl(var(--beige) / 0.45);
+  }
+  .table-premium tbody tr:hover td {
+    background: hsl(var(--teal-light) / 0.7);
+  }
+  .table-premium tbody tr[aria-selected="true"] td,
+  .table-premium tbody tr.row-selected td {
+    background: hsl(var(--teal-light));
+    box-shadow: inset 3px 0 0 0 hsl(var(--teal));
+  }
+  /* Chip styles — origem & segmentos */
+  .chip {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap;
+    line-height: 1.1;
+  }
+  .chip-essencial {
+    background: hsl(var(--teal));
+    color: hsl(var(--primary-foreground));
+    border-color: hsl(var(--teal-dark));
+  }
+  .chip-automatico {
+    background: hsl(var(--card));
+    color: hsl(var(--navy));
+    border-color: hsl(var(--teal));
+    border-style: dashed;
+  }
+  .chip-segmento {
+    background: hsl(var(--teal-light));
+    color: hsl(var(--navy));
+    border-color: hsl(var(--teal-light));
+  }
   .badge-available {
     @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
     background: hsl(var(--teal-light));
