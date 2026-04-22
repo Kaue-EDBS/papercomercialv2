@@ -237,7 +237,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
     } else {
       drawTitle(page, fontBold, font, p.title, (p as any).subtitle);
       if (p.kind === 'kpis') drawKpis(page, font, fontBold, p.kpis, (p as any).paragraph);
-      else if (p.kind === 'list') drawList(page, font, fontBold, p.items);
+      else if (p.kind === 'list') drawList(page, font, fontBold, p.items as [string, string][]);
       else if (p.kind === 'table') drawTable(page, font, fontBold, p.headers, p.rows);
       else if (p.kind === 'bullets') drawBullets(page, font, fontBold, p.bullets);
     }
