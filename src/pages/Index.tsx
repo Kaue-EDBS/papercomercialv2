@@ -2,10 +2,13 @@ import { useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDataLoader } from '@/hooks/useDataLoader';
 import { runAnalysis } from '@/lib/analysis';
-import { AppPage, PresentationType, AnalysisResult } from '@/lib/types';
+import { AppPage, PresentationType, AnalysisResult, ConsultorSession } from '@/lib/types';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import NavigationBar from '@/components/NavigationBar';
+import PageLogin from '@/components/pages/PageLogin';
+import PageModo from '@/components/pages/PageModo';
+import PageCarteira from '@/components/pages/PageCarteira';
 import PageCapa from '@/components/pages/PageCapa';
 import PageTipo from '@/components/pages/PageTipo';
 import PageAbertura from '@/components/pages/PageAbertura';
@@ -21,17 +24,54 @@ import ComparativeModule from '@/components/pages/ComparativeModule';
 
 const PAGE_ORDER: AppPage[] = ['abertura', 'resumo', 'panorama', 'concorrencia', 'marketshare', 'mensalidade', 'socioeconomico', 'insights', 'encerramento'];
 
+const SESSION_KEY = 'consultor:session:v1';
+
 export default function Index() {
   const { censo, demo, loading } = useDataLoader();
-  const [page, setPage] = useState<AppPage>('capa');
+  const [page, setPage] = useState<AppPage>('login');
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [presentationType, setPresentationType] = useState<PresentationType | null>(null);
   const [error, setError] = useState('');
+  const [session, setSession] = useState<ConsultorSession | null>(null);
 
   // Comparative
   const [isComparative, setIsComparative] = useState(false);
   const [compA1, setCompA1] = useState<AnalysisResult | null>(null);
   const [compA2, setCompA2] = useState<AnalysisResult | null>(null);
+
+  // Restore session from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const s = JSON.parse(raw) as ConsultorSession;
+        if (s?.codigo && s?.nome) { setSession(s); setPage('modo'); }
+      }
+    } catch {}
+  }, []);
+
+  const handleLogin = useCallback((s: ConsultorSession) => {
+    setSession(s);
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch {}
+    setPage('modo');
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    try { localStorage.removeItem(SESSION_KEY); } catch {}
+    setSession(null);
+    setAnalysis(null);
+    setPresentationType(null);
+    setIsComparative(false);
+    setCompA1(null);
+    setCompA2(null);
+    setError('');
+    setPage('login');
+  }, []);
+
+  const handleSelectModo = useCallback((modo: 'carteira' | 'paper') => {
+    if (modo === 'carteira') setPage('carteira');
+    else setPage('capa');
+  }, []);
 
   const handleNewSearch = useCallback(() => {
     setAnalysis(null);
@@ -40,14 +80,14 @@ export default function Index() {
     setIsComparative(false);
     setCompA1(null);
     setCompA2(null);
-    setPage('capa');
-  }, []);
+    setPage(session ? 'modo' : 'login');
+  }, [session]);
 
   const handleSearch = useCallback((codigo: string) => {
     setError('');
     const result = runAnalysis(codigo.trim(), censo, demo);
     if (!result) {
-      setError(`Escola não encontrada para o Código Inep: ${codigo}. Verifique o código e tente novamente.`);
+      setError(`Não encontramos a escola para o Código Inep "${codigo}". Confira o número e tente de novo.`);
       return;
     }
     setAnalysis(result);
@@ -59,7 +99,7 @@ export default function Index() {
     const r1 = runAnalysis(c1.trim(), censo, demo);
     const r2 = runAnalysis(c2.trim(), censo, demo);
     if (!r1 || !r2) {
-      setError('Uma ou ambas as escolas não foram encontradas. Verifique os códigos Inep.');
+      setError('Uma ou ambas as escolas não foram encontradas. Confira os códigos Inep.');
       return;
     }
     setCompA1(r1);
@@ -81,12 +121,12 @@ export default function Index() {
     } else {
       setAnalysis(null);
       setPresentationType(null);
-      setPage('capa');
+      setPage(session ? 'modo' : 'login');
     }
   };
 
   const goNext = useCallback(() => {
-    if (isComparative) return; // single page comparative, no nav
+    if (isComparative) return;
     const idx = PAGE_ORDER.indexOf(page);
     if (idx >= 0 && idx < PAGE_ORDER.length - 1) setPage(PAGE_ORDER[idx + 1]);
   }, [page, isComparative]);
@@ -128,7 +168,7 @@ export default function Index() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
+      <Header session={session} onLogout={handleLogout} />
       {showNav && (
         <NavigationBar
           currentPage={page}
@@ -142,14 +182,14 @@ export default function Index() {
           currentPage={page}
           onNavigate={() => {}}
           isComparative
-          onBackToMain={() => { setIsComparative(false); setPage('capa'); }}
+          onBackToMain={() => { setIsComparative(false); setPage(session ? 'modo' : 'login'); }}
           onNewSearch={handleNewSearch}
         />
       )}
 
       <main className="flex-1 relative">
         {error && (
-          <div className="max-w-lg mx-auto mt-8 p-4 rounded-xl border text-sm text-center mx-4 sm:mx-auto" style={{ background: 'hsl(0, 84%, 95%)', color: 'hsl(0, 84%, 40%)', borderColor: 'hsl(0, 84%, 85%)' }}>
+          <div role="alert" className="max-w-lg mx-auto mt-8 p-4 rounded-xl border text-sm text-center mx-4 sm:mx-auto" style={{ background: 'hsl(0, 84%, 95%)', color: 'hsl(0, 84%, 40%)', borderColor: 'hsl(0, 84%, 85%)' }}>
             {error}
           </div>
         )}
@@ -178,8 +218,17 @@ export default function Index() {
           <ComparativeModule a1={compA1} a2={compA2} />
         ) : (
           <>
+            {page === 'login' && <PageLogin onConfirm={handleLogin} />}
+            {page === 'modo' && session && <PageModo session={session} onSelect={handleSelectModo} />}
+            {page === 'carteira' && session && (
+              <PageCarteira
+                session={session}
+                onPickEscola={(inep) => { if (inep) handleSearch(inep); }}
+                onBack={() => setPage('modo')}
+              />
+            )}
             {page === 'capa' && <PageCapa censoData={censo} onSearch={handleSearch} onCompare={handleCompare} />}
-            {page === 'tipo' && analysis && <PageTipo escola={analysis.escola} onSelect={handleSelectType} onBack={() => { setAnalysis(null); setPage('capa'); }} />}
+            {page === 'tipo' && analysis && <PageTipo escola={analysis.escola} onSelect={handleSelectType} onBack={() => { setAnalysis(null); setPage(session ? 'modo' : 'capa'); }} />}
             {page === 'abertura' && presentationType && <PageAbertura type={presentationType} />}
             {page === 'resumo' && analysis && <PageResumo analysis={analysis} />}
             {page === 'panorama' && analysis && <PagePanorama analysis={analysis} />}

@@ -79,5 +79,22 @@ export interface MarketShareData {
 }
 
 export type PresentationType = 'prospeccao' | 'renovacao';
-export type AppPage = 'capa' | 'tipo' | 'abertura' | 'resumo' | 'panorama' | 'concorrencia' | 'marketshare' | 'mensalidade' | 'socioeconomico' | 'insights' | 'encerramento';
+export type AppPage = 'login' | 'modo' | 'carteira' | 'capa' | 'tipo' | 'abertura' | 'resumo' | 'panorama' | 'concorrencia' | 'marketshare' | 'mensalidade' | 'socioeconomico' | 'insights' | 'encerramento';
 export type ComparativePage = 'c1';
+
+// Consultor / Setorização
+export interface Consultor {
+  'GESTOR DIRETO': string;
+  'CÓD PROTHEUS': string | number;
+  'NOME DO CONSULTOR': string;
+  'OBSERVAÇÕES': string;
+}
+
+// Setorização: 104 colunas dinâmicas; usamos índice de string
+export type SetorizacaoRow = Record<string, string | number>;
+
+export interface ConsultorSession {
+  codigo: string;
+  nome: string;
+  gestor: string;
+}
