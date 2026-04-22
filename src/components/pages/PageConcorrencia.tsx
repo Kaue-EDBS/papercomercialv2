@@ -1,12 +1,17 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnalysisResult, EscolaData, ConcorrenteInfo } from '@/lib/types';
-import { num, formatNumber, formatDistance, formatPercent, getSegmentos, getMensalidadeFaixa } from '@/lib/analysis';
-import { MapPin, Users, Target, Trophy, ChevronDown, ChevronUp, GitCompare, Filter, X } from 'lucide-react';
+import { num, formatNumber, formatDistance, formatPercent, getSegmentos, getMensalidadeFaixa, rebuildConcorrentes } from '@/lib/analysis';
+import { useDataLoader } from '@/hooks/useDataLoader';
+import { MapPin, Users, Target, ChevronDown, ChevronUp, GitCompare, Filter, X } from 'lucide-react';
 import ConcorrenciaMap from './ConcorrenciaMap';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 
 interface Props {
   analysis: AnalysisResult;
+  /** INEPs marcados como essenciais na Etapa 2; sempre permanecem ao recalcular pelo raio. */
+  essenciaisInep?: string[];
+  /** Notifica o pai sobre alteração ao vivo do raio na régua. */
+  onRaioChange?: (raioKm: number) => void;
 }
 
 function formatAdocao(tipo: string): string {
@@ -113,8 +118,28 @@ function CompareCard({ escola, label, marketShare }: { escola: EscolaData; label
   );
 }
 
-export default function PageConcorrencia({ analysis }: Props) {
-  const { escola, concorrentes, marketShare } = analysis;
+export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaioChange }: Props) {
+  const { censo } = useDataLoader();
+  const [liveRaio, setLiveRaio] = useState<number>(analysis.raioOperacional);
+  const [liveAnalysis, setLiveAnalysis] = useState<AnalysisResult>(analysis);
+
+  // Sempre que a análise inicial mudar (nova escola), reseta o estado local.
+  useEffect(() => {
+    setLiveRaio(analysis.raioOperacional);
+    setLiveAnalysis(analysis);
+  }, [analysis]);
+
+  // Recalcula em tempo real quando o usuário arrasta a régua.
+  useEffect(() => {
+    if (liveRaio === analysis.raioOperacional) {
+      setLiveAnalysis(analysis);
+      return;
+    }
+    const next = rebuildConcorrentes(analysis, censo, { essenciaisInep, raioKm: liveRaio });
+    setLiveAnalysis(next);
+  }, [liveRaio, analysis, censo, essenciaisInep]);
+
+  const { escola, concorrentes, marketShare } = liveAnalysis;
   const [expandedInep, setExpandedInep] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -150,10 +175,6 @@ export default function PageConcorrencia({ analysis }: Props) {
   const totalConcorrentes = concorrentes.length;
   const mesmaFaixa = concorrentes.filter(c => getMensalidadeFaixa(escola.Mensalidade) === getMensalidadeFaixa(c.escola.Mensalidade)).length;
   const proximos = concorrentes.filter(c => c.distancia !== null && c.distancia <= 3).length;
-  const liderCompetitivo = concorrentes.length > 0
-    ? [...concorrentes].sort((a, b) => num(b.escola['Alunado Total']) - num(a.escola['Alunado Total']))[0].escola.Escola
-    : '—';
-
   const comCoordenadas = concorrentes.filter(c => {
     const cLat = parseFloat(String(c.escola.Latitude));
     const cLng = parseFloat(String(c.escola.Longitude));
@@ -207,7 +228,7 @@ export default function PageConcorrencia({ analysis }: Props) {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div className="card-indicator">
           <div className="flex items-center gap-2 mb-1">
             <Users className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
@@ -229,13 +250,6 @@ export default function PageConcorrencia({ analysis }: Props) {
           </div>
           <div className="card-indicator-value" style={{ color: 'hsl(var(--navy))' }}>{proximos}</div>
           <span className="text-[10px] text-muted-foreground">até 3 km</span>
-        </div>
-        <div className="card-indicator">
-          <div className="flex items-center gap-2 mb-1">
-            <Trophy className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
-            <span className="card-indicator-label !mt-0">Líder Competitivo</span>
-          </div>
-          <div className="text-xs sm:text-sm font-bold truncate" style={{ color: 'hsl(var(--navy))' }}>{liderCompetitivo?.slice(0, 25)}</div>
         </div>
       </div>
 
@@ -269,6 +283,38 @@ export default function PageConcorrencia({ analysis }: Props) {
                 <MapPin className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
                 <span className="text-xs font-semibold" style={{ color: 'hsl(var(--navy))' }}>Mapa de Concorrência</span>
               </div>
+              {/* Régua operacional — ajusta o raio em tempo real */}
+              <div className="px-3 py-3 border-b space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="raio-live" className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--navy))' }}>
+                    Raio da área de influência
+                  </label>
+                  <span className="text-xs font-bold tabular-nums" style={{ color: 'hsl(var(--teal))' }}>
+                    {liveRaio.toFixed(1).replace('.', ',')} km
+                  </span>
+                </div>
+                <input
+                  id="raio-live"
+                  type="range"
+                  min={0.5}
+                  max={20}
+                  step={0.5}
+                  value={liveRaio}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    setLiveRaio(v);
+                    onRaioChange?.(v);
+                  }}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                  style={{ accentColor: 'hsl(var(--teal))' }}
+                  aria-label="Ajustar raio da área de influência em quilômetros"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>0,5 km</span>
+                  <span>Padrão: {analysis.raioOperacional} km</span>
+                  <span>20 km</span>
+                </div>
+              </div>
               <ConcorrenciaMap
                 escola={escola}
                 concorrentes={concorrentes}
@@ -299,8 +345,8 @@ export default function PageConcorrencia({ analysis }: Props) {
                   <span className="font-semibold">{activeFilterLabel}</span>
                   <span className="text-muted-foreground">Exibidos</span>
                   <span className="font-semibold">{filtered.length}</span>
-                  <span className="text-muted-foreground">Líder</span>
-                  <span className="font-semibold truncate">{liderCompetitivo?.slice(0, 18)}</span>
+                  <span className="text-muted-foreground">Raio</span>
+                  <span className="font-semibold">{liveRaio.toFixed(1).replace('.', ',')} km</span>
                 </div>
               </div>
 
@@ -367,15 +413,14 @@ export default function PageConcorrencia({ analysis }: Props) {
       {/* Table — full width */}
       <div className="bg-card rounded-xl border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="table-executive w-full">
+          <table className="table-executive w-full table-fixed">
             <thead>
               <tr>
                 {compareMode && <th className="w-10"></th>}
-                <th className="min-w-[200px]">Escola</th>
-                <th className="w-24">Matr.</th>
-                <th className="w-28 hidden sm:table-cell">Distância</th>
-                <th className="w-32">Segmentos</th>
-                <th className="w-24 hidden sm:table-cell">Prioridade</th>
+                <th>Escola</th>
+                <th className="w-28">Matrículas</th>
+                <th className="w-36 hidden sm:table-cell">Distância / Proximidade</th>
+                <th className="w-40">Segmentos atendidos</th>
                 <th className="w-8"></th>
               </tr>
             </thead>
@@ -389,7 +434,7 @@ export default function PageConcorrencia({ analysis }: Props) {
                 )}
                 <td className="text-xs sm:text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="truncate max-w-[180px] sm:max-w-[260px]">{escola.Escola}</span>
+                    <span className="truncate">{escola.Escola}</span>
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap shrink-0"
                       style={{ background: 'hsl(var(--teal))', color: 'white' }}>
                       EM ANÁLISE
@@ -399,7 +444,6 @@ export default function PageConcorrencia({ analysis }: Props) {
                 <td className="text-xs sm:text-sm font-bold">{formatNumber(num(escola['Alunado Total']))}</td>
                 <td className="hidden sm:table-cell text-xs">—</td>
                 <td><SegmentChips escola={escola} /></td>
-                <td className="hidden sm:table-cell">—</td>
                 <td></td>
               </tr>
 
@@ -433,14 +477,17 @@ export default function PageConcorrencia({ analysis }: Props) {
                         </td>
                       )}
                       <td className="text-xs sm:text-sm">
-                        <span className="truncate block max-w-[180px] sm:max-w-[260px]">{e.Escola}</span>
+                        <span className="truncate block">{e.Escola}</span>
                       </td>
                       <td className="text-xs sm:text-sm">{formatNumber(num(e['Alunado Total']))}</td>
                       <td className="hidden sm:table-cell text-xs">
-                        {row.distancia !== null ? formatDistance(row.distancia) : 'Estimado por CEP'}
+                        {row.distancia !== null
+                          ? formatDistance(row.distancia)
+                          : row.proximidadeCEP
+                            ? <span className="italic text-muted-foreground">Estimado por CEP</span>
+                            : <span className="italic text-muted-foreground">Sem coordenadas</span>}
                       </td>
                       <td><SegmentChips escola={e} /></td>
-                      <td className="hidden sm:table-cell"><PrioridadeBadge prioridade={row.prioridade} /></td>
                       <td className="text-center">
                         {!compareMode && (
                           isExpanded
@@ -451,7 +498,7 @@ export default function PageConcorrencia({ analysis }: Props) {
                     </tr>
                     {isExpanded && !compareMode && (
                       <tr key={`${inep}-detail`}>
-                        <td colSpan={7} className="!p-0">
+                        <td colSpan={6} className="!p-0">
                           <div className="px-4 sm:px-6 py-3 sm:py-4" style={{ background: 'hsl(var(--beige-dark))' }}>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div className="space-y-1.5">
@@ -459,7 +506,6 @@ export default function PageConcorrencia({ analysis }: Props) {
                                 <div className="text-xs"><span className="text-muted-foreground">Endereço:</span> {e.Endereço || '—'}{e.Número ? `, ${e.Número}` : ''} — {e.Bairro || ''}</div>
                                 <div className="text-xs"><span className="text-muted-foreground">Distância:</span> {row.distancia !== null ? formatDistance(row.distancia) : 'Estimado por CEP'}</div>
                                 <div className="text-xs"><span className="text-muted-foreground">Mensalidade:</span> {e.Mensalidade === '0' ? 'N/D' : `R$ ${e.Mensalidade}`}</div>
-                                <div className="text-xs sm:hidden"><span className="text-muted-foreground">Prioridade:</span> <PrioridadeBadge prioridade={row.prioridade} /></div>
                               </div>
                               <div className="space-y-1.5">
                                 <div className="text-xs font-bold mb-2" style={{ color: 'hsl(var(--navy))' }}>Oferta Educacional</div>

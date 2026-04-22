@@ -6,6 +6,7 @@ import { AppPage, PresentationType, AnalysisResult, ConsultorSession } from '@/l
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import NavigationBar from '@/components/NavigationBar';
+import ContextBar from '@/components/ContextBar';
 import PageLogin from '@/components/pages/PageLogin';
 import PageModo from '@/components/pages/PageModo';
 import PageCarteira from '@/components/pages/PageCarteira';
@@ -238,6 +239,26 @@ export default function Index() {
           onNewSearch={handleNewSearch}
         />
       )}
+      {showNav && analysis && (
+        <ContextBar
+          session={session}
+          escola={analysis.escola}
+          raioKm={raioCustom ?? analysis.raioOperacional}
+          raioMode={raioCustom !== null ? 'personalizado' : 'padrao'}
+          presentationType={presentationType}
+          etapaLabel="3 · Apresentação"
+        />
+      )}
+      {showEtapa2Nav && analysis && (
+        <ContextBar
+          session={session}
+          escola={analysis.escola}
+          raioKm={raioCustom ?? analysis.raioOperacional}
+          raioMode={raioCustom !== null ? 'personalizado' : 'padrao'}
+          presentationType={presentationType}
+          etapaLabel="2 · Validação de Concorrência"
+        />
+      )}
       {showEtapa2Nav && (
         <NavigationBar
           currentPage={page}
@@ -329,7 +350,13 @@ export default function Index() {
             {page === 'abertura' && presentationType && <PageAbertura type={presentationType} />}
             {page === 'resumo' && analysis && <PageResumo analysis={analysis} />}
             {page === 'panorama' && analysis && <PagePanorama analysis={analysis} />}
-            {page === 'concorrencia' && analysis && <PageConcorrencia analysis={analysis} />}
+            {page === 'concorrencia' && analysis && (
+              <PageConcorrencia
+                analysis={analysis}
+                essenciaisInep={essenciaisInep}
+                onRaioChange={(km) => { setRaioCustom(km); setRaioFoiAjustado(true); }}
+              />
+            )}
             {page === 'marketshare' && analysis && <PageMarketShare analysis={analysis} />}
             {page === 'mensalidade' && analysis && <PageMensalidade analysis={analysis} />}
             {page === 'socioeconomico' && analysis && <PageSocioeconomico analysis={analysis} />}
