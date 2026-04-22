@@ -118,8 +118,28 @@ function CompareCard({ escola, label, marketShare }: { escola: EscolaData; label
   );
 }
 
-export default function PageConcorrencia({ analysis }: Props) {
-  const { escola, concorrentes, marketShare } = analysis;
+export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaioChange }: Props) {
+  const { censo } = useDataLoader();
+  const [liveRaio, setLiveRaio] = useState<number>(analysis.raioOperacional);
+  const [liveAnalysis, setLiveAnalysis] = useState<AnalysisResult>(analysis);
+
+  // Sempre que a análise inicial mudar (nova escola), reseta o estado local.
+  useEffect(() => {
+    setLiveRaio(analysis.raioOperacional);
+    setLiveAnalysis(analysis);
+  }, [analysis]);
+
+  // Recalcula em tempo real quando o usuário arrasta a régua.
+  useEffect(() => {
+    if (liveRaio === analysis.raioOperacional) {
+      setLiveAnalysis(analysis);
+      return;
+    }
+    const next = rebuildConcorrentes(analysis, censo, { essenciaisInep, raioKm: liveRaio });
+    setLiveAnalysis(next);
+  }, [liveRaio, analysis, censo, essenciaisInep]);
+
+  const { escola, concorrentes, marketShare } = liveAnalysis;
   const [expandedInep, setExpandedInep] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -155,10 +175,6 @@ export default function PageConcorrencia({ analysis }: Props) {
   const totalConcorrentes = concorrentes.length;
   const mesmaFaixa = concorrentes.filter(c => getMensalidadeFaixa(escola.Mensalidade) === getMensalidadeFaixa(c.escola.Mensalidade)).length;
   const proximos = concorrentes.filter(c => c.distancia !== null && c.distancia <= 3).length;
-  const liderCompetitivo = concorrentes.length > 0
-    ? [...concorrentes].sort((a, b) => num(b.escola['Alunado Total']) - num(a.escola['Alunado Total']))[0].escola.Escola
-    : '—';
-
   const comCoordenadas = concorrentes.filter(c => {
     const cLat = parseFloat(String(c.escola.Latitude));
     const cLng = parseFloat(String(c.escola.Longitude));
