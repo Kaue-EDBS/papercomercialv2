@@ -413,15 +413,14 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
       {/* Table — full width */}
       <div className="bg-card rounded-xl border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="table-executive w-full">
+          <table className="table-executive w-full table-fixed">
             <thead>
               <tr>
                 {compareMode && <th className="w-10"></th>}
-                <th className="min-w-[200px]">Escola</th>
-                <th className="w-24">Matr.</th>
-                <th className="w-28 hidden sm:table-cell">Distância</th>
-                <th className="w-32">Segmentos</th>
-                <th className="w-24 hidden sm:table-cell">Prioridade</th>
+                <th>Escola</th>
+                <th className="w-28">Matrículas</th>
+                <th className="w-36 hidden sm:table-cell">Distância / Proximidade</th>
+                <th className="w-40">Segmentos atendidos</th>
                 <th className="w-8"></th>
               </tr>
             </thead>
@@ -435,7 +434,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
                 )}
                 <td className="text-xs sm:text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="truncate max-w-[180px] sm:max-w-[260px]">{escola.Escola}</span>
+                    <span className="truncate">{escola.Escola}</span>
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap shrink-0"
                       style={{ background: 'hsl(var(--teal))', color: 'white' }}>
                       EM ANÁLISE
@@ -445,7 +444,6 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
                 <td className="text-xs sm:text-sm font-bold">{formatNumber(num(escola['Alunado Total']))}</td>
                 <td className="hidden sm:table-cell text-xs">—</td>
                 <td><SegmentChips escola={escola} /></td>
-                <td className="hidden sm:table-cell">—</td>
                 <td></td>
               </tr>
 
@@ -479,14 +477,17 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
                         </td>
                       )}
                       <td className="text-xs sm:text-sm">
-                        <span className="truncate block max-w-[180px] sm:max-w-[260px]">{e.Escola}</span>
+                        <span className="truncate block">{e.Escola}</span>
                       </td>
                       <td className="text-xs sm:text-sm">{formatNumber(num(e['Alunado Total']))}</td>
                       <td className="hidden sm:table-cell text-xs">
-                        {row.distancia !== null ? formatDistance(row.distancia) : 'Estimado por CEP'}
+                        {row.distancia !== null
+                          ? formatDistance(row.distancia)
+                          : row.proximidadeCEP
+                            ? <span className="italic text-muted-foreground">Estimado por CEP</span>
+                            : <span className="italic text-muted-foreground">Sem coordenadas</span>}
                       </td>
                       <td><SegmentChips escola={e} /></td>
-                      <td className="hidden sm:table-cell"><PrioridadeBadge prioridade={row.prioridade} /></td>
                       <td className="text-center">
                         {!compareMode && (
                           isExpanded
@@ -497,7 +498,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
                     </tr>
                     {isExpanded && !compareMode && (
                       <tr key={`${inep}-detail`}>
-                        <td colSpan={7} className="!p-0">
+                        <td colSpan={6} className="!p-0">
                           <div className="px-4 sm:px-6 py-3 sm:py-4" style={{ background: 'hsl(var(--beige-dark))' }}>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div className="space-y-1.5">
@@ -505,7 +506,6 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
                                 <div className="text-xs"><span className="text-muted-foreground">Endereço:</span> {e.Endereço || '—'}{e.Número ? `, ${e.Número}` : ''} — {e.Bairro || ''}</div>
                                 <div className="text-xs"><span className="text-muted-foreground">Distância:</span> {row.distancia !== null ? formatDistance(row.distancia) : 'Estimado por CEP'}</div>
                                 <div className="text-xs"><span className="text-muted-foreground">Mensalidade:</span> {e.Mensalidade === '0' ? 'N/D' : `R$ ${e.Mensalidade}`}</div>
-                                <div className="text-xs sm:hidden"><span className="text-muted-foreground">Prioridade:</span> <PrioridadeBadge prioridade={row.prioridade} /></div>
                               </div>
                               <div className="space-y-1.5">
                                 <div className="text-xs font-bold mb-2" style={{ color: 'hsl(var(--navy))' }}>Oferta Educacional</div>
