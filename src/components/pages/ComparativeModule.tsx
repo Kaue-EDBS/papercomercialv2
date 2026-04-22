@@ -1,108 +1,139 @@
-import { AnalysisResult } from '@/lib/types';
-import { num, formatPercent, formatNumber, getSegmentosLabel } from '@/lib/analysis';
+import { useState, useEffect, useCallback } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { AnalysisResult, AppPage } from '@/lib/types';
+import PageResumo from './PageResumo';
+import PagePanorama from './PagePanorama';
+import PageConcorrencia from './PageConcorrencia';
+import PageMarketShare from './PageMarketShare';
+import PageMensalidade from './PageMensalidade';
+import PageSocioeconomico from './PageSocioeconomico';
+import PageInsights from './PageInsights';
+import PageEncerramento from './PageEncerramento';
 
 interface Props {
   a1: AnalysisResult;
   a2: AnalysisResult;
 }
 
+const COMPARATIVE_PAGES: { id: Exclude<AppPage, 'login' | 'modo' | 'carteira' | 'capa' | 'tipo' | 'abertura' | 'concEssenciais' | 'concTabela' | 'concMapa'>; label: string; short: string }[] = [
+  { id: 'resumo', label: 'Resumo Executivo', short: '1' },
+  { id: 'panorama', label: 'Panorama', short: '2' },
+  { id: 'concorrencia', label: 'Concorrência', short: '3' },
+  { id: 'marketshare', label: 'Market Share', short: '4' },
+  { id: 'mensalidade', label: 'Mensalidade', short: '5' },
+  { id: 'socioeconomico', label: 'Socioeconômico', short: '6' },
+  { id: 'insights', label: 'Insights', short: '7' },
+  { id: 'encerramento', label: 'Encerramento', short: '8' },
+];
+
+type CompPage = typeof COMPARATIVE_PAGES[number]['id'];
+
+function renderPage(page: CompPage, analysis: AnalysisResult) {
+  switch (page) {
+    case 'resumo':         return <PageResumo analysis={analysis} />;
+    case 'panorama':       return <PagePanorama analysis={analysis} />;
+    case 'concorrencia':   return <PageConcorrencia analysis={analysis} />;
+    case 'marketshare':    return <PageMarketShare analysis={analysis} />;
+    case 'mensalidade':    return <PageMensalidade analysis={analysis} />;
+    case 'socioeconomico': return <PageSocioeconomico analysis={analysis} />;
+    case 'insights':       return <PageInsights analysis={analysis} />;
+    case 'encerramento':   return <PageEncerramento />;
+  }
+}
+
+/**
+ * Comparativo aprofundado: mesmo fluxo de páginas analíticas, lado a lado.
+ * Navegação sincronizada (ambas colunas exibem a mesma página).
+ */
 export default function ComparativeModule({ a1, a2 }: Props) {
-  const schools = [a1, a2];
+  const [page, setPage] = useState<CompPage>('resumo');
+  const idx = COMPARATIVE_PAGES.findIndex(p => p.id === page);
 
-  const getPositionLabel = (a: AnalysisResult) => {
-    if (a.marketShare.geral >= 30) return 'Líder';
-    if (a.marketShare.geral >= 15) return 'Forte';
-    if (a.marketShare.geral >= 5) return 'Intermediário';
-    return 'Desafiante';
-  };
+  const goNext = useCallback(() => {
+    if (idx < COMPARATIVE_PAGES.length - 1) setPage(COMPARATIVE_PAGES[idx + 1].id);
+  }, [idx]);
+  const goPrev = useCallback(() => {
+    if (idx > 0) setPage(COMPARATIVE_PAGES[idx - 1].id);
+  }, [idx]);
 
-  const getResume = (a: AnalysisResult) => {
-    const ms = formatPercent(a.marketShare.geral);
-    const conc = a.concorrentes.length;
-    if (a.marketShare.geral >= 20) return `Escola bem posicionada com ${ms} de market share e ${conc} concorrentes na área de influência.`;
-    if (a.marketShare.geral >= 10) return `Posição intermediária com ${ms} de market share. ${conc} concorrentes atuam na mesma área.`;
-    return `Market share de ${ms} indica oportunidade de crescimento. Ambiente competitivo com ${conc} concorrentes.`;
-  };
-
-  const colors = ['hsl(var(--teal))', 'hsl(var(--navy))'];
+  // Atalhos de teclado
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [goNext, goPrev]);
 
   return (
-    <div className="max-w-5xl mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-6">
-      <h2 className="page-title text-xl sm:text-2xl">VISÃO GERAL COMPARATIVA</h2>
+    <div className="space-y-3">
+      {/* Wizard de páginas comparativas */}
+      <nav
+        className="flex items-center gap-1 sm:gap-1.5 px-3 sm:px-6 py-2 border-b bg-card overflow-x-auto scrollbar-hide sticky top-0 z-20"
+        aria-label="Navegação do comparativo"
+      >
+        {COMPARATIVE_PAGES.map(p => (
+          <button
+            key={p.id}
+            onClick={() => setPage(p.id)}
+            className={`nav-pill whitespace-nowrap text-[10px] sm:text-xs ${page === p.id ? 'nav-pill-active' : ''}`}
+            aria-current={page === p.id ? 'page' : undefined}
+          >
+            <span className="font-bold mr-0.5 sm:mr-1">{p.short}</span>
+            <span className="hidden md:inline">{p.label}</span>
+          </button>
+        ))}
+        <span className="ml-auto text-[10px] sm:text-xs font-semibold whitespace-nowrap" style={{ color: 'hsl(var(--navy))' }}>
+          {idx + 1} / {COMPARATIVE_PAGES.length}
+        </span>
+      </nav>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {schools.map((a, i) => {
-          const mensalidade = a.escola.Mensalidade === '0' || !a.escola.Mensalidade ? 'N/D' : `R$ ${a.escola.Mensalidade}`;
-          return (
-            <div key={i} className="bg-card rounded-xl border p-4 sm:p-5 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="font-bold text-sm sm:text-base" style={{ color: colors[i] }}>{a.escola.Escola}</h3>
-                <span
-                  className="text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
-                  style={{ background: `${colors[i]}20`, color: colors[i] }}
-                >
-                  {getPositionLabel(a)}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs sm:text-sm">
-                <div>
-                  <span className="text-muted-foreground">Código Inep</span>
-                  <p className="font-medium">{a.escola['Código Inep']}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Cidade/UF</span>
-                  <p className="font-medium">{a.escola.Município}/{a.escola.UF}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Alunado Total</span>
-                  <p className="font-medium">{formatNumber(num(a.escola['Alunado Total']))}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Mensalidade</span>
-                  <p className="font-medium">{mensalidade}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Segmentos</span>
-                  <p className="font-medium">{getSegmentosLabel(a.escola)}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Raio Operacional</span>
-                  <p className="font-medium">{a.raioOperacional} km</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Market Share</span>
-                  <p className="font-bold" style={{ color: colors[i] }}>{formatPercent(a.marketShare.geral)}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Concorrentes</span>
-                  <p className="font-medium">{a.concorrentes.length}</p>
-                </div>
-              </div>
-
-              <div className="pt-2 border-t text-xs sm:text-sm text-muted-foreground italic">
-                {getResume(a)}
-              </div>
-            </div>
-          );
-        })}
+      {/* Cabeçalhos das colunas (sticky) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 px-3 sm:px-6 sticky top-[44px] sm:top-[52px] z-10 bg-background">
+        <ColumnHeader analysis={a1} accent="hsl(var(--teal))" label="ESCOLA A" />
+        <ColumnHeader analysis={a2} accent="hsl(var(--navy))" label="ESCOLA B" />
       </div>
 
-      {/* Comparative insight */}
-      <div className="insight-box text-xs sm:text-sm space-y-2">
-        <h4 className="font-semibold" style={{ color: 'hsl(var(--navy))' }}>Análise Comparativa</h4>
-        <p>
-          {a1.escola.Município === a2.escola.Município
-            ? 'As duas escolas atuam no mesmo município, disputando a mesma base de famílias.'
-            : 'As escolas atuam em municípios distintos, com dinâmicas de mercado independentes.'}
-        </p>
-        <p>
-          <strong>{num(a1.escola['Alunado Total']) > num(a2.escola['Alunado Total']) ? a1.escola.Escola : a2.escola.Escola}</strong> possui maior alunado total, enquanto{' '}
-          <strong>{a1.marketShare.geral > a2.marketShare.geral ? a1.escola.Escola : a2.escola.Escola}</strong> detém maior market share na respectiva área de influência.
-        </p>
-        <p>
-          Em termos competitivos, <strong>{a1.concorrentes.length > a2.concorrentes.length ? a1.escola.Escola : a2.escola.Escola}</strong> enfrenta maior número de concorrentes ({Math.max(a1.concorrentes.length, a2.concorrentes.length)}), indicando maior pressão competitiva.
-        </p>
+      {/* Páginas espelhadas */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 relative">
+        <div className="border-r min-w-0">{renderPage(page, a1)}</div>
+        <div className="min-w-0">{renderPage(page, a2)}</div>
+      </div>
+
+      {/* Setas */}
+      {idx > 0 && (
+        <button
+          onClick={goPrev}
+          className="fixed left-1 sm:left-2 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-card border shadow-md flex items-center justify-center hover:bg-accent transition-colors"
+          aria-label="Página anterior do comparativo"
+        >
+          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+        </button>
+      )}
+      {idx < COMPARATIVE_PAGES.length - 1 && (
+        <button
+          onClick={goNext}
+          className="fixed right-1 sm:right-2 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-card border shadow-md flex items-center justify-center hover:bg-accent transition-colors"
+          aria-label="Próxima página do comparativo"
+        >
+          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+function ColumnHeader({ analysis, accent, label }: { analysis: AnalysisResult; accent: string; label: string }) {
+  return (
+    <div className="px-3 sm:px-4 py-2 border-y" style={{ background: 'hsl(var(--beige))' }}>
+      <div className="flex items-baseline gap-2">
+        <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: accent }}>{label}</span>
+        <span className="text-xs font-semibold truncate" style={{ color: 'hsl(var(--navy))' }}>{analysis.escola.Escola}</span>
+        <span className="text-[10px] text-muted-foreground hidden sm:inline">
+          · {analysis.escola.Município}/{analysis.escola.UF}
+        </span>
       </div>
     </div>
   );
