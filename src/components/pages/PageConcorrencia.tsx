@@ -228,7 +228,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div className="card-indicator">
           <div className="flex items-center gap-2 mb-1">
             <Users className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
@@ -250,13 +250,6 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
           </div>
           <div className="card-indicator-value" style={{ color: 'hsl(var(--navy))' }}>{proximos}</div>
           <span className="text-[10px] text-muted-foreground">até 3 km</span>
-        </div>
-        <div className="card-indicator">
-          <div className="flex items-center gap-2 mb-1">
-            <Trophy className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
-            <span className="card-indicator-label !mt-0">Líder Competitivo</span>
-          </div>
-          <div className="text-xs sm:text-sm font-bold truncate" style={{ color: 'hsl(var(--navy))' }}>{liderCompetitivo?.slice(0, 25)}</div>
         </div>
       </div>
 
@@ -320,8 +313,8 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
                   <span className="font-semibold">{activeFilterLabel}</span>
                   <span className="text-muted-foreground">Exibidos</span>
                   <span className="font-semibold">{filtered.length}</span>
-                  <span className="text-muted-foreground">Líder</span>
-                  <span className="font-semibold truncate">{liderCompetitivo?.slice(0, 18)}</span>
+                  <span className="text-muted-foreground">Raio</span>
+                  <span className="font-semibold">{liveRaio.toFixed(1).replace('.', ',')} km</span>
                 </div>
               </div>
 
