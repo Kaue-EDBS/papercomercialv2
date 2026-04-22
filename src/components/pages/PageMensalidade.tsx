@@ -62,9 +62,6 @@ export default function PageMensalidade({ analysis }: Props) {
     return { faixa: f, label: FAIXAS_LABELS[f] || f, items };
   }).filter(g => g.items.length > 0);
 
-  const rendaMedia = demografica ? demografica['Renda Média'] : null;
-  const idhRenda = demografica ? demografica['IDH - Dimensão Renda Classificação'] : null;
-
   const escolaFaixaLabel = escolaFaixaIdx <= 0 ? 'Sem dados' : (FAIXAS_LABELS[escolaFaixa] || escolaFaixa);
 
   const CustomTooltip = ({ active, payload }: any) => {
