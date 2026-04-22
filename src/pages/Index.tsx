@@ -361,7 +361,15 @@ export default function Index() {
             {page === 'mensalidade' && analysis && <PageMensalidade analysis={analysis} />}
             {page === 'socioeconomico' && analysis && <PageSocioeconomico analysis={analysis} />}
             {page === 'insights' && analysis && <PageInsights analysis={analysis} />}
-            {page === 'encerramento' && <PageEncerramento />}
+            {page === 'encerramento' && (
+              <PageEncerramento
+                analysis={analysis}
+                presentationType={presentationType}
+                session={session}
+                raioKm={raioCustom ?? analysis?.raioOperacional}
+                raioMode={raioCustom !== null ? 'personalizado' : 'padrao'}
+              />
+            )}
           </>
         )}
       </main>

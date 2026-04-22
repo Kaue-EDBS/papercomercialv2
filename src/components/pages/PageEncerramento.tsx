@@ -1,4 +1,44 @@
-export default function PageEncerramento() {
+import { useState } from 'react';
+import { Download, FileText, Presentation, Loader2 } from 'lucide-react';
+import { AnalysisResult, PresentationType, ConsultorSession } from '@/lib/types';
+import { exportPDF, exportPPTX, downloadBlob, buildFilename, ExportContext } from '@/lib/export';
+import { toast } from 'sonner';
+
+interface Props {
+  analysis?: AnalysisResult | null;
+  presentationType?: PresentationType | null;
+  session?: ConsultorSession | null;
+  raioKm?: number;
+  raioMode?: 'padrao' | 'personalizado';
+}
+
+export default function PageEncerramento({ analysis, presentationType, session, raioKm, raioMode }: Props = {}) {
+  const [busy, setBusy] = useState<'pdf' | 'pptx' | null>(null);
+
+  const canExport = !!(analysis && presentationType);
+
+  const handleExport = async (kind: 'pdf' | 'pptx') => {
+    if (!analysis || !presentationType) return;
+    setBusy(kind);
+    try {
+      const ctx: ExportContext = {
+        analysis,
+        presentationType,
+        session: session ?? null,
+        raioKm: raioKm ?? analysis.raioOperacional,
+        raioMode: raioMode ?? 'padrao',
+      };
+      const blob = kind === 'pdf' ? await exportPDF(ctx) : await exportPPTX(ctx);
+      downloadBlob(blob, buildFilename(ctx, kind));
+      toast.success(kind === 'pdf' ? 'PDF gerado com sucesso.' : 'PPT gerado com sucesso.');
+    } catch (e) {
+      console.error(e);
+      toast.error('Não foi possível gerar o arquivo. Tente novamente.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="max-w-2xl w-full text-center space-y-10">
@@ -54,6 +94,38 @@ export default function PageEncerramento() {
             Educação que transforma, parceria que constrói.
           </p>
         </div>
+
+        {/* Export actions */}
+        {canExport && (
+          <div className="pt-6 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-2">
+              <Download className="w-3.5 h-3.5" /> Exportar apresentação
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => handleExport('pdf')}
+                disabled={busy !== null}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm shadow-md transition-all hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ background: 'hsl(var(--navy))', color: 'white' }}
+              >
+                {busy === 'pdf' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
+                Exportar PDF
+              </button>
+              <button
+                onClick={() => handleExport('pptx')}
+                disabled={busy !== null}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm shadow-md transition-all hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ background: 'hsl(var(--teal))', color: 'white' }}
+              >
+                {busy === 'pptx' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Presentation className="w-4 h-4" />}
+                Exportar PPT
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Layout nativo · 9 páginas · sem captura de tela.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
