@@ -1,14 +1,14 @@
 import { useState, useMemo } from 'react';
 import logo from '@/assets/ebsa_logo.png';
 import { ConsultorSession } from '@/lib/types';
-import { useConsultoresFromSetor, ConsultorSetor } from '@/hooks/useConsultoresFromSetor';
+import { useCarteiraManifest, CarteiraManifestEntry } from '@/hooks/useCarteiraManifest';
 
 interface Props {
   onConfirm: (session: ConsultorSession) => void;
 }
 
 export default function PageLogin({ onConfirm }: Props) {
-  const { consultores, loading, findByCodigo } = useConsultoresFromSetor();
+  const { consultores, loading, findByCodigo } = useCarteiraManifest();
   const [codigo, setCodigo] = useState('');
   const [focused, setFocused] = useState(false);
   const [erro, setErro] = useState('');
@@ -18,8 +18,8 @@ export default function PageLogin({ onConfirm }: Props) {
     const q = codigo.toLowerCase();
     return consultores
       .filter(c =>
-        c.codigos.some(k => k.toLowerCase().includes(q)) ||
-        c.nome.toLowerCase().includes(q)
+        String(c.codConsultor).toLowerCase().includes(q) ||
+        c.consultor.toLowerCase().includes(q)
       )
       .slice(0, 8);
   }, [codigo, focused, consultores]);
@@ -34,20 +34,20 @@ export default function PageLogin({ onConfirm }: Props) {
       return;
     }
     onConfirm({
-      codigo: value.toUpperCase(),
-      nome: c.nome,
-      gestor: c.gestor,
+      codigo: String(c.codConsultor).toUpperCase(),
+      nome: c.consultor,
+      gestor: c.gerente,
     });
   };
 
-  const pickSuggestion = (c: ConsultorSetor) => {
-    const cod = c.codigos[0];
+  const pickSuggestion = (c: CarteiraManifestEntry) => {
+    const cod = String(c.codConsultor);
     setCodigo(cod);
     setFocused(false);
     onConfirm({
-      codigo: cod,
-      nome: c.nome,
-      gestor: c.gestor,
+      codigo: cod.toUpperCase(),
+      nome: c.consultor,
+      gestor: c.gerente,
     });
   };
 
@@ -55,8 +55,8 @@ export default function PageLogin({ onConfirm }: Props) {
     <div className="flex flex-col items-center justify-center min-h-[70vh] gap-6 sm:gap-8 px-4">
       <img src={logo} alt="Editora do Brasil" className="h-16 sm:h-24 object-contain" />
       <div className="text-center">
-        <h1 className="page-title text-2xl sm:text-3xl">Diagnóstico Territorial</h1>
-        <p className="page-subtitle mt-1 sm:mt-2 text-sm">Acesso do consultor comercial</p>
+        <h1 className="page-title text-2xl sm:text-3xl">Portal do Consultor Comercial</h1>
+        <p className="page-subtitle mt-1 sm:mt-2 text-sm">Acesse sua carteira ou inicie um paper comercial</p>
       </div>
 
       <div className="w-full max-w-md space-y-4">
