@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDataLoader } from '@/hooks/useDataLoader';
-import { runAnalysis } from '@/lib/analysis';
+import { runAnalysis, rebuildConcorrentes } from '@/lib/analysis';
 import { AppPage, PresentationType, AnalysisResult, ConsultorSession } from '@/lib/types';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -15,6 +15,9 @@ import PageAbertura from '@/components/pages/PageAbertura';
 import PageResumo from '@/components/pages/PageResumo';
 import PagePanorama from '@/components/pages/PagePanorama';
 import PageConcorrencia from '@/components/pages/PageConcorrencia';
+import PageConcEssenciais from '@/components/pages/PageConcEssenciais';
+import PageConcTabela from '@/components/pages/PageConcTabela';
+import PageConcMapa from '@/components/pages/PageConcMapa';
 import PageMarketShare from '@/components/pages/PageMarketShare';
 import PageMensalidade from '@/components/pages/PageMensalidade';
 import PageSocioeconomico from '@/components/pages/PageSocioeconomico';
@@ -23,6 +26,8 @@ import PageEncerramento from '@/components/pages/PageEncerramento';
 import ComparativeModule from '@/components/pages/ComparativeModule';
 
 const PAGE_ORDER: AppPage[] = ['abertura', 'resumo', 'panorama', 'concorrencia', 'marketshare', 'mensalidade', 'socioeconomico', 'insights', 'encerramento'];
+// Páginas da Etapa 2 — fora do PAGE_ORDER (sem navegação livre por setas/atalhos).
+const ETAPA2_PAGES: AppPage[] = ['concEssenciais', 'concTabela', 'concMapa'];
 
 const SESSION_KEY = 'consultor:session:v1';
 
@@ -38,6 +43,11 @@ export default function Index() {
   const [isComparative, setIsComparative] = useState(false);
   const [compA1, setCompA1] = useState<AnalysisResult | null>(null);
   const [compA2, setCompA2] = useState<AnalysisResult | null>(null);
+
+  // Etapa 2 — validação de concorrência
+  const [essenciaisInep, setEssenciaisInep] = useState<string[]>([]);
+  const [raioCustom, setRaioCustom] = useState<number | null>(null);
+  const [raioFoiAjustado, setRaioFoiAjustado] = useState(false);
 
   // Restore session from localStorage
   useEffect(() => {
@@ -80,6 +90,9 @@ export default function Index() {
     setIsComparative(false);
     setCompA1(null);
     setCompA2(null);
+    setEssenciaisInep([]);
+    setRaioCustom(null);
+    setRaioFoiAjustado(false);
     setPage(session ? 'modo' : 'login');
   }, [session]);
 
@@ -109,8 +122,50 @@ export default function Index() {
 
   const handleSelectType = (type: PresentationType) => {
     setPresentationType(type);
-    setPage('abertura');
+    // Antes da apresentação, força a Etapa 2 — Validação de Concorrência.
+    setEssenciaisInep([]);
+    setRaioCustom(null);
+    setRaioFoiAjustado(false);
+    setPage('concEssenciais');
   };
+
+  // Etapa 2 — handlers
+  const applyEssenciais = useCallback((inepList: string[], raioKm?: number) => {
+    if (!analysis) return;
+    const rebuilt = rebuildConcorrentes(analysis, censo, {
+      essenciaisInep: inepList,
+      raioKm: raioKm ?? raioCustom ?? analysis.raioOperacional,
+    });
+    setAnalysis(rebuilt);
+  }, [analysis, censo, raioCustom]);
+
+  const handleEssenciaisConfirm = useCallback((inepList: string[]) => {
+    setEssenciaisInep(inepList);
+    applyEssenciais(inepList);
+    setPage('concTabela');
+  }, [applyEssenciais]);
+
+  const handleEssenciaisSkip = useCallback(() => {
+    setEssenciaisInep([]);
+    applyEssenciais([]);
+    setPage('concTabela');
+  }, [applyEssenciais]);
+
+  const handleTabelaConfirm = useCallback(() => setPage('concMapa'), []);
+
+  const handleMapaKeep = useCallback(() => setPage('abertura'), []);
+
+  const handleMapaNewRaio = useCallback((raioKm: number) => {
+    setRaioCustom(raioKm);
+    setRaioFoiAjustado(true);
+    if (analysis) {
+      const rebuilt = rebuildConcorrentes(analysis, censo, { essenciaisInep, raioKm });
+      setAnalysis(rebuilt);
+    }
+    setPage('concTabela');
+  }, [analysis, censo, essenciaisInep]);
+
+  const handleTabelaChangeRaio = useCallback(() => setPage('concMapa'), []);
 
   const handleBack = () => {
     const idx = PAGE_ORDER.indexOf(page);
