@@ -42,6 +42,53 @@ export default function PageEncerramento({ analysis, presentationType, session, 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="max-w-2xl w-full text-center space-y-10">
+        {/* Export actions — destaque no topo, ação principal */}
+        <section
+          aria-labelledby="export-title"
+          className="rounded-2xl border-2 p-6 sm:p-7 text-left shadow-sm"
+          style={{ borderColor: 'hsl(var(--teal))', background: 'hsl(var(--teal-light) / 0.35)' }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <Download className="w-5 h-5" style={{ color: 'hsl(var(--teal))' }} />
+            <h2 id="export-title" className="text-lg sm:text-xl font-bold" style={{ color: 'hsl(var(--navy))' }}>
+              Exportar apresentação
+            </h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-5">
+            Escolha o formato. O arquivo será baixado direto no seu computador.
+          </p>
+          {!canExport && (
+            <p className="text-sm rounded-lg p-3 mb-4" style={{ background: 'hsl(var(--beige))', color: 'hsl(var(--navy))' }}>
+              A exportação fica disponível depois que você concluir a análise da escola.
+            </p>
+          )}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={() => handleExport('pdf')}
+              disabled={!canExport || busy !== null}
+              aria-label="Exportar apresentação em PDF"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base shadow-md transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              style={{ background: 'hsl(var(--navy))', color: 'white', outlineColor: 'hsl(var(--teal))' }}
+            >
+              {busy === 'pdf' ? <Loader2 className="w-5 h-5 animate-spin" /> : <FileText className="w-5 h-5" />}
+              Exportar PDF
+            </button>
+            <button
+              onClick={() => handleExport('pptx')}
+              disabled={!canExport || busy !== null}
+              aria-label="Exportar apresentação em PowerPoint"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-base shadow-md transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              style={{ background: 'hsl(var(--teal))', color: 'white', outlineColor: 'hsl(var(--navy))' }}
+            >
+              {busy === 'pptx' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Presentation className="w-5 h-5" />}
+              Exportar PPT
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            9 páginas · layout fiel à apresentação · sem captura de tela.
+          </p>
+        </section>
+
         {/* Decorative line */}
         <div className="flex justify-center">
           <div className="w-16 h-1 rounded-full" style={{ background: 'hsl(var(--teal))' }} />
@@ -94,38 +141,6 @@ export default function PageEncerramento({ analysis, presentationType, session, 
             Educação que transforma, parceria que constrói.
           </p>
         </div>
-
-        {/* Export actions */}
-        {canExport && (
-          <div className="pt-6 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-2">
-              <Download className="w-3.5 h-3.5" /> Exportar apresentação
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button
-                onClick={() => handleExport('pdf')}
-                disabled={busy !== null}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm shadow-md transition-all hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ background: 'hsl(var(--navy))', color: 'white' }}
-              >
-                {busy === 'pdf' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                Exportar PDF
-              </button>
-              <button
-                onClick={() => handleExport('pptx')}
-                disabled={busy !== null}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm shadow-md transition-all hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ background: 'hsl(var(--teal))', color: 'white' }}
-              >
-                {busy === 'pptx' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Presentation className="w-4 h-4" />}
-                Exportar PPT
-              </button>
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              Layout nativo · 9 páginas · sem captura de tela.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
