@@ -1,14 +1,14 @@
 import { useState, useMemo } from 'react';
 import logo from '@/assets/ebsa_logo.png';
 import { ConsultorSession } from '@/lib/types';
-import { useConsultoresFromSetor, ConsultorSetor } from '@/hooks/useConsultoresFromSetor';
+import { useCarteiraManifest, CarteiraManifestEntry } from '@/hooks/useCarteiraManifest';
 
 interface Props {
   onConfirm: (session: ConsultorSession) => void;
 }
 
 export default function PageLogin({ onConfirm }: Props) {
-  const { consultores, loading, findByCodigo } = useConsultoresFromSetor();
+  const { consultores, loading, findByCodigo } = useCarteiraManifest();
   const [codigo, setCodigo] = useState('');
   const [focused, setFocused] = useState(false);
   const [erro, setErro] = useState('');
@@ -18,8 +18,8 @@ export default function PageLogin({ onConfirm }: Props) {
     const q = codigo.toLowerCase();
     return consultores
       .filter(c =>
-        c.codigos.some(k => k.toLowerCase().includes(q)) ||
-        c.nome.toLowerCase().includes(q)
+        String(c.codConsultor).toLowerCase().includes(q) ||
+        c.consultor.toLowerCase().includes(q)
       )
       .slice(0, 8);
   }, [codigo, focused, consultores]);
@@ -34,20 +34,20 @@ export default function PageLogin({ onConfirm }: Props) {
       return;
     }
     onConfirm({
-      codigo: value.toUpperCase(),
-      nome: c.nome,
-      gestor: c.gestor,
+      codigo: String(c.codConsultor).toUpperCase(),
+      nome: c.consultor,
+      gestor: c.gerente,
     });
   };
 
-  const pickSuggestion = (c: ConsultorSetor) => {
-    const cod = c.codigos[0];
+  const pickSuggestion = (c: CarteiraManifestEntry) => {
+    const cod = String(c.codConsultor);
     setCodigo(cod);
     setFocused(false);
     onConfirm({
-      codigo: cod,
-      nome: c.nome,
-      gestor: c.gestor,
+      codigo: cod.toUpperCase(),
+      nome: c.consultor,
+      gestor: c.gerente,
     });
   };
 
@@ -55,8 +55,8 @@ export default function PageLogin({ onConfirm }: Props) {
     <div className="flex flex-col items-center justify-center min-h-[70vh] gap-6 sm:gap-8 px-4">
       <img src={logo} alt="Editora do Brasil" className="h-16 sm:h-24 object-contain" />
       <div className="text-center">
-        <h1 className="page-title text-2xl sm:text-3xl">Diagnóstico Territorial</h1>
-        <p className="page-subtitle mt-1 sm:mt-2 text-sm">Acesso do consultor comercial</p>
+        <h1 className="page-title text-2xl sm:text-3xl">Portal do Consultor Comercial</h1>
+        <p className="page-subtitle mt-1 sm:mt-2 text-sm">Acesse sua carteira ou inicie um paper comercial</p>
       </div>
 
       <div className="w-full max-w-md space-y-4">
@@ -83,16 +83,16 @@ export default function PageLogin({ onConfirm }: Props) {
               <div className="absolute top-full left-0 right-0 mt-1 bg-card border rounded-xl shadow-lg z-10 max-h-72 overflow-y-auto">
                 {suggestions.map(c => (
                   <button
-                    key={c.nome}
+                    key={c.consultor}
                     onMouseDown={e => e.preventDefault()}
                     onClick={() => pickSuggestion(c)}
                     className="w-full text-left px-4 py-2.5 hover:bg-teal-light text-sm border-b last:border-0"
                   >
-                    <span className="font-semibold">{c.codigos[0]}{c.codigos.length > 1 && <span className="text-[10px] font-normal text-muted-foreground"> +{c.codigos.length - 1}</span>}</span>
-                    <span className="text-muted-foreground ml-2">{c.nome}</span>
+                    <span className="font-semibold">{String(c.codConsultor)}</span>
+                    <span className="text-muted-foreground ml-2">{c.consultor}</span>
                     <div className="text-[10px] text-muted-foreground">
-                      {c.gestor && <>Gestor: {c.gestor} · </>}
-                      {c.carteiraSize} escola{c.carteiraSize !== 1 ? 's' : ''}
+                      {c.gerente && <>Gestor: {c.gerente} · </>}
+                      {c.totalEscolas} escola{c.totalEscolas !== 1 ? 's' : ''}
                     </div>
                   </button>
                 ))}
