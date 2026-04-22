@@ -1,12 +1,17 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnalysisResult, EscolaData, ConcorrenteInfo } from '@/lib/types';
-import { num, formatNumber, formatDistance, formatPercent, getSegmentos, getMensalidadeFaixa } from '@/lib/analysis';
-import { MapPin, Users, Target, Trophy, ChevronDown, ChevronUp, GitCompare, Filter, X } from 'lucide-react';
+import { num, formatNumber, formatDistance, formatPercent, getSegmentos, getMensalidadeFaixa, rebuildConcorrentes } from '@/lib/analysis';
+import { useDataLoader } from '@/hooks/useDataLoader';
+import { MapPin, Users, Target, ChevronDown, ChevronUp, GitCompare, Filter, X } from 'lucide-react';
 import ConcorrenciaMap from './ConcorrenciaMap';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 
 interface Props {
   analysis: AnalysisResult;
+  /** INEPs marcados como essenciais na Etapa 2; sempre permanecem ao recalcular pelo raio. */
+  essenciaisInep?: string[];
+  /** Notifica o pai sobre alteração ao vivo do raio na régua. */
+  onRaioChange?: (raioKm: number) => void;
 }
 
 function formatAdocao(tipo: string): string {
