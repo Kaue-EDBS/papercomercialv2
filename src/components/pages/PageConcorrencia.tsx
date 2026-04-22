@@ -283,6 +283,38 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
                 <MapPin className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
                 <span className="text-xs font-semibold" style={{ color: 'hsl(var(--navy))' }}>Mapa de Concorrência</span>
               </div>
+              {/* Régua operacional — ajusta o raio em tempo real */}
+              <div className="px-3 py-3 border-b space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="raio-live" className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--navy))' }}>
+                    Raio da área de influência
+                  </label>
+                  <span className="text-xs font-bold tabular-nums" style={{ color: 'hsl(var(--teal))' }}>
+                    {liveRaio.toFixed(1).replace('.', ',')} km
+                  </span>
+                </div>
+                <input
+                  id="raio-live"
+                  type="range"
+                  min={0.5}
+                  max={20}
+                  step={0.5}
+                  value={liveRaio}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    setLiveRaio(v);
+                    onRaioChange?.(v);
+                  }}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                  style={{ accentColor: 'hsl(var(--teal))' }}
+                  aria-label="Ajustar raio da área de influência em quilômetros"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>0,5 km</span>
+                  <span>Padrão: {analysis.raioOperacional} km</span>
+                  <span>20 km</span>
+                </div>
+              </div>
               <ConcorrenciaMap
                 escola={escola}
                 concorrentes={concorrentes}
