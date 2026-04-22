@@ -105,7 +105,12 @@ export default function Index() {
       return;
     }
     setAnalysis(result);
-    setPage('tipo');
+    // Etapa 2 começa direto em concorrentes essenciais — sem tela de tipo no meio.
+    setEssenciaisInep([]);
+    setRaioCustom(null);
+    setRaioFoiAjustado(false);
+    setPresentationType(null);
+    setPage('concEssenciais');
   }, [censo, demo]);
 
   const handleCompare = useCallback((c1: string, c2: string) => {
@@ -121,13 +126,10 @@ export default function Index() {
     setIsComparative(true);
   }, [censo, demo]);
 
+  // Tipo de apresentação agora é definido na entrada da Etapa 3 (após validação de concorrência).
   const handleSelectType = (type: PresentationType) => {
     setPresentationType(type);
-    // Antes da apresentação, força a Etapa 2 — Validação de Concorrência.
-    setEssenciaisInep([]);
-    setRaioCustom(null);
-    setRaioFoiAjustado(false);
-    setPage('concEssenciais');
+    setPage('abertura');
   };
 
   // Etapa 2 — handlers
@@ -154,7 +156,8 @@ export default function Index() {
 
   const handleTabelaConfirm = useCallback(() => setPage('concMapa'), []);
 
-  const handleMapaKeep = useCallback(() => setPage('abertura'), []);
+  // Após validar o raio, vai para a tela de tipo de apresentação (entrada da Etapa 3).
+  const handleMapaKeep = useCallback(() => setPage('tipo'), []);
 
   const handleMapaNewRaio = useCallback((raioKm: number) => {
     setRaioCustom(raioKm);
@@ -172,13 +175,20 @@ export default function Index() {
     // Navegação dentro da Etapa 2
     if (page === 'concMapa') { setPage('concTabela'); return; }
     if (page === 'concTabela') { setPage('concEssenciais'); return; }
-    if (page === 'concEssenciais') { setPage('tipo'); return; }
+    if (page === 'concEssenciais') {
+      // Volta para a seleção de escola (carteira ou capa)
+      setAnalysis(null);
+      setPage(session ? 'modo' : 'capa');
+      return;
+    }
+    // Tipo de apresentação fica entre Etapa 2 e Etapa 3
+    if (page === 'tipo') { setPage('concMapa'); return; }
     const idx = PAGE_ORDER.indexOf(page);
     if (idx > 0) {
       setPage(PAGE_ORDER[idx - 1]);
     } else if (page === 'abertura') {
-      // Da abertura voltamos para a Etapa 2 (mapa) — não pode pular a validação.
-      setPage('concMapa');
+      // Da abertura voltamos para a tela de tipo de apresentação.
+      setPage('tipo');
     } else {
       setAnalysis(null);
       setPresentationType(null);
