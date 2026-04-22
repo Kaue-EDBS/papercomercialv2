@@ -244,7 +244,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
   }
 
   const bytes = await pdf.save();
-  return new Blob([bytes], { type: 'application/pdf' });
+  return new Blob([bytes as BlobPart], { type: 'application/pdf' });
 }
 
 function drawHeader(page: PDFPage, font: PDFFont, fontBold: PDFFont, ctx: ExportContext) {
@@ -369,7 +369,7 @@ function drawTable(page: PDFPage, font: PDFFont, bold: PDFFont, headers: string[
     });
     y -= rh;
   });
-  page.drawRectangle({ x: x0, y, width: W, height: y0 - 22 - y, borderColor: BORDER, borderWidth: 0.5, color: undefined as any, opacity: 0 });
+  page.drawRectangle({ x: x0, y, width: W, height: y0 - 22 - y, borderColor: BORDER, borderWidth: 0.5, color: WHITE, opacity: 0 });
 }
 
 function drawBullets(page: PDFPage, font: PDFFont, bold: PDFFont, items: string[]) {
