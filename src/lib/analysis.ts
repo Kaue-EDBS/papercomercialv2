@@ -62,6 +62,125 @@ function calcRaioOperacional(densidade: number): number {
   return 10;
 }
 
+/**
+ * Reconstrói a lista de concorrentes para uma escola, permitindo:
+ * - injeção de "concorrentes essenciais" (selecionados manualmente pelo usuário) que SEMPRE entram;
+ * - completar até 15 vagas com candidatos elegíveis priorizados por:
+ *   1) maior proximidade geográfica dentro do raio (ou estimativa por CEP);
+ *   2) mesma faixa de mensalidade;
+ *   3) maior número de segmentos em comum;
+ *   4) maior alunado total.
+ * - sobrescrita opcional do raio (em km).
+ */
+export function rebuildConcorrentes(
+  base: AnalysisResult,
+  censoData: EscolaData[],
+  options: { essenciaisInep?: string[]; raioKm?: number; max?: number } = {}
+): AnalysisResult {
+  const { escola, escolasMunicipio } = base;
+  const max = options.max ?? 15;
+  const raio = options.raioKm ?? base.raioOperacional;
+  const essenciaisSet = new Set((options.essenciaisInep || []).map(String));
+
+  const escolaSegmentos = getSegmentos(escola);
+  const escolaCEP = String(escola.CEP || '').slice(0, 3);
+  const escolaLat = parseFloat(String(escola.Latitude));
+  const escolaLon = parseFloat(String(escola.Longitude));
+  const hasCoords = !isNaN(escolaLat) && !isNaN(escolaLon);
+
+  type Cand = ConcorrenteInfo & { _proxRank: number; _faixaMatch: number; _segCount: number; _alunado: number; _essencial: boolean };
+
+  // Pool: município + qualquer essencial fora do município (busca em censoData)
+  const pool: EscolaData[] = [...escolasMunicipio];
+  for (const inep of essenciaisSet) {
+    if (!pool.some(e => String(e['Código Inep']) === inep)) {
+      const ext = censoData.find(e => String(e['Código Inep']) === inep);
+      if (ext) pool.push(ext);
+    }
+  }
+
+  const candidates: Cand[] = [];
+  for (const e of pool) {
+    const inep = String(e['Código Inep']);
+    if (inep === String(escola['Código Inep'])) continue;
+    const isEssencial = essenciaisSet.has(inep);
+
+    const eSegmentos = getSegmentos(e);
+    const segComum = escolaSegmentos.filter(s => eSegmentos.includes(s));
+
+    const eLat = parseFloat(String(e.Latitude));
+    const eLon = parseFloat(String(e.Longitude));
+    const eHasCoords = !isNaN(eLat) && !isNaN(eLon);
+    let distancia: number | null = null;
+    let proximidadeCEP = false;
+    if (hasCoords && eHasCoords) {
+      distancia = haversine(escolaLat, escolaLon, eLat, eLon);
+    } else {
+      const eCEP = String(e.CEP || '').slice(0, 3);
+      proximidadeCEP = eCEP === escolaCEP;
+    }
+
+    if (!isEssencial) {
+      // Filtros de elegibilidade (apenas para preenchimento automático)
+      if (segComum.length === 0) continue;
+      if (!isMensalidadeCompativel(escola.Mensalidade, e.Mensalidade)) continue;
+      // Dentro do raio quando há distância real
+      if (distancia !== null && distancia > raio) continue;
+    }
+
+    // Ranking por proximidade: menor distância primeiro; CEP-match depois; o resto por último
+    let proxRank: number;
+    if (distancia !== null) proxRank = distancia;            // km — menor é melhor
+    else if (proximidadeCEP) proxRank = 9000;                // bucket "estimado por CEP"
+    else proxRank = 9999;                                    // bucket "sem proximidade conhecida"
+
+    candidates.push({
+      escola: e,
+      distancia,
+      proximidadeCEP,
+      segmentosComum: segComum,
+      _proxRank: proxRank,
+      _faixaMatch: getMensalidadeFaixa(escola.Mensalidade) === getMensalidadeFaixa(e.Mensalidade) ? 1 : 0,
+      _segCount: segComum.length,
+      _alunado: num(e['Alunado Total']),
+      _essencial: isEssencial,
+    });
+  }
+
+  // 1) essenciais sempre primeiro; 2) proximidade asc; 3) mesma faixa desc; 4) seg em comum desc; 5) alunado desc
+  candidates.sort((a, b) => {
+    if (a._essencial !== b._essencial) return a._essencial ? -1 : 1;
+    if (a._proxRank !== b._proxRank) return a._proxRank - b._proxRank;
+    if (a._faixaMatch !== b._faixaMatch) return b._faixaMatch - a._faixaMatch;
+    if (a._segCount !== b._segCount) return b._segCount - a._segCount;
+    return b._alunado - a._alunado;
+  });
+
+  const concorrentes: ConcorrenteInfo[] = candidates.slice(0, max).map(c => ({
+    escola: c.escola, distancia: c.distancia, proximidadeCEP: c.proximidadeCEP, segmentosComum: c.segmentosComum,
+  }));
+
+  // Recalcula market share
+  const escolaTotal = num(escola['Alunado Total']);
+  const concTotal = concorrentes.reduce((s, c) => s + num(c.escola['Alunado Total']), 0);
+  const universo = escolaTotal + concTotal;
+  const calcMS = (field: keyof EscolaData) => {
+    const ev = num(escola[field] as string);
+    const cv = concorrentes.reduce((s, c) => s + num(c.escola[field] as string), 0);
+    const t = ev + cv;
+    return t > 0 ? (ev / t) * 100 : 0;
+  };
+  const marketShare: MarketShareData = {
+    geral: universo > 0 ? (escolaTotal / universo) * 100 : 0,
+    ei: calcMS('qt_mat_educacao_infantil'),
+    efi: calcMS('qt_mat_ensino_fundamental_anos_iniciais'),
+    efii: calcMS('qt_mat_ensino_fundamental_anos_finais'),
+    em: calcMS('qt_mat_ensino_medio'),
+  };
+
+  return { ...base, concorrentes, raioOperacional: raio, marketShare };
+}
+
 export function runAnalysis(
   codigoInep: string,
   censoData: EscolaData[],
