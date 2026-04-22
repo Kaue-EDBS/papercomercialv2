@@ -11,16 +11,22 @@ export default function PageTipo({ escola, onSelect, onBack }: Props) {
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8 px-4">
       {onBack && (
         <button onClick={onBack} className="self-start ml-4 nav-pill text-sm font-semibold" style={{ color: 'hsl(var(--teal))' }}>
-          ← Voltar à Capa
+          ← Voltar
         </button>
       )}
       <div className="text-center">
+        <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--teal))' }}>
+          Etapa 3 · Apresentação
+        </span>
         <h2 className="page-title text-2xl">Escola Selecionada</h2>
         <p className="text-lg font-semibold mt-2" style={{ color: 'hsl(var(--teal))' }}>{escola.Escola}</p>
         <p className="text-sm text-muted-foreground">{escola.Município} / {escola.UF} — Código Inep: {escola['Código Inep']}</p>
       </div>
       <div className="text-center">
-        <h3 className="page-title text-xl mb-4">Selecione o tipo de apresentação</h3>
+        <h3 className="page-title text-xl mb-2">Como você quer apresentar?</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Escolha o modo da apresentação para gerar o paper comercial.
+        </p>
         <div className="flex gap-4">
           <button onClick={() => onSelect('prospeccao')}
             className="px-8 py-4 rounded-xl font-bold text-lg transition hover:opacity-90"
