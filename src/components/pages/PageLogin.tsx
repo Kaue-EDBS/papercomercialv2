@@ -83,16 +83,16 @@ export default function PageLogin({ onConfirm }: Props) {
               <div className="absolute top-full left-0 right-0 mt-1 bg-card border rounded-xl shadow-lg z-10 max-h-72 overflow-y-auto">
                 {suggestions.map(c => (
                   <button
-                    key={c.nome}
+                    key={c.consultor}
                     onMouseDown={e => e.preventDefault()}
                     onClick={() => pickSuggestion(c)}
                     className="w-full text-left px-4 py-2.5 hover:bg-teal-light text-sm border-b last:border-0"
                   >
-                    <span className="font-semibold">{c.codigos[0]}{c.codigos.length > 1 && <span className="text-[10px] font-normal text-muted-foreground"> +{c.codigos.length - 1}</span>}</span>
-                    <span className="text-muted-foreground ml-2">{c.nome}</span>
+                    <span className="font-semibold">{String(c.codConsultor)}</span>
+                    <span className="text-muted-foreground ml-2">{c.consultor}</span>
                     <div className="text-[10px] text-muted-foreground">
-                      {c.gestor && <>Gestor: {c.gestor} · </>}
-                      {c.carteiraSize} escola{c.carteiraSize !== 1 ? 's' : ''}
+                      {c.gerente && <>Gestor: {c.gerente} · </>}
+                      {c.totalEscolas} escola{c.totalEscolas !== 1 ? 's' : ''}
                     </div>
                   </button>
                 ))}
