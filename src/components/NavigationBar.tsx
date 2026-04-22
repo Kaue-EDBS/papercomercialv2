@@ -49,9 +49,38 @@ interface Props {
   onBackToMain?: () => void;
   onBack?: () => void;
   onNewSearch?: () => void;
+  isEtapa2?: boolean;
 }
 
-export default function NavigationBar({ currentPage, onNavigate, isComparative, onBackToMain, onBack, onNewSearch }: Props) {
+export default function NavigationBar({ currentPage, onNavigate, isComparative, onBackToMain, onBack, onNewSearch, isEtapa2 }: Props) {
+  if (isEtapa2) {
+    const labelMap: Record<string, string> = {
+      concEssenciais: '1/3 · Concorrentes essenciais',
+      concTabela: '2/3 · Tabela de concorrentes',
+      concMapa: '3/3 · Mapa e raio',
+    };
+    return (
+      <nav className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 border-b bg-card overflow-x-auto scrollbar-hide">
+        {onBack && (
+          <button onClick={onBack} className="nav-pill mr-1 sm:mr-2 text-[10px] sm:text-xs font-semibold whitespace-nowrap" style={{ color: 'hsl(var(--teal))' }}>
+            ← <span className="hidden sm:inline">Voltar</span>
+          </button>
+        )}
+        {onNewSearch && (
+          <button onClick={onNewSearch} className="nav-pill flex items-center gap-1 text-[10px] sm:text-xs font-semibold whitespace-nowrap" style={{ color: 'hsl(var(--navy))' }}>
+            <Home className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden sm:inline">Nova Pesquisa</span>
+          </button>
+        )}
+        <span className="text-[10px] sm:text-xs font-semibold ml-1 sm:ml-2 whitespace-nowrap" style={{ color: 'hsl(var(--navy))' }}>
+          ETAPA 2 — VALIDAÇÃO DE CONCORRÊNCIA · {labelMap[currentPage] || ''}
+        </span>
+        <div className="ml-auto flex-shrink-0">
+          <FullscreenButton />
+        </div>
+      </nav>
+    );
+  }
+
   if (isComparative) {
     return (
       <nav className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-2 sm:py-3 border-b bg-card overflow-x-auto scrollbar-hide">

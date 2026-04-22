@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDataLoader } from '@/hooks/useDataLoader';
-import { runAnalysis } from '@/lib/analysis';
+import { runAnalysis, rebuildConcorrentes } from '@/lib/analysis';
 import { AppPage, PresentationType, AnalysisResult, ConsultorSession } from '@/lib/types';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -15,6 +15,9 @@ import PageAbertura from '@/components/pages/PageAbertura';
 import PageResumo from '@/components/pages/PageResumo';
 import PagePanorama from '@/components/pages/PagePanorama';
 import PageConcorrencia from '@/components/pages/PageConcorrencia';
+import PageConcEssenciais from '@/components/pages/PageConcEssenciais';
+import PageConcTabela from '@/components/pages/PageConcTabela';
+import PageConcMapa from '@/components/pages/PageConcMapa';
 import PageMarketShare from '@/components/pages/PageMarketShare';
 import PageMensalidade from '@/components/pages/PageMensalidade';
 import PageSocioeconomico from '@/components/pages/PageSocioeconomico';
@@ -23,6 +26,8 @@ import PageEncerramento from '@/components/pages/PageEncerramento';
 import ComparativeModule from '@/components/pages/ComparativeModule';
 
 const PAGE_ORDER: AppPage[] = ['abertura', 'resumo', 'panorama', 'concorrencia', 'marketshare', 'mensalidade', 'socioeconomico', 'insights', 'encerramento'];
+// Páginas da Etapa 2 — fora do PAGE_ORDER (sem navegação livre por setas/atalhos).
+const ETAPA2_PAGES: AppPage[] = ['concEssenciais', 'concTabela', 'concMapa'];
 
 const SESSION_KEY = 'consultor:session:v1';
 
@@ -38,6 +43,11 @@ export default function Index() {
   const [isComparative, setIsComparative] = useState(false);
   const [compA1, setCompA1] = useState<AnalysisResult | null>(null);
   const [compA2, setCompA2] = useState<AnalysisResult | null>(null);
+
+  // Etapa 2 — validação de concorrência
+  const [essenciaisInep, setEssenciaisInep] = useState<string[]>([]);
+  const [raioCustom, setRaioCustom] = useState<number | null>(null);
+  const [raioFoiAjustado, setRaioFoiAjustado] = useState(false);
 
   // Restore session from localStorage
   useEffect(() => {
@@ -80,6 +90,9 @@ export default function Index() {
     setIsComparative(false);
     setCompA1(null);
     setCompA2(null);
+    setEssenciaisInep([]);
+    setRaioCustom(null);
+    setRaioFoiAjustado(false);
     setPage(session ? 'modo' : 'login');
   }, [session]);
 
@@ -109,15 +122,62 @@ export default function Index() {
 
   const handleSelectType = (type: PresentationType) => {
     setPresentationType(type);
-    setPage('abertura');
+    // Antes da apresentação, força a Etapa 2 — Validação de Concorrência.
+    setEssenciaisInep([]);
+    setRaioCustom(null);
+    setRaioFoiAjustado(false);
+    setPage('concEssenciais');
   };
 
+  // Etapa 2 — handlers
+  const applyEssenciais = useCallback((inepList: string[], raioKm?: number) => {
+    if (!analysis) return;
+    const rebuilt = rebuildConcorrentes(analysis, censo, {
+      essenciaisInep: inepList,
+      raioKm: raioKm ?? raioCustom ?? analysis.raioOperacional,
+    });
+    setAnalysis(rebuilt);
+  }, [analysis, censo, raioCustom]);
+
+  const handleEssenciaisConfirm = useCallback((inepList: string[]) => {
+    setEssenciaisInep(inepList);
+    applyEssenciais(inepList);
+    setPage('concTabela');
+  }, [applyEssenciais]);
+
+  const handleEssenciaisSkip = useCallback(() => {
+    setEssenciaisInep([]);
+    applyEssenciais([]);
+    setPage('concTabela');
+  }, [applyEssenciais]);
+
+  const handleTabelaConfirm = useCallback(() => setPage('concMapa'), []);
+
+  const handleMapaKeep = useCallback(() => setPage('abertura'), []);
+
+  const handleMapaNewRaio = useCallback((raioKm: number) => {
+    setRaioCustom(raioKm);
+    setRaioFoiAjustado(true);
+    if (analysis) {
+      const rebuilt = rebuildConcorrentes(analysis, censo, { essenciaisInep, raioKm });
+      setAnalysis(rebuilt);
+    }
+    setPage('concTabela');
+  }, [analysis, censo, essenciaisInep]);
+
+  const handleTabelaChangeRaio = useCallback(() => setPage('concMapa'), []);
+
   const handleBack = () => {
+    // Navegação dentro da Etapa 2
+    if (page === 'concMapa') { setPage('concTabela'); return; }
+    if (page === 'concTabela') { setPage('concEssenciais'); return; }
+    if (page === 'concEssenciais') { setPage('tipo'); return; }
     const idx = PAGE_ORDER.indexOf(page);
     if (idx > 0) {
       setPage(PAGE_ORDER[idx - 1]);
     } else if (page === 'abertura') {
-      setPage('tipo');
+      // Da abertura voltamos para a Etapa 2 (mapa) — não pode pular a validação.
+      setPage('concMapa');
     } else {
       setAnalysis(null);
       setPresentationType(null);
@@ -164,6 +224,7 @@ export default function Index() {
   }
 
   const showNav = PAGE_ORDER.includes(page) && !isComparative;
+  const showEtapa2Nav = ETAPA2_PAGES.includes(page) && !isComparative;
   const pageIdx = PAGE_ORDER.indexOf(page);
 
   return (
@@ -173,6 +234,15 @@ export default function Index() {
         <NavigationBar
           currentPage={page}
           onNavigate={setPage}
+          onBack={handleBack}
+          onNewSearch={handleNewSearch}
+        />
+      )}
+      {showEtapa2Nav && (
+        <NavigationBar
+          currentPage={page}
+          onNavigate={() => {}}
+          isEtapa2
           onBack={handleBack}
           onNewSearch={handleNewSearch}
         />
@@ -229,6 +299,33 @@ export default function Index() {
             )}
             {page === 'capa' && <PageCapa censoData={censo} onSearch={handleSearch} onCompare={handleCompare} />}
             {page === 'tipo' && analysis && <PageTipo escola={analysis.escola} onSelect={handleSelectType} onBack={() => { setAnalysis(null); setPage(session ? 'modo' : 'capa'); }} />}
+            {page === 'concEssenciais' && analysis && (
+              <PageConcEssenciais
+                escola={analysis.escola}
+                censoData={censo}
+                initialEssenciais={essenciaisInep}
+                onConfirm={handleEssenciaisConfirm}
+                onSkip={handleEssenciaisSkip}
+              />
+            )}
+            {page === 'concTabela' && analysis && (
+              <PageConcTabela
+                analysis={analysis}
+                essenciaisInep={essenciaisInep}
+                raioAtual={raioCustom ?? analysis.raioOperacional}
+                fromRaioAdjust={raioFoiAjustado}
+                onConfirm={handleTabelaConfirm}
+                onChangeRaio={handleTabelaChangeRaio}
+              />
+            )}
+            {page === 'concMapa' && analysis && (
+              <PageConcMapa
+                analysis={analysis}
+                raioAtual={raioCustom ?? analysis.raioOperacional}
+                onKeep={handleMapaKeep}
+                onApplyNewRaio={handleMapaNewRaio}
+              />
+            )}
             {page === 'abertura' && presentationType && <PageAbertura type={presentationType} />}
             {page === 'resumo' && analysis && <PageResumo analysis={analysis} />}
             {page === 'panorama' && analysis && <PagePanorama analysis={analysis} />}
