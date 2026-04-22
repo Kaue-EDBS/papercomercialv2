@@ -41,10 +41,10 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
       </div>
 
       <div className="bg-card rounded-xl border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="table-executive w-full">
-            <thead>
-              <tr className="sticky top-0 z-10" style={{ background: 'hsl(var(--teal-light))' }}>
+        <div className="overflow-x-auto max-h-[65vh] overflow-y-auto">
+          <table className="table-premium">
+            <thead className="sticky top-0 z-10">
+              <tr>
                 <th className="w-8" aria-label="Expandir"></th>
                 <th className="min-w-[200px]">Escola</th>
                 <th className="w-28" title="Como esta escola entrou na lista de concorrentes">Origem</th>
@@ -76,9 +76,9 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
                   <tr
                     key={inep}
                     onClick={() => setExpandedInep(isOpen ? null : inep)}
-                    className={`cursor-pointer transition-colors hover:bg-[hsl(var(--teal-light))] focus-within:bg-[hsl(var(--teal-light))] ${isOpen ? 'bg-[hsl(var(--teal-light))]' : ''}`}
-                    style={isOpen ? { boxShadow: 'inset 3px 0 0 0 hsl(var(--teal))' } : undefined}
+                    className={`cursor-pointer ${isOpen ? 'row-selected' : ''}`}
                     aria-expanded={isOpen}
+                    aria-selected={isOpen}
                     title="Clique para ver os critérios desta seleção"
                   >
                     <td className="text-center align-middle">
@@ -92,40 +92,38 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
                       </button>
                     </td>
                     <td>
-                      <div className="font-medium text-sm" style={{ color: 'hsl(var(--navy))' }}>{c.escola.Escola}</div>
-                      <div className="text-[11px] text-muted-foreground tabular-nums">Inep {inep}</div>
+                      <div className="font-semibold text-sm leading-snug" style={{ color: 'hsl(var(--navy))' }}>{c.escola.Escola}</div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground tabular-nums mt-0.5">Inep · {inep}</div>
                     </td>
                     <td>
                       <span
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+                        className={`chip ${isEss ? 'chip-essencial' : 'chip-automatico'}`}
                         title={isEss ? 'Selecionada manualmente pelo consultor' : 'Selecionada automaticamente pelo sistema'}
-                        style={
-                          isEss
-                            ? { background: 'hsl(var(--teal))', color: 'white', borderColor: 'hsl(var(--teal))' }
-                            : { background: 'hsl(var(--beige))', color: 'hsl(var(--navy))', borderColor: 'hsl(var(--teal-light))' }
-                        }>
+                      >
                         {isEss ? '★ Essencial' : 'Automático'}
                       </span>
                     </td>
                     <td className="font-semibold tabular-nums">{formatNumber(num(c.escola['Alunado Total']))}</td>
                     <td>
                       {c.distancia !== null ? (
-                        <span className="text-sm tabular-nums">{formatDistance(c.distancia)}</span>
+                        <span className="text-sm tabular-nums font-medium" style={{ color: 'hsl(var(--navy))' }}>{formatDistance(c.distancia)}</span>
                       ) : c.proximidadeCEP ? (
-                        <span className="text-[11px] italic text-muted-foreground" title="Distância estimada com base no CEP — sem coordenadas precisas">~ estimado por CEP</span>
+                        <span className="text-[11px] inline-flex items-center gap-1 text-muted-foreground" title="Distância estimada com base no CEP — sem coordenadas precisas">
+                          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50" aria-hidden /> estimado por CEP
+                        </span>
                       ) : (
                         <span className="text-[11px] italic text-muted-foreground">Sem distância</span>
                       )}
                     </td>
                     <td>
                       <div className="flex gap-1 flex-wrap">
-                        {segs.map(s => <span key={s} className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={{ background: 'hsl(var(--teal-light))', color: 'hsl(var(--navy))' }}>{s}</span>)}
+                        {segs.map(s => <span key={s} className="chip chip-segmento">{s}</span>)}
                       </div>
                     </td>
                     <td>
                       {semMensalidade ? (
                         <span className="text-[11px] italic text-muted-foreground" title="Dado não disponível na base fornecida">
-                          Dado não disponível
+                          — não informado
                         </span>
                       ) : (
                         <div className="flex flex-col gap-0.5">
