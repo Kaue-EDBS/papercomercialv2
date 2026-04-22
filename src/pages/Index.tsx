@@ -168,11 +168,16 @@ export default function Index() {
   const handleTabelaChangeRaio = useCallback(() => setPage('concMapa'), []);
 
   const handleBack = () => {
+    // Navegação dentro da Etapa 2
+    if (page === 'concMapa') { setPage('concTabela'); return; }
+    if (page === 'concTabela') { setPage('concEssenciais'); return; }
+    if (page === 'concEssenciais') { setPage('tipo'); return; }
     const idx = PAGE_ORDER.indexOf(page);
     if (idx > 0) {
       setPage(PAGE_ORDER[idx - 1]);
     } else if (page === 'abertura') {
-      setPage('tipo');
+      // Da abertura voltamos para a Etapa 2 (mapa) — não pode pular a validação.
+      setPage('concMapa');
     } else {
       setAnalysis(null);
       setPresentationType(null);
@@ -284,6 +289,33 @@ export default function Index() {
             )}
             {page === 'capa' && <PageCapa censoData={censo} onSearch={handleSearch} onCompare={handleCompare} />}
             {page === 'tipo' && analysis && <PageTipo escola={analysis.escola} onSelect={handleSelectType} onBack={() => { setAnalysis(null); setPage(session ? 'modo' : 'capa'); }} />}
+            {page === 'concEssenciais' && analysis && (
+              <PageConcEssenciais
+                escola={analysis.escola}
+                censoData={censo}
+                initialEssenciais={essenciaisInep}
+                onConfirm={handleEssenciaisConfirm}
+                onSkip={handleEssenciaisSkip}
+              />
+            )}
+            {page === 'concTabela' && analysis && (
+              <PageConcTabela
+                analysis={analysis}
+                essenciaisInep={essenciaisInep}
+                raioAtual={raioCustom ?? analysis.raioOperacional}
+                fromRaioAdjust={raioFoiAjustado}
+                onConfirm={handleTabelaConfirm}
+                onChangeRaio={handleTabelaChangeRaio}
+              />
+            )}
+            {page === 'concMapa' && analysis && (
+              <PageConcMapa
+                analysis={analysis}
+                raioAtual={raioCustom ?? analysis.raioOperacional}
+                onKeep={handleMapaKeep}
+                onApplyNewRaio={handleMapaNewRaio}
+              />
+            )}
             {page === 'abertura' && presentationType && <PageAbertura type={presentationType} />}
             {page === 'resumo' && analysis && <PageResumo analysis={analysis} />}
             {page === 'panorama' && analysis && <PagePanorama analysis={analysis} />}
