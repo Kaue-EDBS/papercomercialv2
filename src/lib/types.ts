@@ -79,7 +79,7 @@ export interface MarketShareData {
 }
 
 export type PresentationType = 'prospeccao' | 'renovacao';
-export type AppPage = 'login' | 'modo' | 'carteira' | 'capa' | 'paper' | 'tipo' | 'abertura' | 'resumo' | 'panorama' | 'concEssenciais' | 'concTabela' | 'concMapa' | 'concorrencia' | 'marketshare' | 'mensalidade' | 'socioeconomico' | 'insights' | 'planoAcao' | 'encerramento';
+export type AppPage = 'login' | 'modo' | 'carteira' | 'capa' | 'paper' | 'tipo' | 'abertura' | 'resumo' | 'panorama' | 'concEssenciais' | 'concTabela' | 'concMapa' | 'concorrencia' | 'marketshare' | 'mensalidade' | 'socioeconomico' | 'potencial' | 'insights' | 'planoAcao' | 'encerramento';
 export type ComparativePage = 'c1';
 
 // Consultor / Setorização
