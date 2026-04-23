@@ -13,6 +13,14 @@ interface Props {
 const STORAGE_KEY = 'carteira:cols:v2';
 const PRIORITY_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF', 'CONSULTOR', 'GERENTE'];
 const DEFAULT_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF', 'TIPO ESCOLA'];
+const COL_LABELS: Record<string, string> = {
+  'COD_PROTHEUS': 'Protheus',
+  'COD_INEP': 'INEP',
+  'NOME ESCOLA': 'Escola',
+  'MUNICIPIO': 'Município',
+  'UF': 'UF',
+};
+const labelOf = (c: string) => COL_LABELS[c] ?? c;
 
 type Row = CarteiraFile['rows'][number];
 
