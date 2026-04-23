@@ -379,7 +379,7 @@ export default function Index() {
               <PageCarteira
                 session={session}
                 censoData={censo}
-                onPickEscola={(inep) => { if (inep) handleSearch(inep); }}
+                onPickEscola={(inep, _nome, coords) => { if (inep) handleSearch(inep, coords ?? null); }}
                 onBack={() => setPage('modo')}
               />
             )}
