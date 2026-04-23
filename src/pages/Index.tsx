@@ -99,6 +99,7 @@ export default function Index() {
     setCompA2(null);
     setEssenciaisInep([]);
     setRaioCustom(null);
+    setRaioPadraoEtapa2(null);
     setRaioFoiAjustado(false);
     setPage(session ? 'modo' : 'login');
   }, [session]);
