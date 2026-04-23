@@ -168,7 +168,6 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {filteredSorted.length} de {rows.length} escolas no arquivo
-            <span className="ml-2 opacity-70">({entry.arquivo})</span>
           </p>
         </div>
         <button
@@ -218,10 +217,10 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
                     <th key={c}>
                       <button
                         onClick={() => toggleSort(c)}
-                        aria-label={`Ordenar por ${c}`}
+                        aria-label={`Ordenar por ${labelOf(c)}`}
                         className="inline-flex items-center gap-1 hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded"
                       >
-                        {c}
+                        {labelOf(c)}
                         {sortCol === c && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                       </button>
                     </th>
@@ -234,7 +233,7 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
                         <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input
                           type="text"
-                          aria-label={`Filtrar ${c}`}
+                          aria-label={`Filtrar ${labelOf(c)}`}
                           placeholder="Filtrar..."
                           value={colFilters[c] || ''}
                           onChange={e => setColFilter(c, e.target.value)}
