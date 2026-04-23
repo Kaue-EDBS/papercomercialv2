@@ -82,9 +82,11 @@ function CompareCard({ escola, label, marketShare }: { escola: EscolaData; label
   );
 }
 
-export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAtual, onRaioChange }: Props) {
+export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAtual, raioPadrao, onRaioChange }: Props) {
   const { censo } = useDataLoader();
-  const [liveRaio, setLiveRaio] = useState<number>(raioAtual ?? analysis.raioOperacional);
+  // Padrão da Etapa 2 — referência FIXA. Se o pai não enviar, cai no raioOperacional inicial.
+  const raioPadraoEtapa2 = raioPadrao ?? analysis.raioOperacional;
+  const [liveRaio, setLiveRaio] = useState<number>(raioAtual ?? raioPadraoEtapa2);
   const [liveAnalysis, setLiveAnalysis] = useState<AnalysisResult>(analysis);
 
   // Sempre que a análise inicial mudar (nova escola), reseta o estado local.
