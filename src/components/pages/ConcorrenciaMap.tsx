@@ -9,9 +9,11 @@ interface Props {
   concorrentes: ConcorrenteInfo[];
   highlightedInep?: string | null;
   onMarkerClick?: (inep: string) => void;
+  /** Quando incrementa, o mapa recentra na escola em análise (ou no primeiro concorrente). */
+  centerSignal?: number;
 }
 
-export default function ConcorrenciaMap({ escola, concorrentes, highlightedInep, onMarkerClick }: Props) {
+export default function ConcorrenciaMap({ escola, concorrentes, highlightedInep, onMarkerClick, centerSignal }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
