@@ -115,6 +115,7 @@ export default function Index() {
     // Etapa 2 começa direto em concorrentes essenciais — sem tela de tipo no meio.
     setEssenciaisInep([]);
     setRaioCustom(null);
+    setRaioPadraoEtapa2(null);
     setRaioFoiAjustado(false);
     setExcluidosInep([]);
     setPresentationType(null);
