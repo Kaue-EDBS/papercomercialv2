@@ -160,6 +160,27 @@ export default function ConcorrenciaMap({ escola, concorrentes, highlightedInep,
     });
   }, [highlightedInep]);
 
+  // Recentraliza no sinal externo ("Centralizar")
+  useEffect(() => {
+    if (centerSignal === undefined) return;
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    let lat: number | null = null;
+    let lng: number | null = null;
+    if (escolaHasCoords) {
+      lat = escolaLat;
+      lng = escolaLng;
+    } else if (plotable.length > 0) {
+      lat = parseFloat(String(plotable[0].escola.Latitude));
+      lng = parseFloat(String(plotable[0].escola.Longitude));
+    }
+    if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) return;
+    try {
+      map.setView([lat, lng], 15, { animate: true });
+    } catch { /* noop */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [centerSignal]);
+
   if (!hasAnything) {
     return null;
   }
