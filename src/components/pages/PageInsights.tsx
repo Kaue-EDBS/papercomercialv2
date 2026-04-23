@@ -1,207 +1,180 @@
 import { AnalysisResult } from '@/lib/types';
 import { num, formatPercent, formatNumber, parseBrNumber } from '@/lib/analysis';
-import { TrendingDown, TrendingUp, Users, Target, DollarSign, Lightbulb } from 'lucide-react';
+import { TrendingDown, TrendingUp, Users, Target, DollarSign, Lightbulb, AlertTriangle, Heart } from 'lucide-react';
+import { useRendaFaixaEtaria } from '@/hooks/useRendaFaixaEtaria';
+import { findRendaByIBGE, buildMatrix, calcAderenciaEconomica, classificarAderencia } from '@/lib/socioeconomico';
 
-interface Props {
-  analysis: AnalysisResult;
+interface Props { analysis: AnalysisResult; }
+
+type Tone = 'teal' | 'navy' | 'lime' | 'risk';
+const toneStyle: Record<Tone, { bg: string; fg: string; label: string }> = {
+  teal: { bg: 'hsl(174, 62%, 96%)', fg: 'hsl(var(--teal))',  label: 'OPORTUNIDADE' },
+  navy: { bg: 'hsl(220, 70%, 96%)', fg: 'hsl(var(--navy))',  label: 'POSICIONAMENTO' },
+  lime: { bg: 'hsl(75, 60%, 94%)',  fg: 'hsl(var(--navy))',  label: 'ADERÊNCIA' },
+  risk: { bg: 'hsl(0, 84%, 96%)',   fg: 'hsl(0, 70%, 45%)',  label: 'RISCO' },
+};
+
+function InsightCard({
+  tone, icon: Icon, title, dado, leitura, implicacao,
+}: { tone: Tone; icon: any; title: string; dado: React.ReactNode; leitura: string; implicacao: string }) {
+  const t = toneStyle[tone];
+  return (
+    <div className="rounded-xl border p-4 space-y-2.5" style={{ background: t.bg, borderColor: t.fg + '33' }}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Icon className="w-4 h-4" style={{ color: t.fg }} />
+          <span className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>{title}</span>
+        </div>
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: t.fg, color: 'white' }}>{t.label}</span>
+      </div>
+      <div className="text-lg sm:text-xl font-bold" style={{ color: t.fg }}>{dado}</div>
+      <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: 'hsl(var(--navy))' }}>
+        <strong>Leitura:</strong> {leitura}
+      </p>
+      <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
+        <strong>Implicação:</strong> {implicacao}
+      </p>
+    </div>
+  );
 }
 
 export default function PageInsights({ analysis }: Props) {
   const { escola, concorrentes, marketShare, demografica, raioOperacional } = analysis;
+  const { data: rendaData } = useRendaFaixaEtaria();
+
   const escolaTotal = num(escola['Alunado Total']);
   const concTotal = concorrentes.reduce((s, c) => s + num(c.escola['Alunado Total']), 0);
   const universo = escolaTotal + concTotal;
-  const isLeader = marketShare.geral >= 20;
-  const isFragmented = marketShare.geral < 10 && concorrentes.length >= 10;
+  const adotamBrasil = concorrentes.filter(c => c.escola['Adota Brasil']?.toLowerCase() === 'sim').length;
 
   const rendaMedia = demografica ? parseBrNumber(demografica['Renda Média']) : 0;
-
   const pop2025_0_4 = demografica ? parseInt(demografica['População por Faixa Etária (2025) - 0 a 4 anos'] || '0') : 0;
   const pop2024_0_4 = demografica ? parseInt(demografica['População por Faixa Etária (2024) - 0 a 4 anos'] || '0') : 0;
   const popGrowth = pop2024_0_4 > 0 ? ((pop2025_0_4 - pop2024_0_4) / pop2024_0_4 * 100) : 0;
 
-  const adotamBrasil = concorrentes.filter(c => c.escola['Adota Brasil']?.toLowerCase() === 'sim').length;
+  // Aderência econômica
+  const rendaRow = findRendaByIBGE(rendaData, String(escola['Código Município']));
+  const matrix = rendaRow ? buildMatrix(rendaRow) : null;
+  const aderencia = matrix ? calcAderenciaEconomica(matrix, escola.Mensalidade) : 0;
+  const aderenteCls = classificarAderencia(aderencia);
 
-  // Find best segment
+  // Segmento líder e mais vulnerável
   const segShares = [
-    { label: 'Educação Infantil', value: marketShare.ei },
-    { label: 'Ens. Fund. AI', value: marketShare.efi },
-    { label: 'Ens. Fund. AF', value: marketShare.efii },
-    { label: 'Ensino Médio', value: marketShare.em },
-  ].filter(s => s.value > 0).sort((a, b) => b.value - a.value);
-  const bestSeg = segShares[0];
+    { label: 'Educação Infantil', key: 'ei', value: marketShare.ei },
+    { label: 'Ens. Fund. Anos Iniciais', key: 'efi', value: marketShare.efi },
+    { label: 'Ens. Fund. Anos Finais', key: 'efii', value: marketShare.efii },
+    { label: 'Ensino Médio', key: 'em', value: marketShare.em },
+  ].filter(s => s.value > 0);
+  const sortedSeg = [...segShares].sort((a, b) => b.value - a.value);
+  const bestSeg = sortedSeg[0];
+  const weakSeg = sortedSeg.length > 1 ? sortedSeg[sortedSeg.length - 1] : null;
+
+  const isLeader = marketShare.geral >= 20;
+  const isFragmented = marketShare.geral < 10 && concorrentes.length >= 10;
+  const highCompetition = concorrentes.length >= 10;
 
   return (
-    <div className="max-w-4xl mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-5 sm:space-y-7">
+    <div className="max-w-5xl mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-5 sm:space-y-7">
       <div>
-        <h2 className="page-title text-xl sm:text-2xl">INSIGHTS E RECOMENDAÇÕES</h2>
-        <p className="page-subtitle text-xs sm:text-sm">Análise estratégica baseada nos dados da área de influência e do município</p>
+        <h2 className="page-title text-xl sm:text-2xl">INSIGHTS ESTRATÉGICOS</h2>
+        <p className="page-subtitle text-xs sm:text-sm">
+          Diagnóstico estruturado: dado observado · leitura · implicação comercial
+        </p>
       </div>
 
-      {/* ─── INSIGHTS ─── */}
-      <div>
-        <h3 className="font-bold text-sm sm:text-base mb-3 sm:mb-4" style={{ color: 'hsl(var(--navy))' }}>Insights Estratégicos</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
 
-          {/* Tendência Demográfica */}
-          {demografica && (
-            <div className="bg-card rounded-xl border p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                {popGrowth >= 0
-                  ? <TrendingUp className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
-                  : <TrendingDown className="w-4 h-4 text-destructive" />}
-                <span className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Tendência Demográfica</span>
-              </div>
-              <div className="text-xl sm:text-2xl font-bold" style={{ color: popGrowth >= 0 ? 'hsl(var(--teal))' : 'hsl(0, 84%, 60%)' }}>
-                {popGrowth >= 0 ? '+' : ''}{popGrowth.toFixed(1).replace('.', ',')}%
-              </div>
-              <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                {popGrowth < 0
-                  ? 'Redução na faixa 0-4 anos (2024→2025). Possível queda na demanda futura por EI.'
-                  : 'Crescimento na faixa 0-4 anos (2024→2025). Potencial de demanda crescente para EI.'}
-              </p>
-            </div>
-          )}
+        {demografica && (
+          <InsightCard
+            tone={popGrowth >= 0 ? 'teal' : 'risk'}
+            icon={popGrowth >= 0 ? TrendingUp : TrendingDown}
+            title="Tendência Demográfica"
+            dado={<>{popGrowth >= 0 ? '+' : ''}{popGrowth.toFixed(1).replace('.', ',')}% <span className="text-xs font-normal text-muted-foreground">na faixa 0–4 (2024→2025)</span></>}
+            leitura={popGrowth >= 0
+              ? 'A base infantil do município cresce, sustentando a demanda futura por Educação Infantil e séries iniciais.'
+              : 'A faixa 0–4 está em retração — a captação de EI tende a ficar mais disputada nos próximos ciclos.'}
+            implicacao={popGrowth >= 0
+              ? 'Reforçar comunicação de Educação Infantil agora protege o pipeline dos próximos anos.'
+              : 'Antecipar ações de retenção e diversificar oferta para reduzir dependência da EI.'}
+          />
+        )}
 
-          {/* Pressão Competitiva */}
-          <div className="bg-card rounded-xl border p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4" style={{ color: 'hsl(var(--navy))' }} />
-              <span className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Pressão Competitiva</span>
-            </div>
-            <div className="text-xl sm:text-2xl font-bold" style={{ color: 'hsl(var(--navy))' }}>
-              {concorrentes.length} <span className="text-sm font-normal text-muted-foreground">concorrentes</span>
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-              {formatNumber(universo)} alunos no universo elegível. {isFragmented ? 'Mercado fragmentado — diferenciação é essencial.' : isLeader ? 'Posição de destaque no mercado local.' : 'Há espaço para ganho de participação.'}
-              {adotamBrasil > 0 && ` ${adotamBrasil} concorrente(s) já adota(m) a Editora do Brasil.`}
-            </p>
-          </div>
+        <InsightCard
+          tone={highCompetition ? 'risk' : 'navy'}
+          icon={Users}
+          title="Pressão Competitiva"
+          dado={<>{concorrentes.length} <span className="text-xs font-normal text-muted-foreground">concorrentes · {formatNumber(universo)} alunos no universo</span></>}
+          leitura={isFragmented
+            ? 'Mercado fragmentado: nenhum player domina, e a diferenciação se torna o principal driver de escolha.'
+            : isLeader
+              ? 'Posição relevante na região — barreira natural à entrada de novos concorrentes.'
+              : 'Concorrência presente, mas há espaço claro para ganho de share via posicionamento.'}
+          implicacao={adotamBrasil > 0
+            ? `${adotamBrasil} concorrente(s) já adota(m) a Editora do Brasil — a parceria fortalece o ecossistema regional.`
+            : 'Nenhum concorrente adota Editora do Brasil — diferencial competitivo disponível para a escola.'}
+        />
 
-          {/* Posicionamento */}
-          <div className="bg-card rounded-xl border p-4 space-y-2">
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
-              <span className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Posicionamento da Escola</span>
-            </div>
-            <div className="text-xl sm:text-2xl font-bold" style={{ color: 'hsl(var(--teal))' }}>
-              {formatPercent(marketShare.geral)}
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-              Market share geral. {bestSeg ? `Maior penetração em ${bestSeg.label} (${formatPercent(bestSeg.value)}).` : ''} Raio operacional de {raioOperacional} km.
-            </p>
-          </div>
+        <InsightCard
+          tone="navy"
+          icon={Target}
+          title="Posicionamento"
+          dado={<>{formatPercent(marketShare.geral)} <span className="text-xs font-normal text-muted-foreground">share geral · raio {raioOperacional} km</span></>}
+          leitura={bestSeg
+            ? `Maior penetração em ${bestSeg.label} (${formatPercent(bestSeg.value)}) — segmento que sustenta a marca da escola na região.`
+            : 'Sem segmento com share dominante claro.'}
+          implicacao={isLeader
+            ? 'Capitalizar a liderança em comunicação ("escola mais escolhida" no segmento forte).'
+            : 'Concentrar esforços comerciais no segmento de maior share antes de expandir frentes.'}
+        />
 
-          {/* Aderência Econômica */}
-          {rendaMedia > 0 && (
-            <div className="bg-card rounded-xl border p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4" style={{ color: 'hsl(var(--lime))' }} />
-                <span className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Aderência Econômica</span>
-              </div>
-              <div className="text-xl sm:text-2xl font-bold" style={{ color: 'hsl(var(--navy))' }}>
-                R$ {rendaMedia.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
-              </div>
-              <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                Renda média municipal. {rendaMedia > 5000 ? 'Perfil favorece propostas de maior valor agregado.' : rendaMedia > 3000 ? 'Espaço para comunicação de custo-benefício.' : 'Fator preço é determinante na decisão.'}
-              </p>
-            </div>
-          )}
+        {matrix && (
+          <InsightCard
+            tone="lime"
+            icon={DollarSign}
+            title="Aderência Econômica"
+            dado={<>{aderencia.toFixed(0)}% <span className="text-xs font-normal text-muted-foreground">da pop. 0–19 nas faixas aderentes</span></>}
+            leitura={`${aderenteCls.label} ao ticket atual${rendaMedia ? ` — renda média municipal R$ ${rendaMedia.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}.` : '.'}`}
+            implicacao={aderencia >= 30
+              ? 'Base sólida para sustentar preço — comunicar valor e diferenciais pedagógicos sem recorrer a desconto.'
+              : aderencia >= 15
+                ? 'Há nicho relevante; reforçar custo-benefício e parcelamento para reduzir sensibilidade a preço.'
+                : 'Atenção à elasticidade — calibrar discurso comercial e considerar política de bolsas/escalonamento.'}
+          />
+        )}
 
-          {/* Oportunidade Comercial */}
-          <div className="bg-card rounded-xl border p-4 space-y-2 sm:col-span-2">
-            <div className="flex items-center gap-2">
-              <Lightbulb className="w-4 h-4" style={{ color: 'hsl(var(--lime))' }} />
-              <span className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Oportunidade Comercial</span>
-            </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-              {escola.Mensalidade && escola.Mensalidade !== '0'
-                ? `A faixa de mensalidade (R$ ${escola.Mensalidade}) deve ser comunicada junto aos diferenciais pedagógicos para reforçar percepção de valor.`
-                : 'A comunicação de valor deve focar nos diferenciais pedagógicos e resultados comprovados.'}
-              {' '}{marketShare.geral < 15 ? 'Com share abaixo de 15%, há potencial relevante de captação.' : 'A posição consolidada permite foco em retenção e upsell.'}
-            </p>
-          </div>
-        </div>
-      </div>
+        <InsightCard
+          tone="teal"
+          icon={Lightbulb}
+          title="Oportunidade Comercial"
+          dado={<>{bestSeg ? bestSeg.label : 'Captação ampla'}</>}
+          leitura={`A vitrine forte em ${bestSeg?.label || 'segmento principal'} é porta de entrada natural — famílias entram aqui e migram entre segmentos da própria escola.`}
+          implicacao="Estruturar funil de captação dedicado ao segmento líder (cadastros → agendas → visitas → matrículas) com meta clara e CPA monitorado."
+        />
 
-      {/* ─── RECOMENDAÇÕES ─── */}
-      <div>
-        <h3 className="font-bold text-sm sm:text-base mb-3 sm:mb-4" style={{ color: 'hsl(var(--navy))' }}>Recomendações Estratégicas</h3>
-        <div className="space-y-3">
+        <InsightCard
+          tone="risk"
+          icon={AlertTriangle}
+          title="Risco de Captação"
+          dado={<>{popGrowth < 0 || isFragmented || aderencia < 15 ? 'Atenção' : 'Controlado'}</>}
+          leitura={[
+            popGrowth < 0 ? 'queda demográfica na base 0–4' : null,
+            isFragmented ? 'mercado pulverizado dilui share' : null,
+            aderencia < 15 ? 'baixa aderência ao ticket' : null,
+            highCompetition ? `${concorrentes.length} concorrentes ativos no raio` : null,
+          ].filter(Boolean).join(' · ') || 'Sem fatores de risco relevantes identificados na área de influência.'}
+          implicacao="Definir meta agressiva (mas factível) e ampliar volume de interessados — captação eficiente exige funil mais largo no topo."
+        />
 
-          <div className="bg-card rounded-xl border p-4">
-            <div className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: 'hsl(var(--teal))' }}>1</span>
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Diferenciação Pedagógica</span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ background: 'hsl(var(--teal))' }}>ALTA PRIORIDADE</span>
-                </div>
-                <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                  <strong>Ação:</strong> Reforçar diferenciais de material didático e proposta pedagógica frente aos {concorrentes.length} concorrentes diretos.
-                </p>
-                <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                  <strong>Objetivo:</strong> Aumentar percepção de valor e justificar posicionamento de preço.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card rounded-xl border p-4">
-            <div className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: 'hsl(var(--teal))' }}>2</span>
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Foco no Segmento de Maior Share</span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold text-white" style={{ background: 'hsl(var(--navy))' }}>ESTRATÉGICA</span>
-                </div>
-                <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                  <strong>Ação:</strong> {bestSeg ? `Concentrar esforços em ${bestSeg.label}, onde a escola detém ${formatPercent(bestSeg.value)} de share.` : 'Identificar o segmento de maior potencial e concentrar esforços de captação.'}
-                </p>
-                <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                  <strong>Objetivo:</strong> Consolidar liderança no segmento mais forte e expandir base de alunos.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card rounded-xl border p-4">
-            <div className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: 'hsl(var(--lime))', color: 'hsl(var(--navy))' }}>3</span>
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Comunicação de Valor</span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold" style={{ background: 'hsl(var(--lime))', color: 'hsl(var(--navy))' }}>TÁTICA</span>
-                </div>
-                <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                  <strong>Ação:</strong> {rendaMedia > 5000 ? 'Posicionar qualidade e resultados como principal argumento comercial.' : 'Enfatizar custo-benefício e retorno sobre investimento educacional.'}
-                </p>
-                <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                  <strong>Objetivo:</strong> Alinhar discurso comercial ao perfil socioeconômico do município{rendaMedia > 0 ? ` (renda média R$ ${rendaMedia.toLocaleString('pt-BR', { maximumFractionDigits: 0 })})` : ''}.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card rounded-xl border p-4">
-            <div className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2" style={{ borderColor: 'hsl(var(--navy))', color: 'hsl(var(--navy))' }}>4</span>
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Monitoramento Competitivo</span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold border" style={{ borderColor: 'hsl(var(--navy))', color: 'hsl(var(--navy))' }}>CONTÍNUA</span>
-                </div>
-                <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                  <strong>Ação:</strong> Acompanhar periodicamente movimentos de preço, segmento e posicionamento dos principais concorrentes na área de influência.
-                </p>
-                <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
-                  <strong>Objetivo:</strong> Antecipar ameaças e identificar oportunidades de captação antes da concorrência.
-                </p>
-              </div>
-            </div>
-          </div>
-
-        </div>
+        {weakSeg && (
+          <InsightCard
+            tone="navy"
+            icon={Heart}
+            title="Oportunidade de Retenção"
+            dado={<>{weakSeg.label} <span className="text-xs font-normal text-muted-foreground">share {formatPercent(weakSeg.value)}</span></>}
+            leitura={`Segmento mais vulnerável da escola — risco de evasão natural (~12%) e dificuldade de reposição quando o share está baixo.`}
+            implicacao="Programa estruturado de rematrícula antecipada e jornada da família reduzem a perda. Lembre-se: cada aluno retido vale por 8–12 anos de ciclo."
+          />
+        )}
       </div>
     </div>
   );
