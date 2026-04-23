@@ -226,6 +226,30 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
           Confirmar e seguir
         </button>
       </div>
+
+      {askRemove && (
+        <RemoveModal
+          nome={askRemove.nome}
+          onCancel={() => setAskRemove(null)}
+          onAuto={() => { onRemoveConcorrente(askRemove.inep, 'auto'); setAskRemove(null); }}
+          onLeave={() => { onRemoveConcorrente(askRemove.inep, 'leave'); setAskRemove(null); }}
+          onManual={() => { setPickReplaceFor(askRemove); setAskRemove(null); }}
+        />
+      )}
+
+      {pickReplaceFor && (
+        <ManualPickModal
+          escola={escola}
+          censoData={censoData}
+          jaPresentes={concorrentes.map(c => String(c.escola['Código Inep']))}
+          forNome={pickReplaceFor.nome}
+          onCancel={() => setPickReplaceFor(null)}
+          onPick={(inep) => {
+            onRemoveConcorrente(pickReplaceFor.inep, { manualInep: inep });
+            setPickReplaceFor(null);
+          }}
+        />
+      )}
     </div>
   );
 }
