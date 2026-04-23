@@ -7,6 +7,18 @@ export interface CarteiraFile {
 }
 
 const cache = new Map<string, CarteiraFile>();
+const inflight = new Map<string, Promise<CarteiraFile>>();
+
+/** Dispara o download em background (sem montar componente). Idempotente. */
+export function prefetchCarteira(arquivo: string | null | undefined) {
+  if (!arquivo) return;
+  if (cache.has(arquivo) || inflight.has(arquivo)) return;
+  const p = fetch(`/data/carteiras/${arquivo}`)
+    .then(r => { if (!r.ok) throw new Error('not found'); return r.json(); })
+    .then((d: CarteiraFile) => { cache.set(arquivo, d); inflight.delete(arquivo); return d; })
+    .catch(e => { inflight.delete(arquivo); throw e; });
+  inflight.set(arquivo, p);
+}
 
 /**
  * Carrega o XLS individual (convertido para JSON) do consultor selecionado.
