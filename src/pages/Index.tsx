@@ -378,6 +378,7 @@ export default function Index() {
             {page === 'carteira' && session && (
               <PageCarteira
                 session={session}
+                censoData={censo}
                 onPickEscola={(inep) => { if (inep) handleSearch(inep); }}
                 onBack={() => setPage('modo')}
               />

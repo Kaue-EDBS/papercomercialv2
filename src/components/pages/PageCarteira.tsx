@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ConsultorSession } from '@/lib/types';
+import { ConsultorSession, EscolaData } from '@/lib/types';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
 import { useCarteira, CarteiraFile } from '@/hooks/useCarteira';
+import { resolveInepFromCarteira } from '@/lib/analysis';
 import { ArrowUp, ArrowDown, Settings2, X, Search, AlertTriangle } from 'lucide-react';
 
 interface Props {
   session: ConsultorSession;
   onPickEscola: (codInep: string, nomeEscola: string) => void;
   onBack: () => void;
+  censoData: EscolaData[];
 }
 
 const STORAGE_KEY = 'carteira:cols:v2';
@@ -27,7 +29,7 @@ const labelOf = (c: string) => COL_LABELS[c] ?? c;
 
 type Row = CarteiraFile['rows'][number];
 
-export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
+export default function PageCarteira({ session, onPickEscola, onBack, censoData }: Props) {
   const { findByCodigo, findByNome, loading: loadingManifest } = useCarteiraManifest();
   const entry = useMemo(
     () => findByCodigo(session.codigo) || findByNome(session.nome),
@@ -39,6 +41,8 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
   const [showColPicker, setShowColPicker] = useState(false);
   const [picked, setPicked] = useState<string[] | null>(null);
   const [confirmEscola, setConfirmEscola] = useState<Row | null>(null);
+  const [resolvedInep, setResolvedInep] = useState<string | null>(null);
+  const [resolveError, setResolveError] = useState<string | null>(null);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [colFilters, setColFilters] = useState<Record<string, string>>({});
   const [sortCol, setSortCol] = useState<string | null>(null);
@@ -100,15 +104,33 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
 
   const confirmPaper = () => {
     if (!confirmEscola) return;
-    const inep = String(confirmEscola['COD_INEP'] ?? '').trim();
+    const inepDireto = String(confirmEscola['COD_INEP'] ?? '').trim();
     const nome = String(confirmEscola['NOME ESCOLA'] ?? '').trim();
-    if (!inep) {
-      // Sem INEP — não dá para abrir paper. Aviso permanece visível no modal.
-      return;
-    }
+    const inepFinal = inepDireto && inepDireto !== '-' ? inepDireto : (resolvedInep ?? '');
+    if (!inepFinal) return;
     setConfirmEscola(null);
-    onPickEscola(inep, nome);
+    setResolvedInep(null);
+    setResolveError(null);
+    onPickEscola(inepFinal, nome);
   };
+
+  // Quando abrir o modal sem INEP, tenta resolver via Protheus (nome + município + UF + coords)
+  useEffect(() => {
+    if (!confirmEscola) { setResolvedInep(null); setResolveError(null); return; }
+    const direto = String(confirmEscola['COD_INEP'] ?? '').trim();
+    if (direto && direto !== '-') { setResolvedInep(null); setResolveError(null); return; }
+    if (!censoData?.length) return;
+    const inep = resolveInepFromCarteira({
+      nome: String(confirmEscola['NOME ESCOLA'] ?? ''),
+      municipio: String(confirmEscola['MUNICIPIO'] ?? ''),
+      uf: String(confirmEscola['UF'] ?? ''),
+      codMunicipio: confirmEscola['COD MUNICIPIO'] as string | number | undefined,
+      latitude: confirmEscola['LATITUDE'] as string | number | undefined,
+      longitude: confirmEscola['LONGITUDE'] as string | number | undefined,
+    }, censoData);
+    if (inep) { setResolvedInep(inep); setResolveError(null); }
+    else { setResolvedInep(null); setResolveError('Não localizamos esta escola no censo automaticamente.'); }
+  }, [confirmEscola, censoData]);
 
   const selectedRow = selectedIdx !== null ? filteredSorted[selectedIdx] : null;
 
@@ -312,28 +334,48 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
               Você selecionou: <strong className="text-foreground">{String(confirmEscola['NOME ESCOLA'] ?? '—')}</strong>
               {confirmEscola['MUNICIPIO'] && <> em <strong className="text-foreground">{String(confirmEscola['MUNICIPIO'])}/{String(confirmEscola['UF'] ?? '')}</strong></>}.
             </p>
-            {String(confirmEscola['COD_INEP'] ?? '').trim() ? (
+            {(() => {
+              const direto = String(confirmEscola['COD_INEP'] ?? '').trim();
+              const temInep = !!direto && direto !== '-';
+              if (temInep) return (
               <>
-                <p className="text-xs text-muted-foreground">Código INEP: {String(confirmEscola['COD_INEP'])}</p>
+                <p className="text-xs text-muted-foreground">Código INEP: {direto}</p>
                 <p className="text-xs" style={{ color: 'hsl(var(--teal))' }}>
                   Ao confirmar, você seguirá para a etapa de validação dos concorrentes.
                 </p>
               </>
-            ) : (
-              <div className="flex gap-2 items-start p-3 rounded-lg border" style={{ background: 'hsl(48, 96%, 95%)', borderColor: 'hsl(45, 90%, 70%)' }}>
-                <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-600 shrink-0" />
-                <div className="text-xs text-foreground">
-                  Esta escola <strong>não possui Código INEP</strong> cadastrado. A busca principal usa INEP — nesses casos raros, localize a escola pelo <strong>Código Protheus {String(confirmEscola['COD_PROTHEUS'] ?? '—')}</strong> nos próximos passos ou peça atualização do cadastro ao seu gestor.
+              );
+              if (resolvedInep) return (
+                <div className="flex gap-2 items-start p-3 rounded-lg border" style={{ background: 'hsl(var(--teal-light))', borderColor: 'hsl(var(--teal))' }}>
+                  <div className="text-xs text-foreground">
+                    Esta escola não tinha INEP no cadastro, mas localizamos no censo pelo
+                    {' '}<strong>Código Protheus {String(confirmEscola['COD_PROTHEUS'] ?? '—')}</strong>:{' '}
+                    INEP <strong>{resolvedInep}</strong>. Pode confirmar para gerar o paper.
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+              return (
+                <div className="flex gap-2 items-start p-3 rounded-lg border" style={{ background: 'hsl(48, 96%, 95%)', borderColor: 'hsl(45, 90%, 70%)' }}>
+                  <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-600 shrink-0" />
+                  <div className="text-xs text-foreground">
+                    Esta escola <strong>não possui Código INEP</strong> cadastrado e não conseguimos localizá-la automaticamente pelo
+                    {' '}<strong>Código Protheus {String(confirmEscola['COD_PROTHEUS'] ?? '—')}</strong>.
+                    {resolveError ? <> {resolveError}</> : null}
+                    {' '}Peça atualização do cadastro ao seu gestor.
+                  </div>
+                </div>
+              );
+            })()}
             <div className="flex gap-2 pt-2">
               <button onClick={() => setConfirmEscola(null)} className="flex-1 py-2.5 rounded-lg border font-semibold text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary">
                 Cancelar
               </button>
               <button
                 onClick={confirmPaper}
-                disabled={!String(confirmEscola['COD_INEP'] ?? '').trim()}
+                disabled={(() => {
+                  const d = String(confirmEscola['COD_INEP'] ?? '').trim();
+                  return !((d && d !== '-') || resolvedInep);
+                })()}
                 className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-primary-foreground bg-primary hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirmar e gerar paper
