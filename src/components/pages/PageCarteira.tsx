@@ -98,6 +98,10 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
     if (!confirmEscola) return;
     const inep = String(confirmEscola['COD_INEP'] ?? '').trim();
     const nome = String(confirmEscola['NOME ESCOLA'] ?? '').trim();
+    if (!inep) {
+      // Sem INEP — não dá para abrir paper. Aviso permanece visível no modal.
+      return;
+    }
     setConfirmEscola(null);
     onPickEscola(inep, nome);
   };
@@ -304,15 +308,30 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
               Você selecionou: <strong className="text-foreground">{String(confirmEscola['NOME ESCOLA'] ?? '—')}</strong>
               {confirmEscola['MUNICIPIO'] && <> em <strong className="text-foreground">{String(confirmEscola['MUNICIPIO'])}/{String(confirmEscola['UF'] ?? '')}</strong></>}.
             </p>
-            <p className="text-xs text-muted-foreground">Código Inep: {String(confirmEscola['COD_INEP'] ?? '—')}</p>
-            <p className="text-xs" style={{ color: 'hsl(var(--teal))' }}>
-              Ao confirmar, você seguirá para a etapa de validação dos concorrentes.
-            </p>
+            {String(confirmEscola['COD_INEP'] ?? '').trim() ? (
+              <>
+                <p className="text-xs text-muted-foreground">Código INEP: {String(confirmEscola['COD_INEP'])}</p>
+                <p className="text-xs" style={{ color: 'hsl(var(--teal))' }}>
+                  Ao confirmar, você seguirá para a etapa de validação dos concorrentes.
+                </p>
+              </>
+            ) : (
+              <div className="flex gap-2 items-start p-3 rounded-lg border" style={{ background: 'hsl(48, 96%, 95%)', borderColor: 'hsl(45, 90%, 70%)' }}>
+                <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-600 shrink-0" />
+                <div className="text-xs text-foreground">
+                  Esta escola <strong>não possui Código INEP</strong> cadastrado. A busca principal usa INEP — nesses casos raros, localize a escola pelo <strong>Código Protheus {String(confirmEscola['COD_PROTHEUS'] ?? '—')}</strong> nos próximos passos ou peça atualização do cadastro ao seu gestor.
+                </div>
+              </div>
+            )}
             <div className="flex gap-2 pt-2">
               <button onClick={() => setConfirmEscola(null)} className="flex-1 py-2.5 rounded-lg border font-semibold text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary">
                 Cancelar
               </button>
-              <button onClick={confirmPaper} className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-primary-foreground bg-primary hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+              <button
+                onClick={confirmPaper}
+                disabled={!String(confirmEscola['COD_INEP'] ?? '').trim()}
+                className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-primary-foreground bg-primary hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Confirmar e gerar paper
               </button>
             </div>

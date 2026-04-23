@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, X, Check, SkipForward } from 'lucide-react';
+import { Search, X, Check, SkipForward, Info } from 'lucide-react';
 import { EscolaData } from '@/lib/types';
 
 interface Props {
@@ -9,6 +9,8 @@ interface Props {
   onConfirm: (inepList: string[]) => void;
   onSkip: () => void;
 }
+
+const INTRO_HIDE_KEY = 'etapa2:intro:hide';
 
 /**
  * 2.1 — Concorrentes essenciais.
@@ -20,6 +22,24 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
   const [selected, setSelected] = useState<string[]>(initialEssenciais);
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showIntro, setShowIntro] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  useEffect(() => {
+    try {
+      const hide = localStorage.getItem(INTRO_HIDE_KEY);
+      if (hide !== '1') setShowIntro(true);
+    } catch {
+      setShowIntro(true);
+    }
+  }, []);
+
+  const closeIntro = (persist: boolean) => {
+    if (persist) {
+      try { localStorage.setItem(INTRO_HIDE_KEY, '1'); } catch { /* noop */ }
+    }
+    setShowIntro(false);
+  };
 
   // Busca dentro do mesmo município por padrão (mais relevante p/ concorrência)
   const codMun = String(escola['Código Município']);
