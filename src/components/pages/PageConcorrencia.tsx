@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnalysisResult, EscolaData, ConcorrenteInfo } from '@/lib/types';
 import { num, formatNumber, formatPercent, getSegmentos, getMensalidadeFaixa, rebuildConcorrentes } from '@/lib/analysis';
 import { useDataLoader } from '@/hooks/useDataLoader';
-import { MapPin, Users, Target, GitCompare, Filter, X, Ruler } from 'lucide-react';
+import { MapPin, Users, Target, GitCompare, Filter, X, Ruler, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import ConcorrenciaMap from './ConcorrenciaMap';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import ConcorrenciaTable from '@/components/concorrencia/ConcorrenciaTable';
@@ -12,6 +13,8 @@ interface Props {
   analysis: AnalysisResult;
   /** INEPs marcados como essenciais na Etapa 2; sempre permanecem ao recalcular pelo raio. */
   essenciaisInep?: string[];
+  /** Raio atualmente em vigor (vindo do pai). Permite preservar o ajuste ao sair e voltar à página. */
+  raioAtual?: number;
   /** Notifica o pai sobre alteração ao vivo do raio na régua. */
   onRaioChange?: (raioKm: number) => void;
 }
