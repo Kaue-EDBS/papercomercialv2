@@ -113,15 +113,6 @@ function Indicator({ label, value }: { label: string; value: string }) {
   );
 }
 
-function DetailItem({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">{label}</div>
-      <div className="text-sm" style={{ color: 'hsl(var(--navy))' }}>{children}</div>
-    </div>
-  );
-}
-
 function RemoveModal({
   nome, onCancel, onAuto, onLeave, onManual,
 }: { nome: string; onCancel: () => void; onAuto: () => void; onLeave: () => void; onManual: () => void; }) {
