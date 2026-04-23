@@ -139,10 +139,21 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
                         </div>
                       )}
                     </td>
+                    <td className="text-center align-middle">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setAskRemove({ inep, nome: c.escola.Escola }); }}
+                        aria-label={`Excluir ${c.escola.Escola} da lista`}
+                        title="Excluir concorrente"
+                        className="p-1.5 rounded hover:bg-background/60 focus-visible:ring-2 focus-visible:ring-primary text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                   {isOpen && (
                     <tr key={inep + '-detail'} style={{ background: 'hsl(var(--beige) / 0.5)' }}>
-                      <td colSpan={7} className="px-4 py-3">
+                      <td colSpan={8} className="px-4 py-3">
                         <div className="rounded-lg border bg-card p-3 sm:p-4 space-y-3" style={{ borderColor: 'hsl(var(--teal-light))' }}>
                           <div className="flex items-start gap-2">
                             <Info className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(var(--teal))' }} />
