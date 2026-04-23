@@ -11,6 +11,7 @@ import PageLogin from '@/components/pages/PageLogin';
 import PageModo from '@/components/pages/PageModo';
 import PageCarteira from '@/components/pages/PageCarteira';
 import PageCapa from '@/components/pages/PageCapa';
+import PagePaperBusca from '@/components/pages/PagePaperBusca';
 import PageTipo from '@/components/pages/PageTipo';
 import PageAbertura from '@/components/pages/PageAbertura';
 import PageResumo from '@/components/pages/PageResumo';
@@ -81,7 +82,7 @@ export default function Index() {
 
   const handleSelectModo = useCallback((modo: 'carteira' | 'paper') => {
     if (modo === 'carteira') setPage('carteira');
-    else setPage('capa');
+    else setPage('paper');
   }, []);
 
   const handleNewSearch = useCallback(() => {
@@ -330,6 +331,13 @@ export default function Index() {
               />
             )}
             {page === 'capa' && <PageCapa censoData={censo} onSearch={handleSearch} onCompare={handleCompare} />}
+            {page === 'paper' && (
+              <PagePaperBusca
+                censoData={censo}
+                onConfirm={handleSearch}
+                onBack={() => setPage(session ? 'modo' : 'login')}
+              />
+            )}
             {page === 'tipo' && analysis && <PageTipo escola={analysis.escola} onSelect={handleSelectType} onBack={() => { setAnalysis(null); setPage(session ? 'modo' : 'capa'); }} />}
             {page === 'concEssenciais' && analysis && (
               <PageConcEssenciais
