@@ -331,3 +331,30 @@ export function getSegmentosLabel(e: EscolaData): string {
 }
 
 export { getSegmentos, num, parseBrNumber, getMensalidadeFaixa };
+
+/**
+ * Devolve o próximo concorrente elegível para preencher uma vaga liberada,
+ * respeitando os mesmos critérios usados pelo `rebuildConcorrentes` e
+ * excluindo INEPs já presentes na lista atual ou descartados pelo consultor.
+ */
+export function pickReplacement(
+  base: AnalysisResult,
+  censoData: EscolaData[],
+  options: { essenciaisInep?: string[]; raioKm?: number; excludeInep: string[] } = { excludeInep: [] }
+): EscolaData | null {
+  const max = (base.concorrentes?.length ?? 0) + 1 + (options.excludeInep?.length ?? 0) + 5;
+  const enlarged = rebuildConcorrentes(base, censoData, {
+    essenciaisInep: options.essenciaisInep,
+    raioKm: options.raioKm,
+    max,
+  });
+  const skip = new Set(options.excludeInep.map(String));
+  const presentes = new Set(base.concorrentes.map(c => String(c.escola['Código Inep'])));
+  for (const c of enlarged.concorrentes) {
+    const inep = String(c.escola['Código Inep']);
+    if (skip.has(inep)) continue;
+    if (presentes.has(inep)) continue;
+    return c.escola;
+  }
+  return null;
+}
