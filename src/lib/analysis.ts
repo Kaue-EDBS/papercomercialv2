@@ -358,3 +358,95 @@ export function pickReplacement(
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Fallback resolver: localizar uma escola no censo quando o COD_INEP da
+// carteira está vazio. Usa nome + município + UF (com normalização) e,
+// quando disponível, prioriza o candidato mais próximo geograficamente.
+// ---------------------------------------------------------------------------
+function normalizeName(s: string): string {
+  return String(s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokenOverlap(a: string, b: string): number {
+  const A = new Set(a.split(' ').filter(t => t.length > 2));
+  const B = new Set(b.split(' ').filter(t => t.length > 2));
+  if (!A.size || !B.size) return 0;
+  let inter = 0;
+  A.forEach(t => { if (B.has(t)) inter++; });
+  return inter / Math.max(A.size, B.size);
+}
+
+export interface CarteiraEscolaHint {
+  nome: string;
+  municipio?: string;
+  uf?: string;
+  codMunicipio?: string | number;
+  latitude?: number | string;
+  longitude?: number | string;
+}
+
+/**
+ * Tenta localizar a escola no censo a partir dos dados da carteira (Protheus).
+ * Útil quando o COD_INEP está vazio. Retorna o Código Inep ou null.
+ */
+export function resolveInepFromCarteira(
+  hint: CarteiraEscolaHint,
+  censoData: EscolaData[],
+): string | null {
+  const target = normalizeName(hint.nome);
+  if (!target) return null;
+  const ufHint = String(hint.uf || '').trim().toUpperCase();
+  const munHint = normalizeName(hint.municipio || '');
+  const codMun = hint.codMunicipio != null ? String(hint.codMunicipio).replace(/\D/g, '') : '';
+  const lat = parseFloat(String(hint.latitude ?? ''));
+  const lon = parseFloat(String(hint.longitude ?? ''));
+  const hasCoords = !isNaN(lat) && !isNaN(lon);
+
+  // Pré-filtra por município (código) ou (nome + UF)
+  const pool = censoData.filter(e => {
+    if (codMun) {
+      const c = String(e['Código Município'] || '').replace(/\D/g, '');
+      if (c === codMun) return true;
+      if (codMun.length === 7 && c === codMun.slice(0, 6)) return true;
+      if (c.length === 7 && c.slice(0, 6) === codMun) return true;
+    }
+    if (munHint && ufHint) {
+      return normalizeName(String(e.Município || '')) === munHint && String(e.UF || '').toUpperCase() === ufHint;
+    }
+    return false;
+  });
+  if (!pool.length) return null;
+
+  let best: { e: EscolaData; score: number } | null = null;
+  for (const e of pool) {
+    const nome = normalizeName(String(e.Escola || ''));
+    if (!nome) continue;
+    let score = 0;
+    if (nome === target) score = 100;
+    else if (nome.includes(target) || target.includes(nome)) score = 80;
+    else score = tokenOverlap(nome, target) * 70;
+
+    if (hasCoords) {
+      const eLat = parseFloat(String(e.Latitude));
+      const eLon = parseFloat(String(e.Longitude));
+      if (!isNaN(eLat) && !isNaN(eLon)) {
+        const d = haversine(lat, lon, eLat, eLon);
+        // bônus por proximidade (até +20)
+        if (d < 0.2) score += 20;
+        else if (d < 1) score += 12;
+        else if (d < 3) score += 6;
+      }
+    }
+    if (!best || score > best.score) best = { e, score };
+  }
+  // Limiar mínimo para evitar match espúrio
+  if (!best || best.score < 45) return null;
+  return String(best.e['Código Inep']);
+}
