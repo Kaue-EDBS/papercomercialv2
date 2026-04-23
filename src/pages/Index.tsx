@@ -433,7 +433,15 @@ export default function Index() {
               <PageConcorrencia
                 analysis={analysis}
                 essenciaisInep={essenciaisInep}
-                onRaioChange={(km) => { setRaioCustom(km); setRaioFoiAjustado(true); }}
+                raioAtual={raioCustom ?? analysis.raioOperacional}
+                onRaioChange={(km) => {
+                  setRaioCustom(km);
+                  setRaioFoiAjustado(true);
+                  // Reconstrói a análise global para que Mensalidade, Market Share e demais
+                  // páginas da Etapa 3 acompanhem o novo raio definido na régua.
+                  const rebuilt = rebuildConcorrentes(analysis, censo, { essenciaisInep, raioKm: km });
+                  setAnalysis(rebuilt);
+                }}
               />
             )}
             {page === 'marketshare' && analysis && <PageMarketShare analysis={analysis} />}
