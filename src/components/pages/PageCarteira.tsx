@@ -3,11 +3,12 @@ import { ConsultorSession, EscolaData } from '@/lib/types';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
 import { useCarteira, CarteiraFile } from '@/hooks/useCarteira';
 import { resolveInepFromCarteira } from '@/lib/analysis';
+import { useLatLongProtheus } from '@/hooks/useLatLongProtheus';
 import { ArrowUp, ArrowDown, Settings2, X, Search, AlertTriangle } from 'lucide-react';
 
 interface Props {
   session: ConsultorSession;
-  onPickEscola: (codInep: string, nomeEscola: string) => void;
+  onPickEscola: (codInep: string, nomeEscola: string, coordsOverride?: { lat: number; lng: number } | null) => void;
   onBack: () => void;
   censoData: EscolaData[];
 }
@@ -31,6 +32,7 @@ type Row = CarteiraFile['rows'][number];
 
 export default function PageCarteira({ session, onPickEscola, onBack, censoData }: Props) {
   const { findByCodigo, findByNome, loading: loadingManifest } = useCarteiraManifest();
+  const { lookup: lookupLatLong } = useLatLongProtheus();
   const entry = useMemo(
     () => findByCodigo(session.codigo) || findByNome(session.nome),
     [session, findByCodigo, findByNome],
@@ -108,10 +110,26 @@ export default function PageCarteira({ session, onPickEscola, onBack, censoData 
     const nome = String(confirmEscola['NOME ESCOLA'] ?? '').trim();
     const inepFinal = inepDireto && inepDireto !== '-' ? inepDireto : (resolvedInep ?? '');
     if (!inepFinal) return;
+    // Fallback de lat/long: se a escola no censo não tiver coords mas a carteira/lookup tiver,
+    // propaga como override (será aplicado em runAnalysis SOMENTE se faltar no censo).
+    const escCenso = censoData.find(e => String(e['Código Inep']) === String(inepFinal));
+    const lat = escCenso ? parseFloat(String(escCenso.Latitude)) : NaN;
+    const lon = escCenso ? parseFloat(String(escCenso.Longitude)) : NaN;
+    let coords: { lat: number; lng: number } | null = null;
+    if (isNaN(lat) || isNaN(lon)) {
+      const carLat = parseFloat(String(confirmEscola['LATITUDE'] ?? ''));
+      const carLon = parseFloat(String(confirmEscola['LONGITUDE'] ?? ''));
+      if (!isNaN(carLat) && !isNaN(carLon)) {
+        coords = { lat: carLat, lng: carLon };
+      } else {
+        const hit = lookupLatLong(confirmEscola['COD_PROTHEUS'] as string | number);
+        if (hit) coords = hit;
+      }
+    }
     setConfirmEscola(null);
     setResolvedInep(null);
     setResolveError(null);
-    onPickEscola(inepFinal, nome);
+    onPickEscola(inepFinal, nome, coords);
   };
 
   // Quando abrir o modal sem INEP, tenta resolver via Protheus (nome + município + UF + coords)

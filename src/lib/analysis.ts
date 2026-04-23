@@ -184,10 +184,21 @@ export function rebuildConcorrentes(
 export function runAnalysis(
   codigoInep: string,
   censoData: EscolaData[],
-  demoData: DemograficaData[]
+  demoData: DemograficaData[],
+  coordsOverride?: { lat: number; lng: number } | null,
 ): AnalysisResult | null {
-  const escola = censoData.find(e => String(e['Código Inep']) === String(codigoInep));
-  if (!escola) return null;
+  const found = censoData.find(e => String(e['Código Inep']) === String(codigoInep));
+  if (!found) return null;
+  // Aplica fallback de coordenadas (origem: lookup por Protheus) APENAS se faltarem no censo.
+  let escola = found;
+  if (coordsOverride) {
+    const lat = parseFloat(String(found.Latitude));
+    const lon = parseFloat(String(found.Longitude));
+    const semCoords = isNaN(lat) || isNaN(lon);
+    if (semCoords) {
+      escola = { ...found, Latitude: String(coordsOverride.lat), Longitude: String(coordsOverride.lng) };
+    }
+  }
 
   const codMun = String(escola['Código Município']);
   const escolasMunicipio = censoData.filter(e => String(e['Código Município']) === codMun);

@@ -101,9 +101,9 @@ export default function Index() {
     setPage(session ? 'modo' : 'login');
   }, [session]);
 
-  const handleSearch = useCallback((codigo: string) => {
+  const handleSearch = useCallback((codigo: string, coordsOverride?: { lat: number; lng: number } | null) => {
     setError('');
-    const result = runAnalysis(codigo.trim(), censo, demo);
+    const result = runAnalysis(codigo.trim(), censo, demo, coordsOverride ?? null);
     if (!result) {
       setError(`Não encontramos a escola para o Código Inep "${codigo}". Confira o número e tente de novo.`);
       return;
@@ -379,7 +379,7 @@ export default function Index() {
               <PageCarteira
                 session={session}
                 censoData={censo}
-                onPickEscola={(inep) => { if (inep) handleSearch(inep); }}
+                onPickEscola={(inep, _nome, coords) => { if (inep) handleSearch(inep, coords ?? null); }}
                 onBack={() => setPage('modo')}
               />
             )}
