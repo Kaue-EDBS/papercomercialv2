@@ -18,7 +18,8 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'mensalidade', label: 'Mensalidade', short: '6' },
   { id: 'socioeconomico', label: 'Socioeconômico', short: '7' },
   { id: 'insights', label: 'Insights', short: '8' },
-  { id: 'encerramento', label: 'Encerramento', short: '9' },
+  { id: 'planoAcao', label: 'Plano de Ação', short: '9' },
+  { id: 'encerramento', label: 'Encerramento', short: '10' },
 ];
 
 function FullscreenButton() {
