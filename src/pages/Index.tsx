@@ -6,7 +6,6 @@ import { AppPage, PresentationType, AnalysisResult, ConsultorSession } from '@/l
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import NavigationBar from '@/components/NavigationBar';
-import ContextBar from '@/components/ContextBar';
 import PageLogin from '@/components/pages/PageLogin';
 import PageModo from '@/components/pages/PageModo';
 import PageCarteira from '@/components/pages/PageCarteira';
