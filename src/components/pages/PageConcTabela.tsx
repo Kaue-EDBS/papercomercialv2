@@ -45,17 +45,18 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
       </div>
 
       <div className="bg-card rounded-xl border overflow-hidden">
-        <div className="overflow-x-auto max-h-[65vh] overflow-y-auto">
+        <div className="overflow-x-auto max-h-[65vh] overflow-y-auto overscroll-contain" tabIndex={0} aria-label="Tabela de concorrentes (rolagem própria)">
           <table className="table-premium">
             <thead className="sticky top-0 z-10">
               <tr>
                 <th className="w-8" aria-label="Expandir"></th>
-                <th className="min-w-[200px]">Escola</th>
+                <th className="min-w-[240px]">Escola</th>
                 <th className="w-28" title="Como esta escola entrou na lista de concorrentes">Origem</th>
                 <th className="w-24">Matr.</th>
                 <th className="w-28">Distância</th>
                 <th className="w-32">Segmentos</th>
                 <th className="w-28">Mensalidade</th>
+                <th className="w-10" aria-label="Ações"></th>
               </tr>
             </thead>
             <tbody>
