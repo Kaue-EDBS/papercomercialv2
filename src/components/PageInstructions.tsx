@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { HelpCircle, X, Info } from 'lucide-react';
+import { HelpCircle, X, Info, Minus } from 'lucide-react';
 import { AppPage } from '@/lib/types';
 
 interface PageInstructionsProps {
@@ -29,11 +29,13 @@ function writeHidden(s: Set<string>) {
  */
 export default function PageInstructions({ page, title, body }: PageInstructionsProps) {
   const [open, setOpen] = useState(false);
+  const [minimized, setMinimized] = useState(false);
   const [dontShow, setDontShow] = useState(false);
 
   useEffect(() => {
     const hidden = readHidden();
     setOpen(!hidden.has(page));
+    setMinimized(false);
     setDontShow(false);
   }, [page]);
 
@@ -44,9 +46,10 @@ export default function PageInstructions({ page, title, body }: PageInstructions
       writeHidden(hidden);
     }
     setOpen(false);
+    setMinimized(false);
   };
 
-  const reopen = () => setOpen(true);
+  const reopen = () => { setOpen(true); setMinimized(false); };
 
   return (
     <>
@@ -64,16 +67,31 @@ export default function PageInstructions({ page, title, body }: PageInstructions
         </button>
       )}
 
+      {/* Caixa de instruções minimizada — pílula */}
+      {open && minimized && (
+        <button
+          type="button"
+          onClick={() => setMinimized(false)}
+          aria-label="Expandir instruções"
+          title={`Instruções: ${title}`}
+          className="fixed bottom-4 right-4 z-30 inline-flex items-center gap-1.5 pl-2.5 pr-3 py-1.5 rounded-full shadow-lg border-2 bg-card text-xs font-semibold transition-all hover:scale-[1.03] focus-visible:ring-2 focus-visible:ring-offset-2"
+          style={{ borderColor: 'hsl(var(--teal))', color: 'hsl(var(--navy))' }}
+        >
+          <Info className="w-3.5 h-3.5" style={{ color: 'hsl(var(--teal))' }} />
+          {title}
+        </button>
+      )}
+
       {/* Caixa de instruções */}
-      {open && (
+      {open && !minimized && (
         <div
-          className="fixed bottom-4 right-4 z-30 w-[min(380px,calc(100vw-2rem))] rounded-2xl border-2 shadow-xl bg-card overflow-hidden animate-in fade-in slide-in-from-bottom-2"
+          className="fixed bottom-4 right-4 z-30 w-[min(320px,calc(100vw-2rem))] rounded-2xl border-2 shadow-xl bg-card overflow-hidden animate-in fade-in slide-in-from-bottom-2"
           style={{ borderColor: 'hsl(var(--teal))' }}
           role="region"
           aria-label={`Instruções: ${title}`}
         >
           <div
-            className="flex items-center justify-between px-4 py-2.5 gap-2"
+            className="flex items-center justify-between px-3 py-2 gap-2"
             style={{ background: 'hsl(var(--teal-light))' }}
           >
             <div className="flex items-center gap-2 min-w-0">
@@ -82,19 +100,30 @@ export default function PageInstructions({ page, title, body }: PageInstructions
                 {title}
               </h3>
             </div>
-            <button
-              type="button"
-              onClick={close}
-              aria-label="Fechar instruções"
-              className="p-1 rounded-md hover:bg-card focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setMinimized(true)}
+                aria-label="Minimizar instruções"
+                title="Minimizar"
+                className="p-1 rounded-md hover:bg-card focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={close}
+                aria-label="Fechar instruções"
+                className="p-1 rounded-md hover:bg-card focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-          <div className="px-4 py-3 text-sm text-foreground space-y-2 max-h-[40vh] overflow-y-auto">
+          <div className="px-3 py-2.5 text-[13px] text-foreground space-y-2 max-h-[35vh] overflow-y-auto">
             {body}
           </div>
-          <div className="px-4 py-2.5 border-t flex items-center justify-between gap-2 bg-card">
+          <div className="px-3 py-2 border-t flex items-center justify-between gap-2 bg-card">
             <label className="flex items-center gap-2 text-xs cursor-pointer select-none text-muted-foreground">
               <input
                 type="checkbox"
@@ -144,8 +173,8 @@ export const PAGE_INSTRUCTIONS: Record<string, { title: string; body: React.Reac
     title: 'Panorama',
     body: (
       <>
-        <p>Mostra o <strong>cenário do município</strong>: total de escolas, distribuição entre rede pública e particular, e densidade escolar.</p>
-        <p>Serve para situar a escola dentro do mercado local — o quanto há de concorrência e oportunidade na região.</p>
+        <p>Mostra o <strong>cenário da área de influência</strong> da escola: total de escolas no raio definido, distribuição entre rede pública e particular, e densidade escolar.</p>
+        <p>Serve para entender quanta concorrência e quanta oportunidade existem dentro da região que a escola realmente atende.</p>
       </>
     ),
   },
