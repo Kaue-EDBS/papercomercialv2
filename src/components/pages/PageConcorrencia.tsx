@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnalysisResult, EscolaData, ConcorrenteInfo } from '@/lib/types';
 import { num, formatNumber, formatPercent, getSegmentos, getMensalidadeFaixa, rebuildConcorrentes } from '@/lib/analysis';
 import { useDataLoader } from '@/hooks/useDataLoader';
-import { MapPin, Users, Target, GitCompare, Filter, X, Ruler } from 'lucide-react';
+import { MapPin, Users, Target, GitCompare, Filter, X, Ruler, Check } from 'lucide-react';
+import { toast } from 'sonner';
 import ConcorrenciaMap from './ConcorrenciaMap';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import ConcorrenciaTable from '@/components/concorrencia/ConcorrenciaTable';
@@ -12,6 +13,8 @@ interface Props {
   analysis: AnalysisResult;
   /** INEPs marcados como essenciais na Etapa 2; sempre permanecem ao recalcular pelo raio. */
   essenciaisInep?: string[];
+  /** Raio atualmente em vigor (vindo do pai). Permite preservar o ajuste ao sair e voltar à página. */
+  raioAtual?: number;
   /** Notifica o pai sobre alteração ao vivo do raio na régua. */
   onRaioChange?: (raioKm: number) => void;
 }
@@ -77,16 +80,18 @@ function CompareCard({ escola, label, marketShare }: { escola: EscolaData; label
   );
 }
 
-export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaioChange }: Props) {
+export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAtual, onRaioChange }: Props) {
   const { censo } = useDataLoader();
-  const [liveRaio, setLiveRaio] = useState<number>(analysis.raioOperacional);
+  const [liveRaio, setLiveRaio] = useState<number>(raioAtual ?? analysis.raioOperacional);
   const [liveAnalysis, setLiveAnalysis] = useState<AnalysisResult>(analysis);
 
   // Sempre que a análise inicial mudar (nova escola), reseta o estado local.
+  // Mantém o raio definido pelo pai (raioAtual) — assim, ao sair e voltar à página,
+  // o último raio escolhido pelo usuário é preservado.
   useEffect(() => {
-    setLiveRaio(analysis.raioOperacional);
+    setLiveRaio(raioAtual ?? analysis.raioOperacional);
     setLiveAnalysis(analysis);
-  }, [analysis]);
+  }, [analysis, raioAtual]);
 
   // Recalcula em tempo real quando o usuário arrasta a régua.
   // Reprocessamento total: tabela, mapa, cards e market share derivam de liveAnalysis.
@@ -262,6 +267,26 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
                 onChange={(km) => { setLiveRaio(km); onRaioChange?.(km); }}
                 hint="Ao mover a régua, o sistema reprocessa a lista de concorrentes, o mapa, os indicadores e o market share desta página."
               />
+              <div className="flex justify-end mt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRaioChange?.(liveRaio);
+                    const fmt = liveRaio < 1
+                      ? `${Math.round(liveRaio * 1000).toLocaleString('pt-BR')} m`
+                      : `${liveRaio.toFixed(1).replace('.', ',')} km`;
+                    toast.success(`Raio confirmado: ${fmt}`, {
+                      description: 'Mensalidade e Market Share foram atualizados.',
+                    });
+                  }}
+                  className="inline-flex items-center gap-2 px-4 h-9 rounded-lg text-sm font-semibold text-white hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  style={{ background: 'hsl(var(--teal))' }}
+                  aria-label="Confirmar raio atual"
+                >
+                  <Check className="w-4 h-4" />
+                  Confirmar raio
+                </button>
+              </div>
             </div>
             <ConcorrenciaMap
               escola={escola}
