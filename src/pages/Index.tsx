@@ -319,17 +319,6 @@ export default function Index() {
           etapaLabel="3 · Apresentação"
         />
       )}
-      {showEtapa2Nav && analysis && (
-        <ContextBar
-          session={session}
-          escola={analysis.escola}
-          raioKm={raioCustom ?? analysis.raioOperacional}
-          raioMode={raioCustom !== null ? 'personalizado' : 'padrao'}
-          presentationType={presentationType}
-          etapaLabel="2 · Validação de Concorrência"
-          compact
-        />
-      )}
       {showEtapa2Nav && (
         <NavigationBar
           currentPage={page}
@@ -337,6 +326,8 @@ export default function Index() {
           isEtapa2
           onBack={handleBack}
           onNewSearch={handleNewSearch}
+          session={session}
+          escola={analysis?.escola}
         />
       )}
       {isComparative && (
