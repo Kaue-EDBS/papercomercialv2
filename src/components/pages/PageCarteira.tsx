@@ -384,7 +384,10 @@ function ColumnPicker({ allCols, selected, onClose, onSave }: {
                   onChange={() => toggle(c)}
                   className="w-5 h-5 accent-[hsl(var(--teal))] cursor-pointer"
                 />
-                <span className="text-sm flex-1">{c}</span>
+                <span className="text-sm flex-1">
+                  {labelOf(c)}
+                  {COL_LABELS[c] && <span className="ml-2 text-[10px] text-muted-foreground font-mono">{c}</span>}
+                </span>
                 {isPriority && (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'hsl(var(--teal-light))', color: 'hsl(var(--navy))' }}>
                     sugerida
