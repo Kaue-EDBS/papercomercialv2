@@ -218,8 +218,17 @@ export const PAGE_INSTRUCTIONS: Record<string, { title: string; body: React.Reac
     title: 'Insights',
     body: (
       <>
-        <p>Reúne os <strong>principais aprendizados</strong> da análise: oportunidades, alertas e recomendações práticas.</p>
-        <p>Use para fechar a conversa propondo próximos passos com a escola.</p>
+        <p>Reúne os <strong>principais aprendizados</strong> da análise em blocos: tendência demográfica, pressão competitiva, posicionamento, aderência econômica, oportunidade comercial, risco e retenção.</p>
+        <p>Cada bloco mostra o <strong>dado observado, a leitura estratégica e a implicação comercial</strong>. Use para construir a conversa com o gestor antes de partir para o plano de ação.</p>
+      </>
+    ),
+  },
+  planoAcao: {
+    title: 'Plano de Ação',
+    body: (
+      <>
+        <p>Traduz o diagnóstico em <strong>ações priorizadas</strong> de captação, retenção e marca, organizadas por horizonte: <em>curto prazo</em>, <em>próximo ciclo comercial</em> e <em>contínua</em>.</p>
+        <p>Cada ação traz <strong>o que fazer, por que fazer e a base analítica</strong> que a sustenta. É o fechamento executivo da apresentação.</p>
       </>
     ),
   },
