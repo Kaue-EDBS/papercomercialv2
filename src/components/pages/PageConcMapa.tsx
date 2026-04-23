@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AnalysisResult } from '@/lib/types';
 import ConcorrenciaMap from './ConcorrenciaMap';
-import { MapPin, Settings2, Check } from 'lucide-react';
+import { MapPin, Check } from 'lucide-react';
 
 interface Props {
   analysis: AnalysisResult;
@@ -144,14 +144,6 @@ export default function PageConcMapa({ analysis, raioAtual, onKeep, onApplyNewRa
 
       {/* Botões finais — ação principal e secundária */}
       <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-        <button
-          onClick={() => { setValor(String(raioAtual)); setUnidade('km'); setErro(''); setOpenAjuste(true); }}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border bg-card hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
-          style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--navy))' }}
-        >
-          <Settings2 className="w-4 h-4" />
-          Alterar raio
-        </button>
         <button
           onClick={onKeep}
           className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
