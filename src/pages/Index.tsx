@@ -179,7 +179,11 @@ export default function Index() {
     if (page === 'concEssenciais') {
       // Volta para a seleção de escola (carteira ou capa)
       setAnalysis(null);
-      setPage(session ? 'modo' : 'capa');
+      setPage(session ? 'modo' : 'paper');
+      return;
+    }
+    if (page === 'paper' || page === 'capa' || page === 'carteira') {
+      setPage(session ? 'modo' : 'login');
       return;
     }
     // Tipo de apresentação fica entre Etapa 2 e Etapa 3
