@@ -268,34 +268,35 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
                 hint="Ao mover a régua, o sistema reprocessa a lista de concorrentes, o mapa, os indicadores e o market share desta página."
               />
 
-              {/* Métricas vivas do raio */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-                <div className="rounded-md border px-2.5 py-1.5" style={{ background: 'hsl(var(--beige) / 0.4)' }}>
-                  <div className="text-muted-foreground uppercase tracking-wider text-[9px] font-bold">Raio atual</div>
-                  <div className="font-bold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
+              {/* Métricas vivas do raio — linha discreta de stats inline */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted-foreground px-0.5">
+                <span className="inline-flex items-baseline gap-1.5">
+                  <span className="uppercase tracking-wider text-[9px]">Raio</span>
+                  <span className="font-semibold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
                     {liveRaio < 1
                       ? `${Math.round(liveRaio * 1000).toLocaleString('pt-BR')} m`
                       : `${liveRaio.toFixed(1).replace('.', ',')} km`}
-                  </div>
-                </div>
-                <div className="rounded-md border px-2.5 py-1.5" style={{ background: 'hsl(var(--beige) / 0.4)' }}>
-                  <div className="text-muted-foreground uppercase tracking-wider text-[9px] font-bold">Padrão</div>
-                  <div className="font-bold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
+                  </span>
+                </span>
+                <span className="h-3 w-px" style={{ background: 'hsl(var(--border))' }} aria-hidden />
+                <span className="inline-flex items-baseline gap-1.5">
+                  <span className="uppercase tracking-wider text-[9px]">Padrão (Etapa 2)</span>
+                  <span className="font-semibold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
                     {analysis.raioOperacional.toFixed(1).replace('.', ',')} km
-                  </div>
-                </div>
-                <div className="rounded-md border px-2.5 py-1.5" style={{ background: 'hsl(var(--beige) / 0.4)' }}>
-                  <div className="text-muted-foreground uppercase tracking-wider text-[9px] font-bold">No raio</div>
-                  <div className="font-bold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
-                    {totalConcorrentes} <span className="text-muted-foreground font-medium">esc.</span>
-                  </div>
-                </div>
-                <div className="rounded-md border px-2.5 py-1.5" style={{ background: 'hsl(var(--beige) / 0.4)' }}>
-                  <div className="text-muted-foreground uppercase tracking-wider text-[9px] font-bold">No mapa</div>
-                  <div className="font-bold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
-                    {comCoordenadas}/{totalConcorrentes}
-                  </div>
-                </div>
+                  </span>
+                </span>
+                <span className="h-3 w-px" style={{ background: 'hsl(var(--border))' }} aria-hidden />
+                <span className="inline-flex items-baseline gap-1.5">
+                  <span className="uppercase tracking-wider text-[9px]">No raio</span>
+                  <span className="font-semibold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>{totalConcorrentes}</span>
+                </span>
+                <span className="h-3 w-px" style={{ background: 'hsl(var(--border))' }} aria-hidden />
+                <span className="inline-flex items-baseline gap-1.5">
+                  <span className="uppercase tracking-wider text-[9px]">No mapa</span>
+                  <span className="font-semibold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
+                    {comCoordenadas}<span className="text-muted-foreground font-normal">/{totalConcorrentes}</span>
+                  </span>
+                </span>
               </div>
 
               {/* Barra de ações: centralizar, padrão, confirmar */}
