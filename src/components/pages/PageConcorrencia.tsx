@@ -286,7 +286,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
                 <span className="inline-flex items-baseline gap-1.5">
                   <span className="uppercase tracking-wider text-[9px]">Padrão (Etapa 2)</span>
                   <span className="font-semibold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
-                    {analysis.raioOperacional.toFixed(1).replace('.', ',')} km
+                    {raioPadraoEtapa2.toFixed(1).replace('.', ',')} km
                   </span>
                 </span>
                 <span className="h-3 w-px" style={{ background: 'hsl(var(--border))' }} aria-hidden />
