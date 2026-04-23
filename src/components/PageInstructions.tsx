@@ -144,8 +144,8 @@ export const PAGE_INSTRUCTIONS: Record<string, { title: string; body: React.Reac
     title: 'Panorama',
     body: (
       <>
-        <p>Mostra o <strong>cenário do município</strong>: total de escolas, distribuição entre rede pública e particular, e densidade escolar.</p>
-        <p>Serve para situar a escola dentro do mercado local — o quanto há de concorrência e oportunidade na região.</p>
+        <p>Mostra o <strong>cenário da área de influência</strong> da escola: total de escolas no raio definido, distribuição entre rede pública e particular, e densidade escolar.</p>
+        <p>Serve para entender quanta concorrência e quanta oportunidade existem dentro da região que a escola realmente atende.</p>
       </>
     ),
   },
