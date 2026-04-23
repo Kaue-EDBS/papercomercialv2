@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, X, Check, SkipForward, Info } from 'lucide-react';
+import { Search, X, Check, SkipForward, Info, AlertTriangle } from 'lucide-react';
 import { EscolaData } from '@/lib/types';
 
 interface Props {
@@ -8,22 +8,39 @@ interface Props {
   initialEssenciais?: string[];
   onConfirm: (inepList: string[]) => void;
   onSkip: () => void;
+  /** Permite registrar uma faixa de mensalidade informada manualmente quando o censo não traz o dado. */
+  onMensalidadeOverride?: (faixa: string) => void;
 }
 
 const INTRO_HIDE_KEY = 'etapa2:intro:hide';
+const MENSALIDADE_PROMPT_KEY = 'etapa2:mensalidadePrompt:dismissedFor';
+
+const FAIXAS_MENSALIDADE: { value: string; label: string }[] = [
+  { value: 'até 399', label: 'Até R$ 399' },
+  { value: '400 a 799', label: 'R$ 400 a R$ 799' },
+  { value: '800 a 1.399', label: 'R$ 800 a R$ 1.399' },
+  { value: '1.400 a 2.399', label: 'R$ 1.400 a R$ 2.399' },
+  { value: 'acima de R$ 2.400', label: 'Acima de R$ 2.400' },
+];
 
 /**
  * 2.1 — Concorrentes essenciais.
  * Autocomplete por nome OU código Inep. Permite escolher múltiplos.
  * "Sem sugestão" pula sem incluir essenciais.
  */
-export default function PageConcEssenciais({ escola, censoData, initialEssenciais = [], onConfirm, onSkip }: Props) {
+export default function PageConcEssenciais({ escola, censoData, initialEssenciais = [], onConfirm, onSkip, onMensalidadeOverride }: Props) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string[]>(initialEssenciais);
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [showIntro, setShowIntro] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  // ---- Aviso: escola sem dado de mensalidade ----
+  const semMensalidade = !escola.Mensalidade || String(escola.Mensalidade).trim() === '' || String(escola.Mensalidade).trim() === '0';
+  const inepKey = String(escola['Código Inep']);
+  const [showMensModal, setShowMensModal] = useState(false);
+  const [faixaPick, setFaixaPick] = useState<string>('');
 
   useEffect(() => {
     try {
@@ -33,6 +50,29 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
       setShowIntro(true);
     }
   }, []);
+
+  // Sobe o aviso de mensalidade ao abrir a etapa, exceto se já foi dispensado para esta escola.
+  useEffect(() => {
+    if (!semMensalidade) return;
+    try {
+      const dismissed = localStorage.getItem(MENSALIDADE_PROMPT_KEY);
+      if (dismissed === inepKey) return;
+    } catch { /* noop */ }
+    setShowMensModal(true);
+  }, [semMensalidade, inepKey]);
+
+  const closeMensModal = (persist: boolean) => {
+    if (persist) {
+      try { localStorage.setItem(MENSALIDADE_PROMPT_KEY, inepKey); } catch { /* noop */ }
+    }
+    setShowMensModal(false);
+  };
+
+  const confirmMensFaixa = () => {
+    if (!faixaPick) return;
+    onMensalidadeOverride?.(faixaPick);
+    closeMensModal(true);
+  };
 
   const closeIntro = (persist: boolean) => {
     if (persist) {
@@ -76,6 +116,21 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
 
   return (
     <div className="max-w-3xl mx-auto py-8 sm:py-12 px-4 space-y-6">
+      {semMensalidade && (
+        <button
+          type="button"
+          onClick={() => setShowMensModal(true)}
+          className="w-full flex items-start gap-2 px-3 py-2.5 rounded-lg border text-left text-xs hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+          style={{ background: 'hsl(40 95% 96%)', borderColor: 'hsl(40 80% 80%)' }}
+        >
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(40 80% 35%)' }} />
+          <span>
+            <strong style={{ color: 'hsl(var(--navy))' }}>Esta escola não possui mensalidade na base.</strong>{' '}
+            <span className="text-muted-foreground">Clique para informar a faixa, se souber — isso melhora a comparação na apresentação.</span>
+          </span>
+        </button>
+      )}
+
       <header className="space-y-1">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--teal))' }}>
@@ -250,6 +305,85 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
                 style={{ background: 'hsl(var(--teal))' }}
               >
                 OK, entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: aviso de mensalidade ausente + escolha de faixa */}
+      {showMensModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => closeMensModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mens-modal-title"
+        >
+          <div
+            className="bg-card rounded-2xl border max-w-md w-full p-6 space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'hsl(40 95% 92%)' }}>
+                  <AlertTriangle className="w-5 h-5" style={{ color: 'hsl(40 80% 35%)' }} />
+                </div>
+                <h3 id="mens-modal-title" className="font-bold text-lg" style={{ color: 'hsl(var(--navy))' }}>
+                  Sem dado de mensalidade
+                </h3>
+              </div>
+              <button
+                onClick={() => closeMensModal(false)}
+                aria-label="Fechar"
+                className="p-1 rounded-lg hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-sm text-foreground space-y-2">
+              <p>
+                A base do censo não traz a mensalidade de <strong style={{ color: 'hsl(var(--navy))' }}>{escola.Escola}</strong>.
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Se você souber a faixa praticada, selecione abaixo. Isso será usado nas comparações de mensalidade e posicionamento competitivo. Caso contrário, pode pular — a apresentação seguirá indicando "Dado não disponível".
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="faixa-mensalidade" className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--navy))' }}>
+                Faixa de mensalidade (opcional)
+              </label>
+              <select
+                id="faixa-mensalidade"
+                value={faixaPick}
+                onChange={e => setFaixaPick(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border bg-background text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--navy))' }}
+              >
+                <option value="">Selecione uma faixa…</option>
+                {FAIXAS_MENSALIDADE.map(f => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+              <button
+                onClick={() => closeMensModal(true)}
+                className="px-4 py-2.5 rounded-lg text-sm font-semibold border hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+                style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--navy))' }}
+              >
+                Pular
+              </button>
+              <button
+                onClick={confirmMensFaixa}
+                disabled={!faixaPick}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                style={{ background: 'hsl(var(--teal))' }}
+              >
+                Aplicar faixa
               </button>
             </div>
           </div>

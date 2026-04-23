@@ -159,6 +159,19 @@ export default function Index() {
     setPage('concTabela');
   }, [applyEssenciais]);
 
+  /** Atualiza a mensalidade da escola analisada quando o consultor informa a faixa manualmente. */
+  const handleMensalidadeOverride = useCallback((faixa: string) => {
+    if (!analysis) return;
+    const novaEscola = { ...analysis.escola, Mensalidade: faixa };
+    const novaAnalise = { ...analysis, escola: novaEscola };
+    // Recalcula concorrentes para que a "mesma faixa" passe a refletir a nova mensalidade
+    const rebuilt = rebuildConcorrentes(novaAnalise, censo, {
+      essenciaisInep,
+      raioKm: raioCustom ?? novaAnalise.raioOperacional,
+    });
+    setAnalysis(rebuilt);
+  }, [analysis, censo, essenciaisInep, raioCustom]);
+
   const handleTabelaConfirm = useCallback(() => setPage('concMapa'), []);
 
   // Após validar o raio, vai para a tela de tipo de apresentação (entrada da Etapa 3).
@@ -379,6 +392,7 @@ export default function Index() {
                 censoData={censo}
                 onConfirm={handleSearch}
                 onBack={() => setPage(session ? 'modo' : 'login')}
+                session={session}
               />
             )}
             {page === 'tipo' && analysis && <PageTipo escola={analysis.escola} onSelect={handleSelectType} onBack={() => { setAnalysis(null); setPage(session ? 'modo' : 'capa'); }} />}
@@ -389,6 +403,7 @@ export default function Index() {
                 initialEssenciais={essenciaisInep}
                 onConfirm={handleEssenciaisConfirm}
                 onSkip={handleEssenciaisSkip}
+                onMensalidadeOverride={handleMensalidadeOverride}
               />
             )}
             {page === 'concTabela' && analysis && (

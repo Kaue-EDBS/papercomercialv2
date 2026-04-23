@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Search, ArrowLeft, Check } from 'lucide-react';
-import { EscolaData } from '@/lib/types';
+import { EscolaData, ConsultorSession } from '@/lib/types';
+import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
+import { useCarteira } from '@/hooks/useCarteira';
 
 interface Props {
   censoData: EscolaData[];
   onConfirm: (codigo: string) => void;
   onBack: () => void;
+  /** Sessão do consultor logado — usada para mapear Protheus → INEP via carteira. */
+  session?: ConsultorSession | null;
 }
 
 /**
@@ -14,22 +18,64 @@ interface Props {
  * a concorrência analisada. Mantém a identidade visual aprovada e usa
  * apenas os tokens semânticos do design system.
  */
-export default function PagePaperBusca({ censoData, onConfirm, onBack }: Props) {
+export default function PagePaperBusca({ censoData, onConfirm, onBack, session }: Props) {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [pick, setPick] = useState<EscolaData | null>(null);
+  const [protheusErr, setProtheusErr] = useState('');
+
+  // Carrega a carteira do consultor (se logado) — permite buscar pelo COD_PROTHEUS.
+  const { findByCodigo, findByNome } = useCarteiraManifest();
+  const entry = useMemo(() => {
+    if (!session) return null;
+    return findByCodigo(session.codigo) || findByNome(session.nome);
+  }, [session, findByCodigo, findByNome]);
+  const { data: carteira } = useCarteira(entry?.arquivo ?? null);
+
+  /** Procura na carteira por COD_PROTHEUS (string ou número). Retorna o INEP se encontrar. */
+  const inepFromProtheus = (q: string): { inep: string; nomeEscola: string } | null => {
+    if (!carteira?.rows?.length) return null;
+    const target = q.trim().toUpperCase();
+    if (!target) return null;
+    const row = carteira.rows.find(r => {
+      const v = r['COD_PROTHEUS'];
+      return v != null && String(v).trim().toUpperCase() === target;
+    });
+    if (!row) return null;
+    const inep = row['COD_INEP'];
+    if (inep == null || String(inep).trim() === '') return null;
+    return { inep: String(inep).trim(), nomeEscola: String(row['NOME ESCOLA'] || '') };
+  };
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (q.length < 3) return [];
     const isNum = /^\d+$/.test(q);
-    return censoData
+    const censoMatches = censoData
       .filter(e => {
         if (isNum) return String(e['Código Inep']).includes(q);
         return String(e.Escola || '').toLowerCase().includes(q);
       })
       .slice(0, 8);
-  }, [query, censoData]);
+    // Sugestões adicionais via Protheus (apenas se houver carteira carregada e busca for numérica/alfanumérica curta)
+    if (carteira?.rows?.length && q.length >= 2) {
+      const qUp = query.trim().toUpperCase();
+      const protheusHits: EscolaData[] = [];
+      for (const r of carteira.rows) {
+        if (protheusHits.length >= 5) break;
+        const cod = r['COD_PROTHEUS'];
+        if (cod != null && String(cod).toUpperCase().includes(qUp)) {
+          const inep = String(r['COD_INEP'] || '').trim();
+          if (!inep) continue;
+          if (censoMatches.some(e => String(e['Código Inep']) === inep)) continue;
+          const escola = censoData.find(e => String(e['Código Inep']) === inep);
+          if (escola) protheusHits.push(escola);
+        }
+      }
+      return [...protheusHits, ...censoMatches].slice(0, 10);
+    }
+    return censoMatches;
+  }, [query, censoData, carteira]);
 
   const escolhe = (e: EscolaData) => {
     setPick(e);
@@ -38,12 +84,24 @@ export default function PagePaperBusca({ censoData, onConfirm, onBack }: Props) 
   };
 
   const confirmar = () => {
+    setProtheusErr('');
     if (pick) { onConfirm(String(pick['Código Inep'])); return; }
     const q = query.trim();
+    if (!q) return;
+    // 1) Tenta como Código Inep direto
+    if (/^\d{6,}$/.test(q)) { onConfirm(q); return; }
+    // 2) Tenta como Código Protheus na carteira do consultor
+    const hit = inepFromProtheus(q);
+    if (hit) { onConfirm(hit.inep); return; }
+    // 3) Numérico curto sem match — provável Protheus inexistente
+    if (/^[A-Za-z0-9]+$/.test(q) && session) {
+      setProtheusErr(`Não encontramos o código "${q}" como Inep nem como Protheus na sua carteira.`);
+      return;
+    }
     if (/^\d+$/.test(q)) onConfirm(q);
   };
 
-  const podeConfirmar = !!pick || /^\d+$/.test(query.trim());
+  const podeConfirmar = !!pick || /^[A-Za-z0-9]+$/.test(query.trim());
 
   return (
     <div className="max-w-2xl mx-auto py-10 sm:py-14 px-4 space-y-6">
@@ -61,7 +119,7 @@ export default function PagePaperBusca({ censoData, onConfirm, onBack }: Props) 
         </span>
         <h1 className="page-title text-2xl sm:text-3xl">Buscar escola para gerar concorrência</h1>
         <p className="page-subtitle text-sm">
-          Digite o <strong>nome da escola</strong> ou o <strong>Código Inep</strong>. O sistema busca na base e prepara a análise de concorrência.
+          Digite o <strong>nome da escola</strong>, o <strong>Código Inep</strong>{session ? <> ou o <strong>Código Protheus</strong></> : null}. O sistema busca na base e prepara a análise de concorrência.
         </p>
       </header>
 
@@ -76,10 +134,10 @@ export default function PagePaperBusca({ censoData, onConfirm, onBack }: Props) 
               id="paper-busca"
               type="text"
               value={query}
-              onChange={e => { setQuery(e.target.value); setPick(null); setOpen(true); }}
+              onChange={e => { setQuery(e.target.value); setPick(null); setOpen(true); setProtheusErr(''); }}
               onFocus={() => setOpen(true)}
               onKeyDown={e => { if (e.key === 'Enter' && podeConfirmar) confirmar(); }}
-              placeholder="Ex.: Colégio Modelo  ou  35012345"
+              placeholder={session ? 'Ex.: Colégio Modelo · 35012345 · 11882' : 'Ex.: Colégio Modelo  ou  35012345'}
               className="flex-1 bg-transparent outline-none text-sm"
               autoComplete="off"
               aria-autocomplete="list"
@@ -88,8 +146,13 @@ export default function PagePaperBusca({ censoData, onConfirm, onBack }: Props) 
             />
           </div>
           <p className="text-[11px] text-muted-foreground mt-1">
-            Mínimo de 3 caracteres. Selecione uma sugestão ou pressione Enter para buscar pelo Código Inep.
+            Mínimo de 3 caracteres. Pressione Enter para buscar por Código Inep{session ? ' ou Protheus' : ''}.
           </p>
+          {protheusErr && (
+            <div role="alert" className="mt-2 text-xs px-3 py-2 rounded-lg border" style={{ background: 'hsl(0,84%,96%)', color: 'hsl(0,84%,38%)', borderColor: 'hsl(0,84%,88%)' }}>
+              {protheusErr}
+            </div>
+          )}
 
           {open && matches.length > 0 && (
             <ul id="paper-listbox" role="listbox" className="absolute z-20 mt-1 w-full max-h-72 overflow-y-auto bg-card border rounded-lg shadow-lg">
