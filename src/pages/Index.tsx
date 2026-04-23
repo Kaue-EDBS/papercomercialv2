@@ -174,6 +174,59 @@ export default function Index() {
 
   const handleTabelaChangeRaio = useCallback(() => setPage('concMapa'), []);
 
+  // ----- Etapa 2.2 — exclusão de concorrente da lista -----
+  const handleRemoveConcorrente = useCallback((inep: string, mode: 'auto' | 'leave' | { manualInep: string }) => {
+    if (!analysis) return;
+    const inepStr = String(inep);
+    const novosExcluidos = excluidosInep.includes(inepStr) ? excluidosInep : [...excluidosInep, inepStr];
+    setExcluidosInep(novosExcluidos);
+    const novosEssenciais = essenciaisInep.filter(i => String(i) !== inepStr);
+    if (novosEssenciais.length !== essenciaisInep.length) setEssenciaisInep(novosEssenciais);
+
+    const raioKm = raioCustom ?? analysis.raioOperacional;
+    // Remove o concorrente da lista atual
+    const semConc = {
+      ...analysis,
+      concorrentes: analysis.concorrentes.filter(c => String(c.escola['Código Inep']) !== inepStr),
+    };
+
+    if (mode === 'leave') {
+      setAnalysis(semConc);
+      return;
+    }
+
+    if (typeof mode === 'object' && mode.manualInep) {
+      // Inclui a escola manual como essencial e reconstrói lista
+      const essMais = Array.from(new Set([...novosEssenciais, mode.manualInep]));
+      setEssenciaisInep(essMais);
+      const rebuilt = rebuildConcorrentes(semConc, censo, { essenciaisInep: essMais, raioKm });
+      // Garante que o excluido não retorne via reconstrução automática
+      const filtrado = {
+        ...rebuilt,
+        concorrentes: rebuilt.concorrentes.filter(c => !novosExcluidos.includes(String(c.escola['Código Inep']))),
+      };
+      setAnalysis(filtrado);
+      return;
+    }
+
+    // mode === 'auto' — busca substituto pelo mesmo critério
+    const substituto = pickReplacement(semConc, censo, {
+      essenciaisInep: novosEssenciais,
+      raioKm,
+      excludeInep: novosExcluidos,
+    });
+    if (!substituto) {
+      setAnalysis(semConc);
+      return;
+    }
+    const rebuilt = rebuildConcorrentes(semConc, censo, { essenciaisInep: novosEssenciais, raioKm });
+    const filtrado = {
+      ...rebuilt,
+      concorrentes: rebuilt.concorrentes.filter(c => !novosExcluidos.includes(String(c.escola['Código Inep']))),
+    };
+    setAnalysis(filtrado);
+  }, [analysis, censo, essenciaisInep, raioCustom, excluidosInep]);
+
   const handleBack = () => {
     // Navegação dentro da Etapa 2
     if (page === 'concMapa') { setPage('concTabela'); return; }
