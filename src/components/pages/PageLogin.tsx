@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import logo from '@/assets/ebsa_logo.png';
 import { ConsultorSession } from '@/lib/types';
 import { useCarteiraManifest, CarteiraManifestEntry } from '@/hooks/useCarteiraManifest';
+import { prefetchCarteira } from '@/hooks/useCarteira';
 
 interface Props {
   onConfirm: (session: ConsultorSession) => void;
@@ -33,6 +34,7 @@ export default function PageLogin({ onConfirm }: Props) {
       setErro(`Não encontramos o código "${value}" na base de consultores. Confira o número e tente novamente.`);
       return;
     }
+    prefetchCarteira(c.arquivo);
     onConfirm({
       codigo: String(c.codConsultor).toUpperCase(),
       nome: c.consultor,
@@ -44,6 +46,7 @@ export default function PageLogin({ onConfirm }: Props) {
     const cod = String(c.codConsultor);
     setCodigo(cod);
     setFocused(false);
+    prefetchCarteira(c.arquivo);
     onConfirm({
       codigo: cod.toUpperCase(),
       nome: c.consultor,
