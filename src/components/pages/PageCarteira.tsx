@@ -12,7 +12,9 @@ interface Props {
 
 const STORAGE_KEY = 'carteira:cols:v2';
 const PRIORITY_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF', 'CONSULTOR', 'GERENTE'];
-const DEFAULT_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF', 'TIPO ESCOLA'];
+const DEFAULT_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF'];
+// Apenas estas colunas têm campo de filtro automático na header. As demais ficam livres para lapidação futura.
+const FILTERABLE_COLS = new Set(['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF']);
 const COL_LABELS: Record<string, string> = {
   'COD_PROTHEUS': 'Protheus',
   'COD_INEP': 'INEP',
@@ -229,17 +231,21 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
                 <tr>
                   {visibleCols.map(c => (
                     <th key={c + '-f'} className="!py-1 !px-2 !bg-card !border-b !border-t-0">
-                      <div className="relative">
-                        <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                        <input
-                          type="text"
-                          aria-label={`Filtrar ${labelOf(c)}`}
-                          placeholder="Filtrar..."
-                          value={colFilters[c] || ''}
-                          onChange={e => setColFilter(c, e.target.value)}
-                          className="w-full pl-7 pr-2 py-1.5 rounded border text-xs font-normal bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                        />
-                      </div>
+                      {FILTERABLE_COLS.has(c) ? (
+                        <div className="relative">
+                          <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                          <input
+                            type="text"
+                            aria-label={`Filtrar ${labelOf(c)}`}
+                            placeholder="Filtrar..."
+                            value={colFilters[c] || ''}
+                            onChange={e => setColFilter(c, e.target.value)}
+                            className="w-full pl-7 pr-2 py-1.5 rounded border text-xs font-normal bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-[30px]" aria-hidden />
+                      )}
                     </th>
                   ))}
                 </tr>
