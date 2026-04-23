@@ -34,17 +34,15 @@ export function useCarteira(arquivo: string | null) {
     const cached = cache.get(arquivo);
     if (cached) { setData(cached); setLoading(false); setError(null); return; }
     setLoading(true); setError(null);
-    fetch(`/data/carteiras/${arquivo}`)
-      .then(r => {
-        if (!r.ok) throw new Error('Arquivo não encontrado');
-        return r.json();
-      })
-      .then((d: CarteiraFile) => {
-        cache.set(arquivo, d);
-        setData(d);
-        setLoading(false);
-      })
+    // Reusa request em voo se houver (evita download duplicado)
+    const existing = inflight.get(arquivo);
+    const p = existing ?? fetch(`/data/carteiras/${arquivo}`)
+      .then(r => { if (!r.ok) throw new Error('Arquivo não encontrado'); return r.json(); })
+      .then((d: CarteiraFile) => { cache.set(arquivo, d); inflight.delete(arquivo); return d; });
+    if (!existing) inflight.set(arquivo, p);
+    p.then(d => { setData(d); setLoading(false); })
       .catch(() => {
+        inflight.delete(arquivo);
         setError('Não conseguimos abrir sua carteira. Fale com seu gestor para verificar o arquivo.');
         setLoading(false);
       });
