@@ -108,11 +108,33 @@ export default function ConcorrenciaMap({ escola, concorrentes, highlightedInep,
     }
 
     return () => {
-      map.remove();
+      try {
+        // Para qualquer animação de zoom/pan em andamento antes de destruir
+        // (evita erro `_leaflet_pos` no _onZoomTransitionEnd)
+        (map as any)._stop?.();
+        map.stop();
+      } catch {
+        /* noop */
+      }
+      try {
+        map.remove();
+      } catch {
+        /* noop */
+      }
       mapInstanceRef.current = null;
       markersRef.current.clear();
     };
-  }, [escola, concorrentes, onMarkerClick, hasAnything, escolaHasCoords, escolaLat, escolaLng, plotable]);
+    // Reagimos apenas a mudanças reais de dados — não à identidade de `plotable`,
+    // que é recriada a cada render. Usamos uma chave estável dos concorrentes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    escolaHasCoords,
+    escolaLat,
+    escolaLng,
+    hasAnything,
+    plotable.length,
+    plotable.map(c => String(c.escola['Código Inep'])).join(','),
+  ]);
 
   // Highlight effect
   useEffect(() => {
