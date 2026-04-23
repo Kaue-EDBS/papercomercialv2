@@ -13,6 +13,14 @@ interface Props {
 const STORAGE_KEY = 'carteira:cols:v2';
 const PRIORITY_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF', 'CONSULTOR', 'GERENTE'];
 const DEFAULT_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF', 'TIPO ESCOLA'];
+const COL_LABELS: Record<string, string> = {
+  'COD_PROTHEUS': 'Protheus',
+  'COD_INEP': 'INEP',
+  'NOME ESCOLA': 'Escola',
+  'MUNICIPIO': 'Município',
+  'UF': 'UF',
+};
+const labelOf = (c: string) => COL_LABELS[c] ?? c;
 
 type Row = CarteiraFile['rows'][number];
 
@@ -160,7 +168,6 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {filteredSorted.length} de {rows.length} escolas no arquivo
-            <span className="ml-2 opacity-70">({entry.arquivo})</span>
           </p>
         </div>
         <button
@@ -210,10 +217,10 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
                     <th key={c}>
                       <button
                         onClick={() => toggleSort(c)}
-                        aria-label={`Ordenar por ${c}`}
+                        aria-label={`Ordenar por ${labelOf(c)}`}
                         className="inline-flex items-center gap-1 hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded"
                       >
-                        {c}
+                        {labelOf(c)}
                         {sortCol === c && (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
                       </button>
                     </th>
@@ -226,7 +233,7 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
                         <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input
                           type="text"
-                          aria-label={`Filtrar ${c}`}
+                          aria-label={`Filtrar ${labelOf(c)}`}
                           placeholder="Filtrar..."
                           value={colFilters[c] || ''}
                           onChange={e => setColFilter(c, e.target.value)}
@@ -377,7 +384,10 @@ function ColumnPicker({ allCols, selected, onClose, onSave }: {
                   onChange={() => toggle(c)}
                   className="w-5 h-5 accent-[hsl(var(--teal))] cursor-pointer"
                 />
-                <span className="text-sm flex-1">{c}</span>
+                <span className="text-sm flex-1">
+                  {labelOf(c)}
+                  {COL_LABELS[c] && <span className="ml-2 text-[10px] text-muted-foreground font-mono">{c}</span>}
+                </span>
                 {isPriority && (
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: 'hsl(var(--teal-light))', color: 'hsl(var(--navy))' }}>
                     sugerida
