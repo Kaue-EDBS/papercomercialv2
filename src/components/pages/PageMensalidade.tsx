@@ -84,25 +84,42 @@ export default function PageMensalidade({ analysis }: Props) {
       {/* 1.1 Cards-resumo */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
         <div className="card-indicator col-span-2 sm:col-span-1">
-          <div className="card-indicator-value text-sm sm:text-base" style={{ color: 'hsl(var(--teal))' }}>{escolaFaixaLabel}</div>
+          <div className="card-indicator-value text-sm sm:text-base" style={{ color: escolaFaixaIdx > 0 ? 'hsl(var(--teal))' : 'hsl(var(--muted-foreground))' }}>{escolaFaixaLabel}</div>
           <div className="card-indicator-label text-[10px] sm:text-xs">Faixa da Escola</div>
         </div>
         <div className="card-indicator">
           <div className="card-indicator-value text-sm sm:text-base" style={{ color: 'hsl(var(--navy))' }}>{FAIXAS_LABELS[faixaModal] || faixaModal}</div>
           <div className="card-indicator-label text-[10px] sm:text-xs">Faixa Modal Concorrentes</div>
         </div>
-        <div className="card-indicator">
-          <div className="card-indicator-value text-lg sm:text-xl" style={{ color: 'hsl(var(--teal))' }}>{mesmaFaixa.length}</div>
-          <div className="card-indicator-label text-[10px] sm:text-xs">Mesma Faixa</div>
-        </div>
-        <div className="card-indicator">
-          <div className="card-indicator-value text-lg sm:text-xl" style={{ color: 'hsl(var(--navy))' }}>{acima.length}</div>
-          <div className="card-indicator-label text-[10px] sm:text-xs">Acima</div>
-        </div>
-        <div className="card-indicator">
-          <div className="card-indicator-value text-lg sm:text-xl" style={{ color: 'hsl(var(--lime))' }}>{abaixo.length}</div>
-          <div className="card-indicator-label text-[10px] sm:text-xs">Abaixo</div>
-        </div>
+        {escolaFaixaIdx > 0 ? (
+          <>
+            <div className="card-indicator">
+              <div className="card-indicator-value text-lg sm:text-xl" style={{ color: 'hsl(var(--teal))' }}>{mesmaFaixa.length}</div>
+              <div className="card-indicator-label text-[10px] sm:text-xs">Mesma Faixa</div>
+            </div>
+            <div className="card-indicator">
+              <div className="card-indicator-value text-lg sm:text-xl" style={{ color: 'hsl(var(--navy))' }}>{acima.length}</div>
+              <div className="card-indicator-label text-[10px] sm:text-xs">Acima</div>
+            </div>
+            <div className="card-indicator">
+              <div className="card-indicator-value text-lg sm:text-xl" style={{ color: 'hsl(var(--lime))' }}>{abaixo.length}</div>
+              <div className="card-indicator-label text-[10px] sm:text-xs">Abaixo</div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="card-indicator">
+              <div className="card-indicator-value text-lg sm:text-xl" style={{ color: 'hsl(var(--navy))' }}>{validConc.length}</div>
+              <div className="card-indicator-label text-[10px] sm:text-xs">Concorrentes c/ dado</div>
+            </div>
+            <div className="card-indicator col-span-2">
+              <div className="card-indicator-value text-[11px] sm:text-xs leading-snug" style={{ color: 'hsl(var(--muted-foreground))' }}>
+                Mensalidade da escola não informada — referência abaixo é dos concorrentes no raio atual.
+              </div>
+              <div className="card-indicator-label text-[10px] sm:text-xs">Aviso</div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* 1.2 Distribuição por Faixa — Gráfico de barras */}
@@ -184,8 +201,17 @@ export default function PageMensalidade({ analysis }: Props) {
                   : ', abaixo da escola — oportunidade para sustentar premium pedagógico.'}
             </p>
           </div>
+        ) : validConc.length > 0 ? (
+          <div className="insight-box text-xs sm:text-sm">
+            <p>
+              A mensalidade da escola analisada não foi informada. No raio atual há
+              {' '}<strong>{validConc.length}</strong> concorrente{validConc.length !== 1 ? 's' : ''} com faixa declarada,
+              {' '}com faixa modal em <strong>{FAIXAS_LABELS[faixaModal] || faixaModal}</strong>.
+              {' '}Use a distribuição abaixo como referência de mercado — informe a faixa da escola na Etapa 3 para habilitar a leitura comparativa completa.
+            </p>
+          </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Mensalidade da escola não informada — leitura competitiva indisponível.</p>
+          <p className="text-xs text-muted-foreground">Sem dados de mensalidade na escola e nos concorrentes do raio atual.</p>
         )}
       </div>
     </div>

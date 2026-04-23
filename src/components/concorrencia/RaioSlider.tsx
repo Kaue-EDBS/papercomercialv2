@@ -31,8 +31,16 @@ export default function RaioSlider({
   hint,
 }: Props) {
   const [hover, setHover] = useState(false);
+  const [unit, setUnit] = useState<'km' | 'm'>('km');
   const isCustom = Math.abs(value - defaultValue) > 0.001;
   const pct = (v: number) => ((v - min) / (max - min)) * 100;
+
+  // Em modo metros usamos passo fino (50 m = 0,05 km) para ajuste preciso.
+  const effectiveStep = unit === 'm' ? 0.05 : step;
+  const fmt = (km: number) =>
+    unit === 'm'
+      ? `${Math.round(km * 1000).toLocaleString('pt-BR')} m`
+      : `${km.toFixed(1).replace('.', ',')} km`;
 
   return (
     <div className="rounded-lg border bg-card p-3 sm:p-4 space-y-2.5"
@@ -56,6 +64,32 @@ export default function RaioSlider({
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Toggle de unidade km / m */}
+          <div
+            className="inline-flex rounded-md overflow-hidden border text-[10px] font-bold uppercase tracking-wider"
+            style={{ borderColor: 'hsl(var(--teal-light))' }}
+            role="group"
+            aria-label="Unidade de distância"
+          >
+            {(['km', 'm'] as const).map((u) => {
+              const active = unit === u;
+              return (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => setUnit(u)}
+                  className="px-2 py-0.5 transition-colors"
+                  style={{
+                    background: active ? 'hsl(var(--teal))' : 'transparent',
+                    color: active ? 'white' : 'hsl(var(--teal-dark))',
+                  }}
+                  aria-pressed={active}
+                >
+                  {u}
+                </button>
+              );
+            })}
+          </div>
           {isCustom && (
             <button
               type="button"
@@ -76,7 +110,7 @@ export default function RaioSlider({
               boxShadow: '0 2px 4px hsl(174 62% 35% / 0.25)',
             }}
           >
-            {value.toFixed(1).replace('.', ',')} km
+            {fmt(value)}
           </span>
         </div>
       </div>
@@ -94,7 +128,7 @@ export default function RaioSlider({
           type="range"
           min={min}
           max={max}
-          step={step}
+          step={effectiveStep}
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
           onMouseEnter={() => setHover(true)}
@@ -108,22 +142,22 @@ export default function RaioSlider({
               hsl(var(--beige-dark)) ${pct(value)}%,
               hsl(var(--beige-dark)) 100%)`,
           }}
-          aria-label={`${label} em quilômetros`}
+          aria-label={`${label} em ${unit === 'm' ? 'metros' : 'quilômetros'}`}
           aria-valuemin={min}
           aria-valuemax={max}
           aria-valuenow={value}
         />
         {/* labels mín/padrão/máx */}
         <div className="absolute left-0 right-0 bottom-0 text-[10px] text-muted-foreground pointer-events-none">
-          <span className="absolute left-0">{min.toFixed(1).replace('.', ',')} km</span>
+          <span className="absolute left-0">{fmt(min)}</span>
           <span
             className="absolute -translate-x-1/2 font-semibold"
             style={{ left: `${pct(defaultValue)}%`, color: 'hsl(var(--teal-dark))' }}
             title="Raio padrão pela densidade escolar"
           >
-            ▲ padrão {defaultValue.toFixed(1).replace('.', ',')}
+            ▲ padrão {fmt(defaultValue)}
           </span>
-          <span className="absolute right-0">{max} km</span>
+          <span className="absolute right-0">{fmt(max)}</span>
         </div>
       </div>
 
