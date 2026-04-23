@@ -267,7 +267,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
             <div className="p-3 border-b space-y-3">
               <RaioSlider
                 value={liveRaio}
-                defaultValue={analysis.raioOperacional}
+                defaultValue={raioPadraoEtapa2}
                 onChange={(km) => { setLiveRaio(km); onRaioChange?.(km); }}
                 hint="Ao mover a régua, o sistema reprocessa a lista de concorrentes, o mapa, os indicadores e o market share desta página."
               />
