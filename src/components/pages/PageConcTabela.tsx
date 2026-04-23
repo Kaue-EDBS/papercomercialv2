@@ -97,8 +97,16 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
                       </button>
                     </td>
                     <td>
-                      <div className="font-semibold text-sm leading-snug" style={{ color: 'hsl(var(--navy))' }}>{c.escola.Escola}</div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground tabular-nums mt-0.5">Inep · {inep}</div>
+                      <div
+                        className="font-medium text-sm leading-snug"
+                        style={{ color: 'hsl(var(--navy))', textTransform: 'none' }}
+                      >
+                        {c.escola.Escola}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                        <span className="uppercase tracking-wider">INEP</span>
+                        <span className="font-mono tabular-nums">{inep}</span>
+                      </div>
                     </td>
                     <td>
                       <span
