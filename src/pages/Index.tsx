@@ -403,6 +403,7 @@ export default function Index() {
                 initialEssenciais={essenciaisInep}
                 onConfirm={handleEssenciaisConfirm}
                 onSkip={handleEssenciaisSkip}
+                onMensalidadeOverride={handleMensalidadeOverride}
               />
             )}
             {page === 'concTabela' && analysis && (
