@@ -93,9 +93,9 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
   // Mantém o raio definido pelo pai (raioAtual) — assim, ao sair e voltar à página,
   // o último raio escolhido pelo usuário é preservado.
   useEffect(() => {
-    setLiveRaio(raioAtual ?? analysis.raioOperacional);
+    setLiveRaio(raioAtual ?? raioPadraoEtapa2);
     setLiveAnalysis(analysis);
-  }, [analysis, raioAtual]);
+  }, [analysis, raioAtual, raioPadraoEtapa2]);
 
   // Recalcula em tempo real quando o usuário arrasta a régua.
   // Reprocessamento total: tabela, mapa, cards e market share derivam de liveAnalysis.
