@@ -17,9 +17,10 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'marketshare', label: 'Market Share', short: '5' },
   { id: 'mensalidade', label: 'Mensalidade', short: '6' },
   { id: 'socioeconomico', label: 'Socioeconômico', short: '7' },
-  { id: 'insights', label: 'Insights', short: '8' },
-  { id: 'planoAcao', label: 'Plano de Ação', short: '9' },
-  { id: 'encerramento', label: 'Encerramento', short: '10' },
+  { id: 'potencial', label: 'Potencial de Consumo', short: '8' },
+  { id: 'insights', label: 'Insights', short: '9' },
+  { id: 'planoAcao', label: 'Plano de Ação', short: '10' },
+  { id: 'encerramento', label: 'Encerramento', short: '11' },
 ];
 
 function FullscreenButton() {

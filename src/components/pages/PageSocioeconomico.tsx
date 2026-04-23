@@ -17,7 +17,7 @@ export default function PageSocioeconomico({ analysis }: Props) {
   if (!demografica) {
     return (
       <div className="max-w-4xl mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-6">
-        <h2 className="page-title text-xl sm:text-2xl">PERFIL SOCIOECONÔMICO DA REGIÃO</h2>
+        <h2 className="page-title text-xl sm:text-2xl">PERFIL SOCIOECONÔMICO E ADERÊNCIA ECONÔMICA</h2>
         <div className="badge-unavailable text-sm p-4">Dado não disponível na base fornecida.</div>
       </div>
     );
@@ -58,7 +58,7 @@ export default function PageSocioeconomico({ analysis }: Props) {
   return (
     <div className="max-w-5xl mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-5 sm:space-y-7">
       <div>
-        <h2 className="page-title text-xl sm:text-2xl">PERFIL SOCIOECONÔMICO DA REGIÃO</h2>
+        <h2 className="page-title text-xl sm:text-2xl">PERFIL SOCIOECONÔMICO E ADERÊNCIA ECONÔMICA</h2>
         <p className="page-subtitle text-xs sm:text-sm">
           Município de {escola.Município}/{escola.UF} · análise de aderência econômica ao ticket da escola
         </p>

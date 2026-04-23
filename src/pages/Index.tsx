@@ -22,13 +22,14 @@ import PageConcMapa from '@/components/pages/PageConcMapa';
 import PageMarketShare from '@/components/pages/PageMarketShare';
 import PageMensalidade from '@/components/pages/PageMensalidade';
 import PageSocioeconomico from '@/components/pages/PageSocioeconomico';
+import PagePotencialConsumo from '@/components/pages/PagePotencialConsumo';
 import PageInsights from '@/components/pages/PageInsights';
 import PagePlanoAcao from '@/components/pages/PagePlanoAcao';
 import PageEncerramento from '@/components/pages/PageEncerramento';
 import ComparativeModule from '@/components/pages/ComparativeModule';
 import PageInstructions, { PAGE_INSTRUCTIONS } from '@/components/PageInstructions';
 
-const PAGE_ORDER: AppPage[] = ['abertura', 'resumo', 'panorama', 'concorrencia', 'marketshare', 'mensalidade', 'socioeconomico', 'insights', 'planoAcao', 'encerramento'];
+const PAGE_ORDER: AppPage[] = ['abertura', 'resumo', 'panorama', 'concorrencia', 'marketshare', 'mensalidade', 'socioeconomico', 'potencial', 'insights', 'planoAcao', 'encerramento'];
 // Páginas da Etapa 2 — fora do PAGE_ORDER (sem navegação livre por setas/atalhos).
 const ETAPA2_PAGES: AppPage[] = ['concEssenciais', 'concTabela', 'concMapa'];
 
@@ -423,6 +424,7 @@ export default function Index() {
             {page === 'marketshare' && analysis && <PageMarketShare analysis={analysis} />}
             {page === 'mensalidade' && analysis && <PageMensalidade analysis={analysis} />}
             {page === 'socioeconomico' && analysis && <PageSocioeconomico analysis={analysis} />}
+            {page === 'potencial' && analysis && <PagePotencialConsumo analysis={analysis} />}
             {page === 'insights' && analysis && <PageInsights analysis={analysis} />}
             {page === 'planoAcao' && analysis && <PagePlanoAcao analysis={analysis} />}
             {page === 'encerramento' && (
