@@ -196,7 +196,7 @@ export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fr
                 );
               })}
               {concorrentes.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-6 text-sm text-muted-foreground italic">Nenhum concorrente encontrado com o raio atual.</td></tr>
+                <tr><td colSpan={8} className="text-center py-6 text-sm text-muted-foreground italic">Nenhum concorrente encontrado com o raio atual.</td></tr>
               )}
             </tbody>
           </table>
