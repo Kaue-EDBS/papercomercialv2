@@ -23,9 +23,9 @@ interface Props {
 export default function RaioSlider({
   value,
   defaultValue,
-  min = 0.5,
+  min = 1,
   max = 20,
-  step = 0.5,
+  step = 1,
   onChange,
   label = 'Raio da área de influência',
   hint,
@@ -33,10 +33,18 @@ export default function RaioSlider({
   const [hover, setHover] = useState(false);
   const [unit, setUnit] = useState<'km' | 'm'>('km');
   const isCustom = Math.abs(value - defaultValue) > 0.001;
-  const pct = (v: number) => ((v - min) / (max - min)) * 100;
 
-  // Em modo metros usamos passo fino (50 m = 0,05 km) para ajuste preciso.
-  const effectiveStep = unit === 'm' ? 0.05 : step;
+  // Faixas conforme unidade selecionada:
+  // - km: 1 km a 20 km (passo 1 km, podendo ser sobrescrito por prop)
+  // - m : 10 m a 999 m (passo 10 m = 0,01 km)
+  const effectiveMin = unit === 'm' ? 0.01 : Math.max(min, 1);
+  const effectiveMax = unit === 'm' ? 0.999 : max;
+  const effectiveStep = unit === 'm' ? 0.01 : step;
+
+  // Garante que o valor atual fique dentro da faixa ativa para a régua
+  const clampedValue = Math.min(Math.max(value, effectiveMin), effectiveMax);
+  const pct = (v: number) => ((v - effectiveMin) / (effectiveMax - effectiveMin)) * 100;
+
   const fmt = (km: number) =>
     unit === 'm'
       ? `${Math.round(km * 1000).toLocaleString('pt-BR')} m`
@@ -120,16 +128,16 @@ export default function RaioSlider({
         {/* marca do padrão */}
         <div
           className="absolute top-1 -translate-x-1/2 z-0 pointer-events-none"
-          style={{ left: `${pct(defaultValue)}%` }}
+          style={{ left: `${Math.min(Math.max(pct(defaultValue), 0), 100)}%` }}
         >
           <div className="w-px h-3" style={{ background: 'hsl(var(--teal) / 0.55)' }} />
         </div>
         <input
           type="range"
-          min={min}
-          max={max}
+          min={effectiveMin}
+          max={effectiveMax}
           step={effectiveStep}
-          value={value}
+          value={clampedValue}
           onChange={(e) => onChange(parseFloat(e.target.value))}
           onMouseEnter={() => setHover(true)}
           onMouseLeave={() => setHover(false)}
@@ -138,26 +146,28 @@ export default function RaioSlider({
             // gradiente de progresso
             background: `linear-gradient(to right,
               hsl(var(--teal)) 0%,
-              hsl(var(--teal)) ${pct(value)}%,
-              hsl(var(--beige-dark)) ${pct(value)}%,
+              hsl(var(--teal)) ${pct(clampedValue)}%,
+              hsl(var(--beige-dark)) ${pct(clampedValue)}%,
               hsl(var(--beige-dark)) 100%)`,
           }}
           aria-label={`${label} em ${unit === 'm' ? 'metros' : 'quilômetros'}`}
-          aria-valuemin={min}
-          aria-valuemax={max}
-          aria-valuenow={value}
+          aria-valuemin={effectiveMin}
+          aria-valuemax={effectiveMax}
+          aria-valuenow={clampedValue}
         />
         {/* labels mín/padrão/máx */}
         <div className="absolute left-0 right-0 bottom-0 text-[10px] text-muted-foreground pointer-events-none">
-          <span className="absolute left-0">{fmt(min)}</span>
-          <span
-            className="absolute -translate-x-1/2 font-semibold"
-            style={{ left: `${pct(defaultValue)}%`, color: 'hsl(var(--teal-dark))' }}
-            title="Raio padrão pela densidade escolar"
-          >
-            ▲ padrão {fmt(defaultValue)}
-          </span>
-          <span className="absolute right-0">{fmt(max)}</span>
+          <span className="absolute left-0">{fmt(effectiveMin)}</span>
+          {defaultValue >= effectiveMin && defaultValue <= effectiveMax && (
+            <span
+              className="absolute -translate-x-1/2 font-semibold"
+              style={{ left: `${pct(defaultValue)}%`, color: 'hsl(var(--teal-dark))' }}
+              title="Raio padrão pela densidade escolar"
+            >
+              ▲ padrão {fmt(defaultValue)}
+            </span>
+          )}
+          <span className="absolute right-0">{fmt(effectiveMax)}</span>
         </div>
       </div>
 
