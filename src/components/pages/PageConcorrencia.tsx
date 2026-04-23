@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnalysisResult, EscolaData, ConcorrenteInfo } from '@/lib/types';
 import { num, formatNumber, formatPercent, getSegmentos, getMensalidadeFaixa, rebuildConcorrentes } from '@/lib/analysis';
 import { useDataLoader } from '@/hooks/useDataLoader';
-import { MapPin, Users, Target, GitCompare, Filter, X, Ruler, Check } from 'lucide-react';
+import { MapPin, Users, Target, GitCompare, Filter, X, Ruler, Check, Crosshair, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import ConcorrenciaMap from './ConcorrenciaMap';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -110,6 +110,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
   const [selected, setSelected] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>('todos');
   const [highlightedInep, setHighlightedInep] = useState<string | null>(null);
+  const [centerSignal, setCenterSignal] = useState(0);
 
   const filtered: ConcorrenteInfo[] = useMemo(() => {
     return concorrentes.filter(c => {
@@ -259,14 +260,77 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
                 Mapa de concorrência
               </span>
             </div>
-            <div className="p-3 border-b">
+            <div className="p-3 border-b space-y-3">
               <RaioSlider
                 value={liveRaio}
                 defaultValue={analysis.raioOperacional}
                 onChange={(km) => { setLiveRaio(km); onRaioChange?.(km); }}
                 hint="Ao mover a régua, o sistema reprocessa a lista de concorrentes, o mapa, os indicadores e o market share desta página."
               />
-              <div className="flex justify-end mt-3">
+
+              {/* Métricas vivas do raio */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                <div className="rounded-md border px-2.5 py-1.5" style={{ background: 'hsl(var(--beige) / 0.4)' }}>
+                  <div className="text-muted-foreground uppercase tracking-wider text-[9px] font-bold">Raio atual</div>
+                  <div className="font-bold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
+                    {liveRaio < 1
+                      ? `${Math.round(liveRaio * 1000).toLocaleString('pt-BR')} m`
+                      : `${liveRaio.toFixed(1).replace('.', ',')} km`}
+                  </div>
+                </div>
+                <div className="rounded-md border px-2.5 py-1.5" style={{ background: 'hsl(var(--beige) / 0.4)' }}>
+                  <div className="text-muted-foreground uppercase tracking-wider text-[9px] font-bold">Padrão</div>
+                  <div className="font-bold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
+                    {analysis.raioOperacional.toFixed(1).replace('.', ',')} km
+                  </div>
+                </div>
+                <div className="rounded-md border px-2.5 py-1.5" style={{ background: 'hsl(var(--beige) / 0.4)' }}>
+                  <div className="text-muted-foreground uppercase tracking-wider text-[9px] font-bold">No raio</div>
+                  <div className="font-bold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
+                    {totalConcorrentes} <span className="text-muted-foreground font-medium">esc.</span>
+                  </div>
+                </div>
+                <div className="rounded-md border px-2.5 py-1.5" style={{ background: 'hsl(var(--beige) / 0.4)' }}>
+                  <div className="text-muted-foreground uppercase tracking-wider text-[9px] font-bold">No mapa</div>
+                  <div className="font-bold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
+                    {comCoordenadas}/{totalConcorrentes}
+                  </div>
+                </div>
+              </div>
+
+              {/* Barra de ações: centralizar, padrão, confirmar */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCenterSignal(s => s + 1)}
+                    className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg text-xs font-semibold border hover:bg-muted transition-colors focus-visible:ring-2 focus-visible:ring-primary"
+                    style={{ borderColor: 'hsl(var(--teal-light))', color: 'hsl(var(--navy))' }}
+                    aria-label="Centralizar mapa na escola em análise"
+                    title="Centraliza o mapa na escola em análise"
+                  >
+                    <Crosshair className="w-3.5 h-3.5" style={{ color: 'hsl(var(--teal))' }} />
+                    Centralizar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLiveRaio(analysis.raioOperacional);
+                      onRaioChange?.(analysis.raioOperacional);
+                      toast.info('Raio restaurado ao padrão da Etapa 2', {
+                        description: `${analysis.raioOperacional.toFixed(1).replace('.', ',')} km`,
+                      });
+                    }}
+                    disabled={!isCustomRaio}
+                    className="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg text-xs font-semibold border hover:bg-muted transition-colors focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    style={{ borderColor: 'hsl(var(--teal-light))', color: 'hsl(var(--navy))' }}
+                    aria-label="Restaurar raio padrão definido na Etapa 2"
+                    title="Volta ao raio padrão definido na Etapa 2"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" style={{ color: 'hsl(var(--teal))' }} />
+                    Padrão
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -293,6 +357,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
                 concorrentes={concorrentes}
                 highlightedInep={highlightedInep}
                 onMarkerClick={handleMarkerClick}
+                centerSignal={centerSignal}
               />
             ) : (
               <div

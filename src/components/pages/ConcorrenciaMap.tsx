@@ -9,9 +9,11 @@ interface Props {
   concorrentes: ConcorrenteInfo[];
   highlightedInep?: string | null;
   onMarkerClick?: (inep: string) => void;
+  /** Quando incrementa, o mapa recentra na escola em análise (ou no primeiro concorrente). */
+  centerSignal?: number;
 }
 
-export default function ConcorrenciaMap({ escola, concorrentes, highlightedInep, onMarkerClick }: Props) {
+export default function ConcorrenciaMap({ escola, concorrentes, highlightedInep, onMarkerClick, centerSignal }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
@@ -157,6 +159,27 @@ export default function ConcorrenciaMap({ escola, concorrentes, highlightedInep,
       }
     });
   }, [highlightedInep]);
+
+  // Recentraliza no sinal externo ("Centralizar")
+  useEffect(() => {
+    if (centerSignal === undefined) return;
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    let lat: number | null = null;
+    let lng: number | null = null;
+    if (escolaHasCoords) {
+      lat = escolaLat;
+      lng = escolaLng;
+    } else if (plotable.length > 0) {
+      lat = parseFloat(String(plotable[0].escola.Latitude));
+      lng = parseFloat(String(plotable[0].escola.Longitude));
+    }
+    if (lat === null || lng === null || isNaN(lat) || isNaN(lng)) return;
+    try {
+      map.setView([lat, lng], 15, { animate: true });
+    } catch { /* noop */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [centerSignal]);
 
   if (!hasAnything) {
     return null;
