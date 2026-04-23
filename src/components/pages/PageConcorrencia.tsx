@@ -1,10 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnalysisResult, EscolaData, ConcorrenteInfo } from '@/lib/types';
-import { num, formatNumber, formatDistance, formatPercent, getSegmentos, getMensalidadeFaixa, rebuildConcorrentes } from '@/lib/analysis';
+import { num, formatNumber, formatPercent, getSegmentos, getMensalidadeFaixa, rebuildConcorrentes } from '@/lib/analysis';
 import { useDataLoader } from '@/hooks/useDataLoader';
-import { MapPin, Users, Target, ChevronDown, ChevronUp, GitCompare, Filter, X } from 'lucide-react';
+import { MapPin, Users, Target, GitCompare, Filter, X, Ruler } from 'lucide-react';
 import ConcorrenciaMap from './ConcorrenciaMap';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import ConcorrenciaTable from '@/components/concorrencia/ConcorrenciaTable';
+import RaioSlider from '@/components/concorrencia/RaioSlider';
 
 interface Props {
   analysis: AnalysisResult;
@@ -14,47 +16,11 @@ interface Props {
   onRaioChange?: (raioKm: number) => void;
 }
 
-function formatAdocao(tipo: string): string {
-  if (!tipo) return 'Dado não disponível';
-  const upper = tipo.toUpperCase().trim();
-  if (upper === 'NÃO' || upper === 'NAO') return 'Sem Dados';
-  if (upper === 'DID' || upper === 'DID/AP') return 'Didático';
-  return tipo;
-}
-
-function formatAdotaBrasil(val: string): string {
-  if (!val) return 'Dado não disponível';
-  const upper = val.toUpperCase().trim();
-  if (upper === 'NÃO' || upper === 'NAO') return 'Sem Dados';
-  return val;
-}
-
-type Prioridade = 'Alta' | 'Média' | 'Baixa';
-
-function calcPrioridade(c: ConcorrenteInfo, escola: EscolaData): Prioridade {
-  let score = 0;
-  if (c.distancia !== null && c.distancia <= 2) score += 3;
-  else if (c.distancia !== null && c.distancia <= 5) score += 2;
-  else if (c.proximidadeCEP) score += 1;
-  if (getMensalidadeFaixa(escola.Mensalidade) === getMensalidadeFaixa(c.escola.Mensalidade)) score += 2;
-  score += Math.min(c.segmentosComum.length, 3);
-  if (num(c.escola['Alunado Total']) >= num(escola['Alunado Total']) * 0.5) score += 1;
-  if (score >= 6) return 'Alta';
-  if (score >= 3) return 'Média';
-  return 'Baixa';
-}
-
 const SEGMENT_CHIP_COLORS: Record<string, { bg: string; text: string }> = {
   EI: { bg: 'hsl(174 50% 92%)', text: 'hsl(174 62% 28%)' },
   EFI: { bg: 'hsl(220 50% 92%)', text: 'hsl(220 70% 18%)' },
   EFII: { bg: 'hsl(78 60% 92%)', text: 'hsl(78 70% 30%)' },
   EM: { bg: 'hsl(174 40% 85%)', text: 'hsl(174 62% 22%)' },
-};
-
-const PRIORIDADE_COLORS: Record<Prioridade, { bg: string; text: string }> = {
-  Alta: { bg: 'hsl(0 70% 95%)', text: 'hsl(0 70% 40%)' },
-  Média: { bg: 'hsl(40 80% 92%)', text: 'hsl(40 80% 35%)' },
-  Baixa: { bg: 'hsl(174 50% 92%)', text: 'hsl(174 62% 28%)' },
 };
 
 function SegmentChips({ escola }: { escola: EscolaData }) {
@@ -63,22 +29,15 @@ function SegmentChips({ escola }: { escola: EscolaData }) {
   return (
     <div className="flex gap-1 flex-wrap">
       {segs.map(s => (
-        <span key={s} className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold"
-          style={{ background: SEGMENT_CHIP_COLORS[s]?.bg, color: SEGMENT_CHIP_COLORS[s]?.text }}>
+        <span
+          key={s}
+          className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold"
+          style={{ background: SEGMENT_CHIP_COLORS[s]?.bg, color: SEGMENT_CHIP_COLORS[s]?.text }}
+        >
           {s}
         </span>
       ))}
     </div>
-  );
-}
-
-function PrioridadeBadge({ prioridade }: { prioridade: Prioridade }) {
-  const c = PRIORIDADE_COLORS[prioridade];
-  return (
-    <span className="px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold whitespace-nowrap"
-      style={{ background: c.bg, color: c.text }}>
-      {prioridade}
-    </span>
   );
 }
 
@@ -130,8 +89,9 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
   }, [analysis]);
 
   // Recalcula em tempo real quando o usuário arrasta a régua.
+  // Reprocessamento total: tabela, mapa, cards e market share derivam de liveAnalysis.
   useEffect(() => {
-    if (liveRaio === analysis.raioOperacional) {
+    if (Math.abs(liveRaio - analysis.raioOperacional) < 0.001) {
       setLiveAnalysis(analysis);
       return;
     }
@@ -146,13 +106,8 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
   const [activeFilter, setActiveFilter] = useState<FilterType>('todos');
   const [highlightedInep, setHighlightedInep] = useState<string | null>(null);
 
-  const enriched = useMemo(() =>
-    concorrentes.map(c => ({ ...c, prioridade: calcPrioridade(c, escola) })),
-    [concorrentes, escola]
-  );
-
-  const filtered = useMemo(() => {
-    return enriched.filter(c => {
+  const filtered: ConcorrenteInfo[] = useMemo(() => {
+    return concorrentes.filter(c => {
       switch (activeFilter) {
         case 'ate2km': return c.distancia !== null && c.distancia <= 2;
         case 'mesmaFaixa': return getMensalidadeFaixa(escola.Mensalidade) === getMensalidadeFaixa(c.escola.Mensalidade);
@@ -170,7 +125,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
         default: return true;
       }
     });
-  }, [enriched, activeFilter, escola]);
+  }, [concorrentes, activeFilter, escola]);
 
   const totalConcorrentes = concorrentes.length;
   const mesmaFaixa = concorrentes.filter(c => getMensalidadeFaixa(escola.Mensalidade) === getMensalidadeFaixa(c.escola.Mensalidade)).length;
@@ -180,12 +135,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
     const cLng = parseFloat(String(c.escola.Longitude));
     return !isNaN(cLat) && !isNaN(cLng);
   }).length;
-
-  const toggleExpand = (inep: string) => {
-    if (compareMode) return;
-    setExpandedInep(expandedInep === inep ? null : inep);
-    setHighlightedInep(expandedInep === inep ? null : inep);
-  };
+  const totalAlunos = num(escola['Alunado Total']) + concorrentes.reduce((s, c) => s + num(c.escola['Alunado Total']), 0);
 
   const toggleSelect = (inep: string) => {
     if (selected.includes(inep)) setSelected(selected.filter(s => s !== inep));
@@ -193,18 +143,25 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
   };
 
   const handleMarkerClick = useCallback((inep: string) => {
-    setHighlightedInep(prev => prev === inep ? null : inep);
-    setExpandedInep(prev => prev === inep ? null : inep);
+    setHighlightedInep(prev => (prev === inep ? null : inep));
+    setExpandedInep(prev => (prev === inep ? null : inep));
   }, []);
 
-  const selectedEscolas = selected.map(inep => concorrentes.find(c => String(c.escola['Código Inep']) === inep)?.escola).filter(Boolean) as EscolaData[];
+  const handleExpandedChange = useCallback((inep: string | null) => {
+    setExpandedInep(inep);
+    setHighlightedInep(inep);
+  }, []);
+
+  const selectedEscolas = selected
+    .map(inep => concorrentes.find(c => String(c.escola['Código Inep']) === inep)?.escola)
+    .filter(Boolean) as EscolaData[];
 
   const getCompetitorMS = (e: EscolaData) => {
-    const total = num(escola['Alunado Total']) + concorrentes.reduce((s, c) => s + num(c.escola['Alunado Total']), 0);
-    return total > 0 ? (num(e['Alunado Total']) / total) * 100 : 0;
+    return totalAlunos > 0 ? (num(e['Alunado Total']) / totalAlunos) * 100 : 0;
   };
 
   const activeFilterLabel = FILTER_OPTIONS.find(f => f.key === activeFilter)?.label || 'Todos';
+  const isCustomRaio = Math.abs(liveRaio - analysis.raioOperacional) > 0.001;
 
   return (
     <div className="max-w-5xl mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-4 sm:space-y-6">
@@ -212,23 +169,22 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
       <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-3">
         <div>
           <h2 className="page-title text-xl sm:text-2xl">PAINEL DE CONCORRÊNCIA ESCOLAR</h2>
-          <p className="page-subtitle text-xs sm:text-sm">Escola analisada e os principais concorrentes na área de influência</p>
+          <p className="page-subtitle text-xs sm:text-sm">
+            Escola analisada e os principais concorrentes na área de influência
+          </p>
         </div>
         <button
           onClick={() => { setCompareMode(!compareMode); setSelected([]); }}
           className="px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors w-full sm:w-auto flex items-center gap-2 justify-center"
-          style={{
-            background: compareMode ? 'hsl(var(--navy))' : 'hsl(var(--teal))',
-            color: 'white',
-          }}
+          style={{ background: compareMode ? 'hsl(var(--navy))' : 'hsl(var(--teal))', color: 'white' }}
         >
           <GitCompare className="w-4 h-4" />
           {compareMode ? 'Cancelar Comparação' : 'Comparar'}
         </button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Summary Cards — refletem o liveAnalysis */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="card-indicator">
           <div className="flex items-center gap-2 mb-1">
             <Users className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
@@ -239,30 +195,44 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
         <div className="card-indicator">
           <div className="flex items-center gap-2 mb-1">
             <Target className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
-            <span className="card-indicator-label !mt-0">Mesma Faixa</span>
+            <span className="card-indicator-label !mt-0">Mesma faixa</span>
           </div>
           <div className="card-indicator-value" style={{ color: 'hsl(var(--navy))' }}>{mesmaFaixa}</div>
         </div>
         <div className="card-indicator">
           <div className="flex items-center gap-2 mb-1">
             <MapPin className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
-            <span className="card-indicator-label !mt-0">Mais Próximos</span>
+            <span className="card-indicator-label !mt-0">Mais próximos</span>
           </div>
           <div className="card-indicator-value" style={{ color: 'hsl(var(--navy))' }}>{proximos}</div>
           <span className="text-[10px] text-muted-foreground">até 3 km</span>
+        </div>
+        <div className="card-indicator">
+          <div className="flex items-center gap-2 mb-1">
+            <Ruler className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
+            <span className="card-indicator-label !mt-0">Total alunos da área</span>
+          </div>
+          <div className="card-indicator-value" style={{ color: 'hsl(var(--navy))' }}>{formatNumber(totalAlunos)}</div>
         </div>
       </div>
 
       {/* Compare mode bar */}
       {compareMode && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-xs p-3 rounded-lg border" style={{ background: 'hsl(var(--beige))', borderColor: 'hsl(var(--teal-light))' }}>
+        <div
+          className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-xs p-3 rounded-lg border"
+          style={{ background: 'hsl(var(--beige))', borderColor: 'hsl(var(--teal-light))' }}
+        >
           <span className="font-semibold" style={{ color: 'hsl(var(--navy))' }}>
             Selecione até 2 concorrentes ({selected.length}/2)
           </span>
           {selected.length > 0 && (
             <div className="flex gap-1 flex-wrap">
               {selectedEscolas.map(e => (
-                <span key={String(e['Código Inep'])} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium" style={{ background: 'hsl(var(--teal-light))', color: 'hsl(var(--navy))' }}>
+                <span
+                  key={String(e['Código Inep'])}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium"
+                  style={{ background: 'hsl(var(--teal-light))', color: 'hsl(var(--navy))' }}
+                >
                   {e.Escola?.slice(0, 20)}
                   <button onClick={() => toggleSelect(String(e['Código Inep']))} className="hover:opacity-70">×</button>
                 </span>
@@ -272,100 +242,86 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
         </div>
       )}
 
-      {/* Mini Map + Info Panel — full width block */}
-      {(() => {
-        const hasAnyCoords = comCoordenadas > 0;
-        if (!hasAnyCoords) return null;
-        return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2 bg-card rounded-xl border overflow-hidden">
-              <div className="px-3 py-2 border-b flex items-center gap-2" style={{ background: 'hsl(var(--teal-light))' }}>
-                <MapPin className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
-                <span className="text-xs font-semibold" style={{ color: 'hsl(var(--navy))' }}>Mapa de Concorrência</span>
-              </div>
-              {/* Régua operacional — ajusta o raio em tempo real */}
-              <div className="px-3 py-3 border-b space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="raio-live" className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--navy))' }}>
-                    Raio da área de influência
-                  </label>
-                  <span className="text-xs font-bold tabular-nums" style={{ color: 'hsl(var(--teal))' }}>
-                    {liveRaio.toFixed(1).replace('.', ',')} km
-                  </span>
-                </div>
-                <input
-                  id="raio-live"
-                  type="range"
-                  min={0.5}
-                  max={20}
-                  step={0.5}
-                  value={liveRaio}
-                  onChange={(e) => {
-                    const v = parseFloat(e.target.value);
-                    setLiveRaio(v);
-                    onRaioChange?.(v);
-                  }}
-                  className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-                  style={{ accentColor: 'hsl(var(--teal))' }}
-                  aria-label="Ajustar raio da área de influência em quilômetros"
-                />
-                <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>0,5 km</span>
-                  <span>Padrão: {analysis.raioOperacional} km</span>
-                  <span>20 km</span>
-                </div>
-              </div>
-              <ConcorrenciaMap
-                escola={escola}
-                concorrentes={concorrentes}
-                highlightedInep={highlightedInep}
-                onMarkerClick={handleMarkerClick}
+      {/* Mapa + painel lateral + régua premium */}
+      {comCoordenadas > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 bg-card rounded-xl border overflow-hidden">
+            <div
+              className="px-3 py-2 border-b flex items-center gap-2"
+              style={{ background: 'hsl(var(--teal-light))' }}
+            >
+              <MapPin className="w-4 h-4" style={{ color: 'hsl(var(--teal))' }} />
+              <span className="text-xs font-semibold" style={{ color: 'hsl(var(--navy))' }}>
+                Mapa de concorrência
+              </span>
+            </div>
+            <div className="p-3 border-b">
+              <RaioSlider
+                value={liveRaio}
+                defaultValue={analysis.raioOperacional}
+                onChange={(km) => { setLiveRaio(km); onRaioChange?.(km); }}
+                hint="Ao mover a régua, o sistema reprocessa a lista de concorrentes, o mapa, os indicadores e o market share desta página."
               />
             </div>
+            <ConcorrenciaMap
+              escola={escola}
+              concorrentes={concorrentes}
+              highlightedInep={highlightedInep}
+              onMarkerClick={handleMarkerClick}
+            />
+          </div>
 
-            {/* Info Panel beside map */}
-            <div className="lg:col-span-1 space-y-3">
-              <div className="bg-card rounded-xl border p-3 space-y-2">
-                <div className="text-xs font-bold" style={{ color: 'hsl(var(--navy))' }}>Legenda</div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="inline-block w-3 h-3 rounded-full" style={{ background: 'hsl(174,62%,35%)' }}></span>
-                  <span className="text-muted-foreground">Escola em análise</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="inline-block w-3 h-3 rounded-full" style={{ background: 'hsl(220,70%,18%)' }}></span>
-                  <span className="text-muted-foreground">Concorrentes</span>
-                </div>
-                <div className="text-[10px] text-muted-foreground mt-1">{comCoordenadas} de {totalConcorrentes} com coordenadas no mapa</div>
+          {/* Painel lateral mais sofisticado */}
+          <div className="lg:col-span-1 space-y-3">
+            <div className="bg-card rounded-xl border p-3 space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--navy))' }}>
+                Legenda
               </div>
-
-              <div className="bg-card rounded-xl border p-3 space-y-2">
-                <div className="text-xs font-bold" style={{ color: 'hsl(var(--navy))' }}>Resumo</div>
-                <div className="grid grid-cols-2 gap-y-1 text-xs">
-                  <span className="text-muted-foreground">Filtro ativo</span>
-                  <span className="font-semibold">{activeFilterLabel}</span>
-                  <span className="text-muted-foreground">Exibidos</span>
-                  <span className="font-semibold">{filtered.length}</span>
-                  <span className="text-muted-foreground">Raio</span>
-                  <span className="font-semibold">{liveRaio.toFixed(1).replace('.', ',')} km</span>
-                </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="inline-block w-3 h-3 rounded-full" style={{ background: 'hsl(174,62%,35%)' }} />
+                <span className="text-muted-foreground">Escola em análise</span>
               </div>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="inline-block w-3 h-3 rounded-full" style={{ background: 'hsl(220,70%,18%)' }} />
+                <span className="text-muted-foreground">Concorrentes</span>
+              </div>
+            </div>
 
-              {selected.length > 0 && (
-                <div className="bg-card rounded-xl border p-3 space-y-2">
-                  <div className="text-xs font-bold" style={{ color: 'hsl(var(--navy))' }}>Selecionadas</div>
-                  {selectedEscolas.map(e => (
-                    <div key={String(e['Código Inep'])} className="text-xs font-medium truncate" style={{ color: 'hsl(var(--teal))' }}>
-                      • {e.Escola?.slice(0, 28)}
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="bg-card rounded-xl border p-3 space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--navy))' }}>
+                Cobertura no mapa
+              </div>
+              <div className="grid grid-cols-2 gap-y-1 text-xs">
+                <span className="text-muted-foreground">Plotados</span>
+                <span className="font-semibold tabular-nums">{comCoordenadas} / {totalConcorrentes}</span>
+                <span className="text-muted-foreground">Estimados por CEP</span>
+                <span className="font-semibold tabular-nums">{totalConcorrentes - comCoordenadas}</span>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-xl border p-3 space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--navy))' }}>
+                Filtro ativo
+              </div>
+              <div className="grid grid-cols-2 gap-y-1 text-xs">
+                <span className="text-muted-foreground">Critério</span>
+                <span className="font-semibold">{activeFilterLabel}</span>
+                <span className="text-muted-foreground">Exibidos</span>
+                <span className="font-semibold tabular-nums">{filtered.length}</span>
+                <span className="text-muted-foreground">Raio</span>
+                <span className="font-semibold tabular-nums">
+                  {liveRaio.toFixed(1).replace('.', ',')} km
+                  {isCustomRaio && (
+                    <span className="ml-1 text-[10px]" style={{ color: 'hsl(40 80% 35%)' }}>(ajustado)</span>
+                  )}
+                </span>
+              </div>
             </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
-      {/* Filter icon + active chips */}
+      {/* Filtros rápidos */}
       <div className="flex items-center gap-2 flex-wrap">
         <Popover>
           <PopoverTrigger asChild>
@@ -379,13 +335,14 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
               <Filter className="w-3.5 h-3.5" />
               Filtros
               {activeFilter !== 'todos' && (
-                <span className="ml-1 w-2 h-2 rounded-full" style={{ background: 'hsl(var(--teal))' }}></span>
+                <span className="ml-1 w-2 h-2 rounded-full" style={{ background: 'hsl(var(--teal))' }} />
               )}
             </button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-52 p-2 space-y-1">
             {FILTER_OPTIONS.map(f => (
-              <button key={f.key}
+              <button
+                key={f.key}
                 onClick={() => setActiveFilter(f.key)}
                 className="w-full text-left px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
                 style={{
@@ -400,148 +357,83 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaio
         </Popover>
 
         {activeFilter !== 'todos' && (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-medium"
-            style={{ background: 'hsl(var(--teal-light))', color: 'hsl(var(--navy))' }}>
+          <span
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-medium"
+            style={{ background: 'hsl(var(--teal-light))', color: 'hsl(var(--navy))' }}
+          >
             {activeFilterLabel}
-            <button onClick={() => setActiveFilter('todos')} className="hover:opacity-70 ml-0.5"><X className="w-3 h-3" /></button>
+            <button onClick={() => setActiveFilter('todos')} className="hover:opacity-70 ml-0.5">
+              <X className="w-3 h-3" />
+            </button>
           </span>
         )}
 
-        <span className="text-[10px] text-muted-foreground ml-auto">{filtered.length} concorrente{filtered.length !== 1 ? 's' : ''}</span>
+        <span className="text-[10px] text-muted-foreground ml-auto">
+          {filtered.length} concorrente{filtered.length !== 1 ? 's' : ''}
+        </span>
       </div>
 
-      {/* Table — full width */}
-      <div className="bg-card rounded-xl border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="table-executive w-full table-fixed">
-            <thead>
-              <tr>
-                {compareMode && <th className="w-10"></th>}
-                <th>Escola</th>
-                <th className="w-28">Matrículas</th>
-                <th className="w-36 hidden sm:table-cell">Distância / Proximidade</th>
-                <th className="w-40">Segmentos atendidos</th>
-                <th className="w-8"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* Escola analisada - fixed on top */}
-              <tr style={{ background: 'hsl(var(--teal-light))' }} className="font-semibold">
-                {compareMode && (
-                  <td className="text-center">
-                    <span className="text-[10px] text-muted-foreground">REF</span>
-                  </td>
-                )}
-                <td className="text-xs sm:text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate">{escola.Escola}</span>
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap shrink-0"
-                      style={{ background: 'hsl(var(--teal))', color: 'white' }}>
-                      EM ANÁLISE
-                    </span>
-                  </div>
-                </td>
-                <td className="text-xs sm:text-sm font-bold">{formatNumber(num(escola['Alunado Total']))}</td>
-                <td className="hidden sm:table-cell text-xs">—</td>
-                <td><SegmentChips escola={escola} /></td>
-                <td></td>
-              </tr>
-
-              {/* Concorrentes */}
-              {filtered.map((row) => {
-                const inep = String(row.escola['Código Inep']);
-                const isExpanded = expandedInep === inep;
-                const isSelected = selected.includes(inep);
-                const isHighlighted = highlightedInep === inep;
-                const e = row.escola;
-                return (
-                  <>
-                    <tr key={inep}
-                      onClick={() => compareMode ? toggleSelect(inep) : toggleExpand(inep)}
-                      className={`cursor-pointer transition-colors ${isSelected ? 'ring-2 ring-inset ring-primary' : ''}`}
-                      style={{
-                        background: isHighlighted
-                          ? 'hsl(var(--teal-light))'
-                          : isSelected ? 'hsl(var(--teal-light) / 0.5)' : undefined,
-                      }}
-                    >
-                      {compareMode && (
-                        <td className="text-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleSelect(inep)}
-                            disabled={!isSelected && selected.length >= 2}
-                            className="w-4 h-4 accent-[hsl(var(--teal))]"
-                          />
-                        </td>
-                      )}
-                      <td className="text-xs sm:text-sm">
-                        <span className="truncate block">{e.Escola}</span>
-                      </td>
-                      <td className="text-xs sm:text-sm">{formatNumber(num(e['Alunado Total']))}</td>
-                      <td className="hidden sm:table-cell text-xs">
-                        {row.distancia !== null
-                          ? formatDistance(row.distancia)
-                          : row.proximidadeCEP
-                            ? <span className="italic text-muted-foreground">Estimado por CEP</span>
-                            : <span className="italic text-muted-foreground">Sem coordenadas</span>}
-                      </td>
-                      <td><SegmentChips escola={e} /></td>
-                      <td className="text-center">
-                        {!compareMode && (
-                          isExpanded
-                            ? <ChevronUp className="w-4 h-4 text-muted-foreground inline" />
-                            : <ChevronDown className="w-4 h-4 text-muted-foreground inline" />
-                        )}
-                      </td>
-                    </tr>
-                    {isExpanded && !compareMode && (
-                      <tr key={`${inep}-detail`}>
-                        <td colSpan={6} className="!p-0">
-                          <div className="px-4 sm:px-6 py-3 sm:py-4" style={{ background: 'hsl(var(--beige-dark))' }}>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                              <div className="space-y-1.5">
-                                <div className="text-xs font-bold mb-2" style={{ color: 'hsl(var(--navy))' }}>Localização e Perfil</div>
-                                <div className="text-xs"><span className="text-muted-foreground">Endereço:</span> {e.Endereço || '—'}{e.Número ? `, ${e.Número}` : ''} — {e.Bairro || ''}</div>
-                                <div className="text-xs"><span className="text-muted-foreground">Distância:</span> {row.distancia !== null ? formatDistance(row.distancia) : 'Estimado por CEP'}</div>
-                                <div className="text-xs"><span className="text-muted-foreground">Mensalidade:</span> {e.Mensalidade === '0' ? 'N/D' : `R$ ${e.Mensalidade}`}</div>
-                              </div>
-                              <div className="space-y-1.5">
-                                <div className="text-xs font-bold mb-2" style={{ color: 'hsl(var(--navy))' }}>Oferta Educacional</div>
-                                <div className="text-xs"><span className="text-muted-foreground">Matrículas Totais:</span> {formatNumber(num(e['Alunado Total']))}</div>
-                                <div className="text-xs"><span className="text-muted-foreground">Ed. Infantil:</span> {formatNumber(num(e.qt_mat_educacao_infantil))}</div>
-                                <div className="text-xs"><span className="text-muted-foreground">Fund. Anos Iniciais:</span> {formatNumber(num(e.qt_mat_ensino_fundamental_anos_iniciais))}</div>
-                                <div className="text-xs"><span className="text-muted-foreground">Fund. Anos Finais:</span> {formatNumber(num(e.qt_mat_ensino_fundamental_anos_finais))}</div>
-                                <div className="text-xs"><span className="text-muted-foreground">Ensino Médio:</span> {formatNumber(num(e.qt_mat_ensino_medio))}</div>
-                              </div>
-                              <div className="space-y-1.5">
-                                <div className="text-xs font-bold mb-2" style={{ color: 'hsl(var(--navy))' }}>Relação com a Editora</div>
-                                <div className="text-xs"><span className="text-muted-foreground">Adoção Ed. do Brasil:</span> {formatAdotaBrasil(e['Adota Brasil'])}</div>
-                                <div className="text-xs"><span className="text-muted-foreground">Tipo de Adoção:</span> {formatAdocao(e['Tipo de Adoção'])}</div>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Tabela unificada — mesmo padrão da Validação (Etapa 2) */}
+      <ConcorrenciaTable
+        escola={escola}
+        concorrentes={filtered}
+        essenciaisInep={essenciaisInep}
+        mode="apresentacao"
+        expandedInep={expandedInep}
+        onExpandedChange={handleExpandedChange}
+        caption={
+          <>
+            Dica: <strong>clique em uma linha</strong> para expandir os detalhes da escola.
+          </>
+        }
+      />
 
       {/* Compare cards */}
       {compareMode && selected.length > 0 && (
         <div className="space-y-4">
-          <h3 className="font-semibold text-base sm:text-lg" style={{ color: 'hsl(var(--navy))' }}>Comparativo Rápido</h3>
+          <h3 className="font-semibold text-base sm:text-lg" style={{ color: 'hsl(var(--navy))' }}>
+            Comparativo Rápido
+          </h3>
           <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4">
             <CompareCard escola={escola} label="Escola em Análise" marketShare={marketShare.geral} />
             {selectedEscolas.map((e, idx) => (
-              <CompareCard key={String(e['Código Inep'])} escola={e} label={`Concorrente ${idx + 1}`} marketShare={getCompetitorMS(e)} />
+              <CompareCard
+                key={String(e['Código Inep'])}
+                escola={e}
+                label={`Concorrente ${idx + 1}`}
+                marketShare={getCompetitorMS(e)}
+              />
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modo comparação: chips para selecionar concorrentes (lista compacta) */}
+      {compareMode && (
+        <div className="bg-card rounded-xl border p-3 space-y-2">
+          <div className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'hsl(var(--navy))' }}>
+            Toque para incluir/remover do comparativo
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {filtered.map(c => {
+              const inep = String(c.escola['Código Inep']);
+              const isSel = selected.includes(inep);
+              return (
+                <button
+                  key={inep}
+                  onClick={() => toggleSelect(inep)}
+                  disabled={!isSel && selected.length >= 2}
+                  className="px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors disabled:opacity-40"
+                  style={{
+                    background: isSel ? 'hsl(var(--teal))' : 'hsl(var(--card))',
+                    color: isSel ? 'white' : 'hsl(var(--navy))',
+                    borderColor: isSel ? 'hsl(var(--teal))' : 'hsl(var(--border))',
+                  }}
+                >
+                  {c.escola.Escola?.slice(0, 26)}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

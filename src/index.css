@@ -223,3 +223,54 @@
     color: hsl(var(--primary-foreground));
   }
 }
+
+/* ─────────────────────────────────────────────────────────
+   RaioSlider — trilho premium e thumb confortável
+   ───────────────────────────────────────────────────────── */
+@layer components {
+  .raio-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    border-radius: 9999px;
+    outline: none;
+    cursor: pointer;
+  }
+  .raio-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    background: white;
+    border: 3px solid hsl(var(--teal));
+    box-shadow: 0 2px 6px hsl(174 62% 35% / 0.35), 0 0 0 4px hsl(174 62% 35% / 0.08);
+    cursor: grab;
+    transition: transform 120ms ease, box-shadow 120ms ease;
+    margin-top: -7px;
+  }
+  .raio-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.08);
+    box-shadow: 0 3px 10px hsl(174 62% 35% / 0.45), 0 0 0 6px hsl(174 62% 35% / 0.12);
+  }
+  .raio-slider::-webkit-slider-thumb:active {
+    cursor: grabbing;
+    transform: scale(0.96);
+  }
+  .raio-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    background: white;
+    border: 3px solid hsl(var(--teal));
+    box-shadow: 0 2px 6px hsl(174 62% 35% / 0.35);
+    cursor: grab;
+    transition: transform 120ms ease;
+  }
+  .raio-slider::-moz-range-thumb:hover {
+    transform: scale(1.08);
+  }
+  .raio-slider:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 4px hsl(174 62% 35% / 0.25), 0 2px 8px hsl(174 62% 35% / 0.4);
+  }
+}
