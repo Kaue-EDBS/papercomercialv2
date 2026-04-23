@@ -41,6 +41,8 @@ export default function PageCarteira({ session, onPickEscola, onBack, censoData 
   const [showColPicker, setShowColPicker] = useState(false);
   const [picked, setPicked] = useState<string[] | null>(null);
   const [confirmEscola, setConfirmEscola] = useState<Row | null>(null);
+  const [resolvedInep, setResolvedInep] = useState<string | null>(null);
+  const [resolveError, setResolveError] = useState<string | null>(null);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [colFilters, setColFilters] = useState<Record<string, string>>({});
   const [sortCol, setSortCol] = useState<string | null>(null);
@@ -102,15 +104,33 @@ export default function PageCarteira({ session, onPickEscola, onBack, censoData 
 
   const confirmPaper = () => {
     if (!confirmEscola) return;
-    const inep = String(confirmEscola['COD_INEP'] ?? '').trim();
+    const inepDireto = String(confirmEscola['COD_INEP'] ?? '').trim();
     const nome = String(confirmEscola['NOME ESCOLA'] ?? '').trim();
-    if (!inep) {
-      // Sem INEP — não dá para abrir paper. Aviso permanece visível no modal.
-      return;
-    }
+    const inepFinal = inepDireto && inepDireto !== '-' ? inepDireto : (resolvedInep ?? '');
+    if (!inepFinal) return;
     setConfirmEscola(null);
-    onPickEscola(inep, nome);
+    setResolvedInep(null);
+    setResolveError(null);
+    onPickEscola(inepFinal, nome);
   };
+
+  // Quando abrir o modal sem INEP, tenta resolver via Protheus (nome + município + UF + coords)
+  useEffect(() => {
+    if (!confirmEscola) { setResolvedInep(null); setResolveError(null); return; }
+    const direto = String(confirmEscola['COD_INEP'] ?? '').trim();
+    if (direto && direto !== '-') { setResolvedInep(null); setResolveError(null); return; }
+    if (!censoData?.length) return;
+    const inep = resolveInepFromCarteira({
+      nome: String(confirmEscola['NOME ESCOLA'] ?? ''),
+      municipio: String(confirmEscola['MUNICIPIO'] ?? ''),
+      uf: String(confirmEscola['UF'] ?? ''),
+      codMunicipio: confirmEscola['COD MUNICIPIO'] as string | number | undefined,
+      latitude: confirmEscola['LATITUDE'] as string | number | undefined,
+      longitude: confirmEscola['LONGITUDE'] as string | number | undefined,
+    }, censoData);
+    if (inep) { setResolvedInep(inep); setResolveError(null); }
+    else { setResolvedInep(null); setResolveError('Não localizamos esta escola no censo automaticamente.'); }
+  }, [confirmEscola, censoData]);
 
   const selectedRow = selectedIdx !== null ? filteredSorted[selectedIdx] : null;
 
