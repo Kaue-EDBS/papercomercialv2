@@ -310,6 +310,85 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
           </div>
         </div>
       )}
+
+      {/* Modal: aviso de mensalidade ausente + escolha de faixa */}
+      {showMensModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => closeMensModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="mens-modal-title"
+        >
+          <div
+            className="bg-card rounded-2xl border max-w-md w-full p-6 space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'hsl(40 95% 92%)' }}>
+                  <AlertTriangle className="w-5 h-5" style={{ color: 'hsl(40 80% 35%)' }} />
+                </div>
+                <h3 id="mens-modal-title" className="font-bold text-lg" style={{ color: 'hsl(var(--navy))' }}>
+                  Sem dado de mensalidade
+                </h3>
+              </div>
+              <button
+                onClick={() => closeMensModal(false)}
+                aria-label="Fechar"
+                className="p-1 rounded-lg hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-sm text-foreground space-y-2">
+              <p>
+                A base do censo não traz a mensalidade de <strong style={{ color: 'hsl(var(--navy))' }}>{escola.Escola}</strong>.
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Se você souber a faixa praticada, selecione abaixo. Isso será usado nas comparações de mensalidade e posicionamento competitivo. Caso contrário, pode pular — a apresentação seguirá indicando "Dado não disponível".
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="faixa-mensalidade" className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--navy))' }}>
+                Faixa de mensalidade (opcional)
+              </label>
+              <select
+                id="faixa-mensalidade"
+                value={faixaPick}
+                onChange={e => setFaixaPick(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border bg-background text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--navy))' }}
+              >
+                <option value="">Selecione uma faixa…</option>
+                {FAIXAS_MENSALIDADE.map(f => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end pt-1">
+              <button
+                onClick={() => closeMensModal(true)}
+                className="px-4 py-2.5 rounded-lg text-sm font-semibold border hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+                style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--navy))' }}
+              >
+                Pular
+              </button>
+              <button
+                onClick={confirmMensFaixa}
+                disabled={!faixaPick}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                style={{ background: 'hsl(var(--teal))' }}
+              >
+                Aplicar faixa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
