@@ -26,6 +26,7 @@ import PageSocioeconomico from '@/components/pages/PageSocioeconomico';
 import PageInsights from '@/components/pages/PageInsights';
 import PageEncerramento from '@/components/pages/PageEncerramento';
 import ComparativeModule from '@/components/pages/ComparativeModule';
+import PageInstructions, { PAGE_INSTRUCTIONS } from '@/components/PageInstructions';
 
 const PAGE_ORDER: AppPage[] = ['abertura', 'resumo', 'panorama', 'concorrencia', 'marketshare', 'mensalidade', 'socioeconomico', 'insights', 'encerramento'];
 // Páginas da Etapa 2 — fora do PAGE_ORDER (sem navegação livre por setas/atalhos).
@@ -444,6 +445,14 @@ export default function Index() {
           </>
         )}
       </main>
+
+      {showNav && PAGE_INSTRUCTIONS[page] && (
+        <PageInstructions
+          page={page}
+          title={PAGE_INSTRUCTIONS[page].title}
+          body={PAGE_INSTRUCTIONS[page].body}
+        />
+      )}
 
       <Footer />
     </div>
