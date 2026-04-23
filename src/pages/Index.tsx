@@ -179,7 +179,11 @@ export default function Index() {
   const handleTabelaConfirm = useCallback(() => setPage('concMapa'), []);
 
   // Após validar o raio, vai para a tela de tipo de apresentação (entrada da Etapa 3).
-  const handleMapaKeep = useCallback(() => setPage('tipo'), []);
+  const handleMapaKeep = useCallback(() => {
+    // Trava o snapshot do raio padrão da Etapa 2 ao entrar na Etapa 3.
+    if (analysis) setRaioPadraoEtapa2(raioCustom ?? analysis.raioOperacional);
+    setPage('tipo');
+  }, [analysis, raioCustom]);
 
   const handleMapaNewRaio = useCallback((raioKm: number) => {
     setRaioCustom(raioKm);
