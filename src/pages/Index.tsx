@@ -51,6 +51,8 @@ export default function Index() {
   // Etapa 2 — validação de concorrência
   const [essenciaisInep, setEssenciaisInep] = useState<string[]>([]);
   const [raioCustom, setRaioCustom] = useState<number | null>(null);
+  /** Snapshot do raio padrão definido na Etapa 2 — referência fixa para a Etapa 3. */
+  const [raioPadraoEtapa2, setRaioPadraoEtapa2] = useState<number | null>(null);
   const [raioFoiAjustado, setRaioFoiAjustado] = useState(false);
   const [excluidosInep, setExcluidosInep] = useState<string[]>([]);
 
