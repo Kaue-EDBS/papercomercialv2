@@ -1,13 +1,15 @@
-import { useState } from 'react';
-import { AnalysisResult } from '@/lib/types';
+import { useMemo, useState } from 'react';
+import { AnalysisResult, EscolaData } from '@/lib/types';
 import { num, formatNumber, formatDistance, getSegmentos, getMensalidadeFaixa } from '@/lib/analysis';
-import { Check, Settings2, ChevronDown, ChevronRight, Info } from 'lucide-react';
+import { Check, Settings2, ChevronDown, ChevronRight, Info, X, Search, Trash2 } from 'lucide-react';
 
 interface Props {
   analysis: AnalysisResult;
   essenciaisInep: string[];
   raioAtual: number;
   fromRaioAdjust?: boolean;
+  censoData: EscolaData[];
+  onRemoveConcorrente: (inep: string, mode: 'auto' | 'leave' | { manualInep: string }) => void;
   onConfirm: () => void;
   onChangeRaio: () => void;
 }
@@ -16,10 +18,12 @@ interface Props {
  * 2.2 — Tabela final de concorrentes (até 15).
  * Essenciais sempre presentes; restante completado pela priorização automática.
  */
-export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fromRaioAdjust, onConfirm, onChangeRaio }: Props) {
+export default function PageConcTabela({ analysis, essenciaisInep, raioAtual, fromRaioAdjust, censoData, onRemoveConcorrente, onConfirm, onChangeRaio }: Props) {
   const { escola, concorrentes } = analysis;
   const essenciaisSet = new Set(essenciaisInep.map(String));
   const [expandedInep, setExpandedInep] = useState<string | null>(null);
+  const [askRemove, setAskRemove] = useState<{ inep: string; nome: string } | null>(null);
+  const [pickReplaceFor, setPickReplaceFor] = useState<{ inep: string; nome: string } | null>(null);
 
   return (
     <div className="max-w-5xl mx-auto py-8 sm:py-10 px-3 sm:px-4 space-y-5">
