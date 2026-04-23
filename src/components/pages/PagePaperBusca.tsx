@@ -119,7 +119,7 @@ export default function PagePaperBusca({ censoData, onConfirm, onBack, session }
         </span>
         <h1 className="page-title text-2xl sm:text-3xl">Buscar escola para gerar concorrência</h1>
         <p className="page-subtitle text-sm">
-          Digite o <strong>nome da escola</strong> ou o <strong>Código Inep</strong>. O sistema busca na base e prepara a análise de concorrência.
+          Digite o <strong>nome da escola</strong>, o <strong>Código Inep</strong>{session ? <> ou o <strong>Código Protheus</strong></> : null}. O sistema busca na base e prepara a análise de concorrência.
         </p>
       </header>
 
@@ -134,10 +134,10 @@ export default function PagePaperBusca({ censoData, onConfirm, onBack, session }
               id="paper-busca"
               type="text"
               value={query}
-              onChange={e => { setQuery(e.target.value); setPick(null); setOpen(true); }}
+              onChange={e => { setQuery(e.target.value); setPick(null); setOpen(true); setProtheusErr(''); }}
               onFocus={() => setOpen(true)}
               onKeyDown={e => { if (e.key === 'Enter' && podeConfirmar) confirmar(); }}
-              placeholder="Ex.: Colégio Modelo  ou  35012345"
+              placeholder={session ? 'Ex.: Colégio Modelo · 35012345 · 11882' : 'Ex.: Colégio Modelo  ou  35012345'}
               className="flex-1 bg-transparent outline-none text-sm"
               autoComplete="off"
               aria-autocomplete="list"
@@ -146,8 +146,13 @@ export default function PagePaperBusca({ censoData, onConfirm, onBack, session }
             />
           </div>
           <p className="text-[11px] text-muted-foreground mt-1">
-            Mínimo de 3 caracteres. Selecione uma sugestão ou pressione Enter para buscar pelo Código Inep.
+            Mínimo de 3 caracteres. Pressione Enter para buscar por Código Inep{session ? ' ou Protheus' : ''}.
           </p>
+          {protheusErr && (
+            <div role="alert" className="mt-2 text-xs px-3 py-2 rounded-lg border" style={{ background: 'hsl(0,84%,96%)', color: 'hsl(0,84%,38%)', borderColor: 'hsl(0,84%,88%)' }}>
+              {protheusErr}
+            </div>
+          )}
 
           {open && matches.length > 0 && (
             <ul id="paper-listbox" role="listbox" className="absolute z-20 mt-1 w-full max-h-72 overflow-y-auto bg-card border rounded-lg shadow-lg">
