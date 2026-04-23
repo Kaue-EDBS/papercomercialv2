@@ -310,16 +310,6 @@ export default function Index() {
           onNewSearch={handleNewSearch}
         />
       )}
-      {showNav && analysis && (
-        <ContextBar
-          session={session}
-          escola={analysis.escola}
-          raioKm={raioCustom ?? analysis.raioOperacional}
-          raioMode={raioCustom !== null ? 'personalizado' : 'padrao'}
-          presentationType={presentationType}
-          etapaLabel="3 · Apresentação"
-        />
-      )}
       {showEtapa2Nav && (
         <NavigationBar
           currentPage={page}
