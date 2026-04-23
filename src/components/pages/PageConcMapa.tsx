@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AnalysisResult } from '@/lib/types';
 import ConcorrenciaMap from './ConcorrenciaMap';
-import { MapPin, Check } from 'lucide-react';
+import { MapPin, Check, Settings2 } from 'lucide-react';
 
 interface Props {
   analysis: AnalysisResult;
