@@ -20,11 +20,17 @@ export default function PagePanorama({ analysis }: Props) {
 
   const mediaAlunos = totalEscolas > 0 ? Math.round(totalAlunos / totalEscolas) : 0;
 
+  // Cobertura: escolas que ofertam cada segmento (matrículas > 0)
+  const escolasEI = todas.filter(e => num(e.qt_mat_educacao_infantil) > 0).length;
+  const escolasEFI = todas.filter(e => num(e.qt_mat_ensino_fundamental_anos_iniciais) > 0).length;
+  const escolasEFII = todas.filter(e => num(e.qt_mat_ensino_fundamental_anos_finais) > 0).length;
+  const escolasEM = todas.filter(e => num(e.qt_mat_ensino_medio) > 0).length;
+
   const segmentos = [
-    { nome: 'Educação Infantil', sigla: 'EI', alunos: totalEI },
-    { nome: 'Ens. Fund. — Anos Iniciais', sigla: 'EFI', alunos: totalEFI },
-    { nome: 'Ens. Fund. — Anos Finais', sigla: 'EFII', alunos: totalEFII },
-    { nome: 'Ensino Médio', sigla: 'EM', alunos: totalEM },
+    { nome: 'Educação Infantil', sigla: 'EI', alunos: totalEI, escolas: escolasEI },
+    { nome: 'Ens. Fund. — Anos Iniciais', sigla: 'EFI', alunos: totalEFI, escolas: escolasEFI },
+    { nome: 'Ens. Fund. — Anos Finais', sigla: 'EFII', alunos: totalEFII, escolas: escolasEFII },
+    { nome: 'Ensino Médio', sigla: 'EM', alunos: totalEM, escolas: escolasEM },
   ];
 
   const segmentosOrdenados = [...segmentos].sort((a, b) => b.alunos - a.alunos);
