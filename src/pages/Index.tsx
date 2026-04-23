@@ -379,6 +379,7 @@ export default function Index() {
                 censoData={censo}
                 onConfirm={handleSearch}
                 onBack={() => setPage(session ? 'modo' : 'login')}
+                session={session}
               />
             )}
             {page === 'tipo' && analysis && <PageTipo escola={analysis.escola} onSelect={handleSelectType} onBack={() => { setAnalysis(null); setPage(session ? 'modo' : 'capa'); }} />}
