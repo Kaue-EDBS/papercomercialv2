@@ -1,5 +1,5 @@
-import { AppPage } from '@/lib/types';
-import { Home, Maximize, Minimize, User, GraduationCap, ChevronRight } from 'lucide-react';
+import { AppPage, PresentationType } from '@/lib/types';
+import { Home, Maximize, Minimize, User, GraduationCap, ChevronRight, Lock, MapPin, Compass, Briefcase } from 'lucide-react';
 import { useState, useCallback } from 'react';
 import { ConsultorSession, EscolaData } from '@/lib/types';
 
@@ -55,9 +55,16 @@ interface Props {
   /** Contexto resumido exibido inline na barra Etapa 2 (Consultor · Escola). */
   session?: ConsultorSession | null;
   escola?: EscolaData;
+  /** Índice máximo já alcançado em PAGE_ORDER — itens além disso ficam travados. */
+  maxReachedIdx?: number;
+  /** Contexto exibido inline na barra principal (Etapa 3). */
+  raioKm?: number;
+  raioMode?: 'padrao' | 'personalizado';
+  presentationType?: PresentationType | null;
+  etapaLabel?: string;
 }
 
-export default function NavigationBar({ currentPage, onNavigate, isComparative, onBackToMain, onBack, onNewSearch, isEtapa2, session, escola }: Props) {
+export default function NavigationBar({ currentPage, onNavigate, isComparative, onBackToMain, onBack, onNewSearch, isEtapa2, session, escola, maxReachedIdx, raioKm, raioMode, presentationType, etapaLabel }: Props) {
   if (isEtapa2) {
     const stepMap: Record<string, { idx: number; label: string }> = {
       concEssenciais: { idx: 0, label: 'Concorrentes essenciais' },
