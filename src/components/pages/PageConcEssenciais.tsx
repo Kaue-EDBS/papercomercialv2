@@ -243,16 +243,10 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
               <span className="text-muted-foreground">Não mostrar de novo</span>
             </label>
 
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={() => closeIntro(true)}
-                className="flex-1 py-2.5 rounded-lg border font-semibold text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
-              >
-                Não quero ler de novo
-              </button>
+            <div className="pt-1">
               <button
                 onClick={() => closeIntro(dontShowAgain)}
-                className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-white hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="w-full py-2.5 rounded-lg font-semibold text-sm text-white hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 style={{ background: 'hsl(var(--teal))' }}
               >
                 OK, entendi

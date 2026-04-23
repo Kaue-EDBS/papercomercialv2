@@ -11,10 +11,11 @@ interface Props {
 }
 
 const STORAGE_KEY = 'carteira:cols:v2';
-const PRIORITY_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF', 'CONSULTOR', 'GERENTE'];
-const DEFAULT_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF'];
-// Apenas estas colunas têm campo de filtro automático na header. As demais ficam livres para lapidação futura.
-const FILTERABLE_COLS = new Set(['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF']);
+// Por enquanto, só estas 5 colunas são exibidas e filtráveis. Demais ficam ocultas até serem lapidadas.
+const ALLOWED_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF'];
+const PRIORITY_COLS = ALLOWED_COLS;
+const DEFAULT_COLS = ALLOWED_COLS;
+const FILTERABLE_COLS = new Set(ALLOWED_COLS);
 const COL_LABELS: Record<string, string> = {
   'COD_PROTHEUS': 'Protheus',
   'COD_INEP': 'INEP',
@@ -43,7 +44,10 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
-  const allCols = data?.headers ?? [];
+  const allCols = useMemo(
+    () => (data?.headers ?? []).filter(h => ALLOWED_COLS.includes(h)),
+    [data]
+  );
   const rows = data?.rows ?? [];
 
   // Init picked columns
