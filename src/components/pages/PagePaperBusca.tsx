@@ -1,0 +1,148 @@
+import { useMemo, useState } from 'react';
+import { Search, ArrowLeft, Check } from 'lucide-react';
+import { EscolaData } from '@/lib/types';
+
+interface Props {
+  censoData: EscolaData[];
+  onConfirm: (codigo: string) => void;
+  onBack: () => void;
+}
+
+/**
+ * Tela operacional de entrada do modo "Paper".
+ * Não é capa de apresentação — é a etapa de busca da escola que terá
+ * a concorrência analisada. Mantém a identidade visual aprovada e usa
+ * apenas os tokens semânticos do design system.
+ */
+export default function PagePaperBusca({ censoData, onConfirm, onBack }: Props) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [pick, setPick] = useState<EscolaData | null>(null);
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q.length < 3) return [];
+    const isNum = /^\d+$/.test(q);
+    return censoData
+      .filter(e => {
+        if (isNum) return String(e['Código Inep']).includes(q);
+        return String(e.Escola || '').toLowerCase().includes(q);
+      })
+      .slice(0, 8);
+  }, [query, censoData]);
+
+  const escolhe = (e: EscolaData) => {
+    setPick(e);
+    setQuery(`${e['Código Inep']} — ${e.Escola}`);
+    setOpen(false);
+  };
+
+  const confirmar = () => {
+    if (pick) { onConfirm(String(pick['Código Inep'])); return; }
+    const q = query.trim();
+    if (/^\d+$/.test(q)) onConfirm(q);
+  };
+
+  const podeConfirmar = !!pick || /^\d+$/.test(query.trim());
+
+  return (
+    <div className="max-w-2xl mx-auto py-10 sm:py-14 px-4 space-y-6">
+      <button
+        onClick={onBack}
+        className="inline-flex items-center gap-1 text-xs font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded px-1"
+        style={{ color: 'hsl(var(--teal))' }}
+      >
+        <ArrowLeft className="w-3.5 h-3.5" /> Voltar
+      </button>
+
+      <header className="space-y-1">
+        <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--teal))' }}>
+          Etapa 1 · Paper
+        </span>
+        <h1 className="page-title text-2xl sm:text-3xl">Buscar escola para gerar concorrência</h1>
+        <p className="page-subtitle text-sm">
+          Digite o <strong>nome da escola</strong> ou o <strong>Código Inep</strong>. O sistema busca na base e prepara a análise de concorrência.
+        </p>
+      </header>
+
+      <div className="bg-card rounded-xl border p-4 sm:p-6 space-y-4">
+        <label htmlFor="paper-busca" className="block text-xs font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--navy))' }}>
+          Escola a analisar
+        </label>
+        <div className="relative">
+          <div className="flex items-center gap-2 border rounded-lg px-3 py-2.5 bg-background focus-within:ring-2 focus-within:ring-primary" style={{ borderColor: 'hsl(var(--border))' }}>
+            <Search className="w-4 h-4 text-muted-foreground" />
+            <input
+              id="paper-busca"
+              type="text"
+              value={query}
+              onChange={e => { setQuery(e.target.value); setPick(null); setOpen(true); }}
+              onFocus={() => setOpen(true)}
+              onKeyDown={e => { if (e.key === 'Enter' && podeConfirmar) confirmar(); }}
+              placeholder="Ex.: Colégio Modelo  ou  35012345"
+              className="flex-1 bg-transparent outline-none text-sm"
+              autoComplete="off"
+              aria-autocomplete="list"
+              aria-controls="paper-listbox"
+              aria-expanded={open && matches.length > 0}
+            />
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Mínimo de 3 caracteres. Selecione uma sugestão ou pressione Enter para buscar pelo Código Inep.
+          </p>
+
+          {open && matches.length > 0 && (
+            <ul id="paper-listbox" role="listbox" className="absolute z-20 mt-1 w-full max-h-72 overflow-y-auto bg-card border rounded-lg shadow-lg">
+              {matches.map(e => (
+                <li key={String(e['Código Inep'])}>
+                  <button
+                    type="button"
+                    onClick={() => escolhe(e)}
+                    className="w-full text-left px-3 py-2 hover:bg-accent transition-colors"
+                  >
+                    <div className="text-sm font-medium" style={{ color: 'hsl(var(--navy))' }}>{e.Escola}</div>
+                    <div className="text-[11px] text-muted-foreground">
+                      Inep {String(e['Código Inep'])} · {e.Município}/{e.UF}
+                    </div>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {open && query.trim().length >= 3 && matches.length === 0 && (
+            <div className="absolute z-20 mt-1 w-full bg-card border rounded-lg shadow-lg px-3 py-3 text-xs text-muted-foreground">
+              Nenhuma escola encontrada para "<strong>{query}</strong>".
+            </div>
+          )}
+        </div>
+
+        {pick && (
+          <div className="rounded-lg border px-3 py-2.5" style={{ background: 'hsl(var(--teal-light))', borderColor: 'hsl(var(--teal-light))' }}>
+            <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--teal))' }}>Escola selecionada</div>
+            <div className="text-sm font-semibold mt-0.5" style={{ color: 'hsl(var(--navy))' }}>{pick.Escola}</div>
+            <div className="text-[11px] text-muted-foreground">Inep {String(pick['Código Inep'])} · {pick.Município}/{pick.UF}</div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold border bg-card hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+          style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--navy))' }}
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={confirmar}
+          disabled={!podeConfirmar}
+          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          style={{ background: 'hsl(var(--teal))' }}
+        >
+          <Check className="w-4 h-4" />
+          Confirmar
+        </button>
+      </div>
+    </div>
+  );
+}

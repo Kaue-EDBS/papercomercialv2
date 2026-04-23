@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDataLoader } from '@/hooks/useDataLoader';
-import { runAnalysis, rebuildConcorrentes } from '@/lib/analysis';
+import { runAnalysis, rebuildConcorrentes, pickReplacement } from '@/lib/analysis';
 import { AppPage, PresentationType, AnalysisResult, ConsultorSession } from '@/lib/types';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -11,6 +11,7 @@ import PageLogin from '@/components/pages/PageLogin';
 import PageModo from '@/components/pages/PageModo';
 import PageCarteira from '@/components/pages/PageCarteira';
 import PageCapa from '@/components/pages/PageCapa';
+import PagePaperBusca from '@/components/pages/PagePaperBusca';
 import PageTipo from '@/components/pages/PageTipo';
 import PageAbertura from '@/components/pages/PageAbertura';
 import PageResumo from '@/components/pages/PageResumo';
@@ -49,6 +50,7 @@ export default function Index() {
   const [essenciaisInep, setEssenciaisInep] = useState<string[]>([]);
   const [raioCustom, setRaioCustom] = useState<number | null>(null);
   const [raioFoiAjustado, setRaioFoiAjustado] = useState(false);
+  const [excluidosInep, setExcluidosInep] = useState<string[]>([]);
 
   // Restore session from localStorage
   useEffect(() => {
@@ -81,7 +83,7 @@ export default function Index() {
 
   const handleSelectModo = useCallback((modo: 'carteira' | 'paper') => {
     if (modo === 'carteira') setPage('carteira');
-    else setPage('capa');
+    else setPage('paper');
   }, []);
 
   const handleNewSearch = useCallback(() => {
@@ -109,6 +111,7 @@ export default function Index() {
     setEssenciaisInep([]);
     setRaioCustom(null);
     setRaioFoiAjustado(false);
+    setExcluidosInep([]);
     setPresentationType(null);
     setPage('concEssenciais');
   }, [censo, demo]);
@@ -171,6 +174,59 @@ export default function Index() {
 
   const handleTabelaChangeRaio = useCallback(() => setPage('concMapa'), []);
 
+  // ----- Etapa 2.2 — exclusão de concorrente da lista -----
+  const handleRemoveConcorrente = useCallback((inep: string, mode: 'auto' | 'leave' | { manualInep: string }) => {
+    if (!analysis) return;
+    const inepStr = String(inep);
+    const novosExcluidos = excluidosInep.includes(inepStr) ? excluidosInep : [...excluidosInep, inepStr];
+    setExcluidosInep(novosExcluidos);
+    const novosEssenciais = essenciaisInep.filter(i => String(i) !== inepStr);
+    if (novosEssenciais.length !== essenciaisInep.length) setEssenciaisInep(novosEssenciais);
+
+    const raioKm = raioCustom ?? analysis.raioOperacional;
+    // Remove o concorrente da lista atual
+    const semConc = {
+      ...analysis,
+      concorrentes: analysis.concorrentes.filter(c => String(c.escola['Código Inep']) !== inepStr),
+    };
+
+    if (mode === 'leave') {
+      setAnalysis(semConc);
+      return;
+    }
+
+    if (typeof mode === 'object' && mode.manualInep) {
+      // Inclui a escola manual como essencial e reconstrói lista
+      const essMais = Array.from(new Set([...novosEssenciais, mode.manualInep]));
+      setEssenciaisInep(essMais);
+      const rebuilt = rebuildConcorrentes(semConc, censo, { essenciaisInep: essMais, raioKm });
+      // Garante que o excluido não retorne via reconstrução automática
+      const filtrado = {
+        ...rebuilt,
+        concorrentes: rebuilt.concorrentes.filter(c => !novosExcluidos.includes(String(c.escola['Código Inep']))),
+      };
+      setAnalysis(filtrado);
+      return;
+    }
+
+    // mode === 'auto' — busca substituto pelo mesmo critério
+    const substituto = pickReplacement(semConc, censo, {
+      essenciaisInep: novosEssenciais,
+      raioKm,
+      excludeInep: novosExcluidos,
+    });
+    if (!substituto) {
+      setAnalysis(semConc);
+      return;
+    }
+    const rebuilt = rebuildConcorrentes(semConc, censo, { essenciaisInep: novosEssenciais, raioKm });
+    const filtrado = {
+      ...rebuilt,
+      concorrentes: rebuilt.concorrentes.filter(c => !novosExcluidos.includes(String(c.escola['Código Inep']))),
+    };
+    setAnalysis(filtrado);
+  }, [analysis, censo, essenciaisInep, raioCustom, excluidosInep]);
+
   const handleBack = () => {
     // Navegação dentro da Etapa 2
     if (page === 'concMapa') { setPage('concTabela'); return; }
@@ -178,7 +234,11 @@ export default function Index() {
     if (page === 'concEssenciais') {
       // Volta para a seleção de escola (carteira ou capa)
       setAnalysis(null);
-      setPage(session ? 'modo' : 'capa');
+      setPage(session ? 'modo' : 'paper');
+      return;
+    }
+    if (page === 'paper' || page === 'capa' || page === 'carteira') {
+      setPage(session ? 'modo' : 'login');
       return;
     }
     // Tipo de apresentação fica entre Etapa 2 e Etapa 3
@@ -330,6 +390,13 @@ export default function Index() {
               />
             )}
             {page === 'capa' && <PageCapa censoData={censo} onSearch={handleSearch} onCompare={handleCompare} />}
+            {page === 'paper' && (
+              <PagePaperBusca
+                censoData={censo}
+                onConfirm={handleSearch}
+                onBack={() => setPage(session ? 'modo' : 'login')}
+              />
+            )}
             {page === 'tipo' && analysis && <PageTipo escola={analysis.escola} onSelect={handleSelectType} onBack={() => { setAnalysis(null); setPage(session ? 'modo' : 'capa'); }} />}
             {page === 'concEssenciais' && analysis && (
               <PageConcEssenciais
@@ -346,6 +413,8 @@ export default function Index() {
                 essenciaisInep={essenciaisInep}
                 raioAtual={raioCustom ?? analysis.raioOperacional}
                 fromRaioAdjust={raioFoiAjustado}
+                censoData={censo}
+                onRemoveConcorrente={handleRemoveConcorrente}
                 onConfirm={handleTabelaConfirm}
                 onChangeRaio={handleTabelaChangeRaio}
               />
