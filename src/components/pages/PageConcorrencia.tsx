@@ -80,16 +80,18 @@ function CompareCard({ escola, label, marketShare }: { escola: EscolaData; label
   );
 }
 
-export default function PageConcorrencia({ analysis, essenciaisInep = [], onRaioChange }: Props) {
+export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAtual, onRaioChange }: Props) {
   const { censo } = useDataLoader();
-  const [liveRaio, setLiveRaio] = useState<number>(analysis.raioOperacional);
+  const [liveRaio, setLiveRaio] = useState<number>(raioAtual ?? analysis.raioOperacional);
   const [liveAnalysis, setLiveAnalysis] = useState<AnalysisResult>(analysis);
 
   // Sempre que a análise inicial mudar (nova escola), reseta o estado local.
+  // Mantém o raio definido pelo pai (raioAtual) — assim, ao sair e voltar à página,
+  // o último raio escolhido pelo usuário é preservado.
   useEffect(() => {
-    setLiveRaio(analysis.raioOperacional);
+    setLiveRaio(raioAtual ?? analysis.raioOperacional);
     setLiveAnalysis(analysis);
-  }, [analysis]);
+  }, [analysis, raioAtual]);
 
   // Recalcula em tempo real quando o usuário arrasta a régua.
   // Reprocessamento total: tabela, mapa, cards e market share derivam de liveAnalysis.
