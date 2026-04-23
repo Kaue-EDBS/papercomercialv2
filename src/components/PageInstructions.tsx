@@ -206,11 +206,20 @@ export const PAGE_INSTRUCTIONS: Record<string, { title: string; body: React.Reac
     ),
   },
   socioeconomico: {
-    title: 'Socioeconômico',
+    title: 'Perfil Socioeconômico',
     body: (
       <>
-        <p>Apresenta o <strong>perfil socioeconômico da região</strong>: renda média, faixa etária, IDH.</p>
-        <p>Mostra ao gestor o tipo de público que vive ao redor da escola — base para decisões pedagógicas e comerciais.</p>
+        <p>Apresenta o <strong>perfil estrutural do município</strong>: renda média, IDH educação e renda, distribuição etária e cruzamento renda × faixa etária.</p>
+        <p>Mostra <strong>aderência econômica ao ticket</strong> da escola — em que faixas há maior poder de compra alinhado e onde existe maior sensibilidade a preço.</p>
+      </>
+    ),
+  },
+  potencial: {
+    title: 'Potencial de Consumo',
+    body: (
+      <>
+        <p>Mede o <strong>potencial econômico educacional</strong> do município: quanto se consome em matrículas, mensalidades, livros e material escolar — e como isso se distribui pelas classes A, B, C, D, E.</p>
+        <p>Não é previsão de matrícula — é leitura de <strong>massa de consumo e oportunidade comercial</strong>: onde o discurso de valor pode ser mais forte e onde o comercial precisa atenção à sensibilidade de preço.</p>
       </>
     ),
   },
