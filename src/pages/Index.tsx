@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDataLoader } from '@/hooks/useDataLoader';
-import { runAnalysis, rebuildConcorrentes } from '@/lib/analysis';
+import { runAnalysis, rebuildConcorrentes, pickReplacement } from '@/lib/analysis';
 import { AppPage, PresentationType, AnalysisResult, ConsultorSession } from '@/lib/types';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -50,6 +50,7 @@ export default function Index() {
   const [essenciaisInep, setEssenciaisInep] = useState<string[]>([]);
   const [raioCustom, setRaioCustom] = useState<number | null>(null);
   const [raioFoiAjustado, setRaioFoiAjustado] = useState(false);
+  const [excluidosInep, setExcluidosInep] = useState<string[]>([]);
 
   // Restore session from localStorage
   useEffect(() => {
@@ -110,6 +111,7 @@ export default function Index() {
     setEssenciaisInep([]);
     setRaioCustom(null);
     setRaioFoiAjustado(false);
+    setExcluidosInep([]);
     setPresentationType(null);
     setPage('concEssenciais');
   }, [censo, demo]);
