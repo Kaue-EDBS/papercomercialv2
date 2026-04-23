@@ -171,7 +171,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
   };
 
   const activeFilterLabel = FILTER_OPTIONS.find(f => f.key === activeFilter)?.label || 'Todos';
-  const isCustomRaio = Math.abs(liveRaio - analysis.raioOperacional) > 0.001;
+  const isCustomRaio = Math.abs(liveRaio - raioPadraoEtapa2) > 0.001;
 
   return (
     <div className="max-w-5xl mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-4 sm:space-y-6">
