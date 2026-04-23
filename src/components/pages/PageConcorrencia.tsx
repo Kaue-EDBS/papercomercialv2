@@ -15,6 +15,8 @@ interface Props {
   essenciaisInep?: string[];
   /** Raio atualmente em vigor (vindo do pai). Permite preservar o ajuste ao sair e voltar à página. */
   raioAtual?: number;
+  /** Raio padrão original definido na Etapa 2 — referência fixa, NUNCA muda na Etapa 3. */
+  raioPadrao?: number;
   /** Notifica o pai sobre alteração ao vivo do raio na régua. */
   onRaioChange?: (raioKm: number) => void;
 }
