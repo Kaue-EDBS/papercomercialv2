@@ -1,10 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnalysisResult, EscolaData, ConcorrenteInfo } from '@/lib/types';
-import { num, formatNumber, formatDistance, formatPercent, getSegmentos, getMensalidadeFaixa, rebuildConcorrentes } from '@/lib/analysis';
+import { num, formatNumber, formatPercent, getSegmentos, getMensalidadeFaixa, rebuildConcorrentes } from '@/lib/analysis';
 import { useDataLoader } from '@/hooks/useDataLoader';
-import { MapPin, Users, Target, ChevronDown, ChevronUp, GitCompare, Filter, X } from 'lucide-react';
+import { MapPin, Users, Target, GitCompare, Filter, X } from 'lucide-react';
 import ConcorrenciaMap from './ConcorrenciaMap';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import ConcorrenciaTable from '@/components/concorrencia/ConcorrenciaTable';
+import RaioSlider from '@/components/concorrencia/RaioSlider';
 
 interface Props {
   analysis: AnalysisResult;
@@ -12,36 +14,6 @@ interface Props {
   essenciaisInep?: string[];
   /** Notifica o pai sobre alteração ao vivo do raio na régua. */
   onRaioChange?: (raioKm: number) => void;
-}
-
-function formatAdocao(tipo: string): string {
-  if (!tipo) return 'Dado não disponível';
-  const upper = tipo.toUpperCase().trim();
-  if (upper === 'NÃO' || upper === 'NAO') return 'Sem Dados';
-  if (upper === 'DID' || upper === 'DID/AP') return 'Didático';
-  return tipo;
-}
-
-function formatAdotaBrasil(val: string): string {
-  if (!val) return 'Dado não disponível';
-  const upper = val.toUpperCase().trim();
-  if (upper === 'NÃO' || upper === 'NAO') return 'Sem Dados';
-  return val;
-}
-
-type Prioridade = 'Alta' | 'Média' | 'Baixa';
-
-function calcPrioridade(c: ConcorrenteInfo, escola: EscolaData): Prioridade {
-  let score = 0;
-  if (c.distancia !== null && c.distancia <= 2) score += 3;
-  else if (c.distancia !== null && c.distancia <= 5) score += 2;
-  else if (c.proximidadeCEP) score += 1;
-  if (getMensalidadeFaixa(escola.Mensalidade) === getMensalidadeFaixa(c.escola.Mensalidade)) score += 2;
-  score += Math.min(c.segmentosComum.length, 3);
-  if (num(c.escola['Alunado Total']) >= num(escola['Alunado Total']) * 0.5) score += 1;
-  if (score >= 6) return 'Alta';
-  if (score >= 3) return 'Média';
-  return 'Baixa';
 }
 
 const SEGMENT_CHIP_COLORS: Record<string, { bg: string; text: string }> = {
