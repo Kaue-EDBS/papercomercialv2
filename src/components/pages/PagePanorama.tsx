@@ -20,11 +20,17 @@ export default function PagePanorama({ analysis }: Props) {
 
   const mediaAlunos = totalEscolas > 0 ? Math.round(totalAlunos / totalEscolas) : 0;
 
+  // Cobertura: escolas que ofertam cada segmento (matrículas > 0)
+  const escolasEI = todas.filter(e => num(e.qt_mat_educacao_infantil) > 0).length;
+  const escolasEFI = todas.filter(e => num(e.qt_mat_ensino_fundamental_anos_iniciais) > 0).length;
+  const escolasEFII = todas.filter(e => num(e.qt_mat_ensino_fundamental_anos_finais) > 0).length;
+  const escolasEM = todas.filter(e => num(e.qt_mat_ensino_medio) > 0).length;
+
   const segmentos = [
-    { nome: 'Educação Infantil', sigla: 'EI', alunos: totalEI },
-    { nome: 'Ens. Fund. — Anos Iniciais', sigla: 'EFI', alunos: totalEFI },
-    { nome: 'Ens. Fund. — Anos Finais', sigla: 'EFII', alunos: totalEFII },
-    { nome: 'Ensino Médio', sigla: 'EM', alunos: totalEM },
+    { nome: 'Educação Infantil', sigla: 'EI', alunos: totalEI, escolas: escolasEI },
+    { nome: 'Ens. Fund. — Anos Iniciais', sigla: 'EFI', alunos: totalEFI, escolas: escolasEFI },
+    { nome: 'Ens. Fund. — Anos Finais', sigla: 'EFII', alunos: totalEFII, escolas: escolasEFII },
+    { nome: 'Ensino Médio', sigla: 'EM', alunos: totalEM, escolas: escolasEM },
   ];
 
   const segmentosOrdenados = [...segmentos].sort((a, b) => b.alunos - a.alunos);
@@ -116,8 +122,58 @@ export default function PagePanorama({ analysis }: Props) {
         </div>
       </div>
 
-      {/* Table with mini bars */}
+      {/* Tabela 1 — Cobertura: quantas escolas ofertam cada segmento */}
       <div className="bg-card rounded-xl border overflow-hidden">
+        <div className="px-4 sm:px-5 pt-4 pb-2">
+          <h3 className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Cobertura por Segmento</h3>
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">Quantas escolas ofertam cada nível de ensino na região</p>
+        </div>
+        <table className="table-executive w-full">
+          <thead>
+            <tr>
+              <th className="text-left">Segmento</th>
+              <th className="text-right">Escolas que ofertam</th>
+              <th className="text-right">% das escolas</th>
+              <th className="w-32 sm:w-40"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...segmentos].sort((a, b) => b.escolas - a.escolas).map((s, i) => {
+              const pCob = totalEscolas > 0 ? (s.escolas / totalEscolas) * 100 : 0;
+              const isMax = i === 0;
+              const corIdx = segmentosOrdenados.findIndex(x => x.sigla === s.sigla);
+              return (
+                <tr key={s.sigla} className={isMax ? 'font-semibold' : ''}>
+                  <td className="whitespace-nowrap">
+                    <span className="flex items-center gap-2">
+                      {s.nome}
+                      {isMax && (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold" style={{ background: 'hsl(var(--teal-light))', color: 'hsl(var(--teal))' }}>
+                          MAIOR COBERTURA
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="text-right">{s.escolas} de {totalEscolas}</td>
+                  <td className="text-right">{pCob.toFixed(1).replace('.', ',')}%</td>
+                  <td>
+                    <div className="w-full rounded-full h-2.5" style={{ background: 'hsl(var(--muted))' }}>
+                      <div className="h-2.5 rounded-full transition-all" style={{ width: `${Math.max(pCob, 2)}%`, background: barColors[corIdx % barColors.length] }} />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Tabela 2 — Volume de alunos por segmento */}
+      <div className="bg-card rounded-xl border overflow-hidden">
+        <div className="px-4 sm:px-5 pt-4 pb-2">
+          <h3 className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Volume de Alunos por Segmento</h3>
+          <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5">Distribuição da demanda total entre os níveis de ensino</p>
+        </div>
         <table className="table-executive w-full">
           <thead>
             <tr>
