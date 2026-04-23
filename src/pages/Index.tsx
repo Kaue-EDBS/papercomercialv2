@@ -51,6 +51,8 @@ export default function Index() {
   // Etapa 2 — validação de concorrência
   const [essenciaisInep, setEssenciaisInep] = useState<string[]>([]);
   const [raioCustom, setRaioCustom] = useState<number | null>(null);
+  /** Snapshot do raio padrão definido na Etapa 2 — referência fixa para a Etapa 3. */
+  const [raioPadraoEtapa2, setRaioPadraoEtapa2] = useState<number | null>(null);
   const [raioFoiAjustado, setRaioFoiAjustado] = useState(false);
   const [excluidosInep, setExcluidosInep] = useState<string[]>([]);
 
@@ -97,6 +99,7 @@ export default function Index() {
     setCompA2(null);
     setEssenciaisInep([]);
     setRaioCustom(null);
+    setRaioPadraoEtapa2(null);
     setRaioFoiAjustado(false);
     setPage(session ? 'modo' : 'login');
   }, [session]);
@@ -112,6 +115,7 @@ export default function Index() {
     // Etapa 2 começa direto em concorrentes essenciais — sem tela de tipo no meio.
     setEssenciaisInep([]);
     setRaioCustom(null);
+    setRaioPadraoEtapa2(null);
     setRaioFoiAjustado(false);
     setExcluidosInep([]);
     setPresentationType(null);
@@ -175,7 +179,11 @@ export default function Index() {
   const handleTabelaConfirm = useCallback(() => setPage('concMapa'), []);
 
   // Após validar o raio, vai para a tela de tipo de apresentação (entrada da Etapa 3).
-  const handleMapaKeep = useCallback(() => setPage('tipo'), []);
+  const handleMapaKeep = useCallback(() => {
+    // Trava o snapshot do raio padrão da Etapa 2 ao entrar na Etapa 3.
+    if (analysis) setRaioPadraoEtapa2(raioCustom ?? analysis.raioOperacional);
+    setPage('tipo');
+  }, [analysis, raioCustom]);
 
   const handleMapaNewRaio = useCallback((raioKm: number) => {
     setRaioCustom(raioKm);
@@ -434,6 +442,7 @@ export default function Index() {
                 analysis={analysis}
                 essenciaisInep={essenciaisInep}
                 raioAtual={raioCustom ?? analysis.raioOperacional}
+                raioPadrao={raioPadraoEtapa2 ?? analysis.raioOperacional}
                 onRaioChange={(km) => {
                   setRaioCustom(km);
                   setRaioFoiAjustado(true);

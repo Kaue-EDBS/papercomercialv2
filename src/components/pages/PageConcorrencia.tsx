@@ -15,6 +15,8 @@ interface Props {
   essenciaisInep?: string[];
   /** Raio atualmente em vigor (vindo do pai). Permite preservar o ajuste ao sair e voltar à página. */
   raioAtual?: number;
+  /** Raio padrão original definido na Etapa 2 — referência fixa, NUNCA muda na Etapa 3. */
+  raioPadrao?: number;
   /** Notifica o pai sobre alteração ao vivo do raio na régua. */
   onRaioChange?: (raioKm: number) => void;
 }
@@ -80,18 +82,20 @@ function CompareCard({ escola, label, marketShare }: { escola: EscolaData; label
   );
 }
 
-export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAtual, onRaioChange }: Props) {
+export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAtual, raioPadrao, onRaioChange }: Props) {
   const { censo } = useDataLoader();
-  const [liveRaio, setLiveRaio] = useState<number>(raioAtual ?? analysis.raioOperacional);
+  // Padrão da Etapa 2 — referência FIXA. Se o pai não enviar, cai no raioOperacional inicial.
+  const raioPadraoEtapa2 = raioPadrao ?? analysis.raioOperacional;
+  const [liveRaio, setLiveRaio] = useState<number>(raioAtual ?? raioPadraoEtapa2);
   const [liveAnalysis, setLiveAnalysis] = useState<AnalysisResult>(analysis);
 
   // Sempre que a análise inicial mudar (nova escola), reseta o estado local.
   // Mantém o raio definido pelo pai (raioAtual) — assim, ao sair e voltar à página,
   // o último raio escolhido pelo usuário é preservado.
   useEffect(() => {
-    setLiveRaio(raioAtual ?? analysis.raioOperacional);
+    setLiveRaio(raioAtual ?? raioPadraoEtapa2);
     setLiveAnalysis(analysis);
-  }, [analysis, raioAtual]);
+  }, [analysis, raioAtual, raioPadraoEtapa2]);
 
   // Recalcula em tempo real quando o usuário arrasta a régua.
   // Reprocessamento total: tabela, mapa, cards e market share derivam de liveAnalysis.
@@ -167,7 +171,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
   };
 
   const activeFilterLabel = FILTER_OPTIONS.find(f => f.key === activeFilter)?.label || 'Todos';
-  const isCustomRaio = Math.abs(liveRaio - analysis.raioOperacional) > 0.001;
+  const isCustomRaio = Math.abs(liveRaio - raioPadraoEtapa2) > 0.001;
 
   return (
     <div className="max-w-5xl mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-4 sm:space-y-6">
@@ -263,7 +267,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
             <div className="p-3 border-b space-y-3">
               <RaioSlider
                 value={liveRaio}
-                defaultValue={analysis.raioOperacional}
+                defaultValue={raioPadraoEtapa2}
                 onChange={(km) => { setLiveRaio(km); onRaioChange?.(km); }}
                 hint="Ao mover a régua, o sistema reprocessa a lista de concorrentes, o mapa, os indicadores e o market share desta página."
               />
@@ -282,7 +286,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
                 <span className="inline-flex items-baseline gap-1.5">
                   <span className="uppercase tracking-wider text-[9px]">Padrão (Etapa 2)</span>
                   <span className="font-semibold tabular-nums" style={{ color: 'hsl(var(--navy))' }}>
-                    {analysis.raioOperacional.toFixed(1).replace('.', ',')} km
+                    {raioPadraoEtapa2.toFixed(1).replace('.', ',')} km
                   </span>
                 </span>
                 <span className="h-3 w-px" style={{ background: 'hsl(var(--border))' }} aria-hidden />
@@ -316,10 +320,10 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
                   <button
                     type="button"
                     onClick={() => {
-                      setLiveRaio(analysis.raioOperacional);
-                      onRaioChange?.(analysis.raioOperacional);
+                      setLiveRaio(raioPadraoEtapa2);
+                      onRaioChange?.(raioPadraoEtapa2);
                       toast.info('Raio restaurado ao padrão da Etapa 2', {
-                        description: `${analysis.raioOperacional.toFixed(1).replace('.', ',')} km`,
+                        description: `${raioPadraoEtapa2.toFixed(1).replace('.', ',')} km`,
                       });
                     }}
                     disabled={!isCustomRaio}
