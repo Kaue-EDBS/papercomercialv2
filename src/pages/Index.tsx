@@ -446,6 +446,14 @@ export default function Index() {
         )}
       </main>
 
+      {showNav && PAGE_INSTRUCTIONS[page] && (
+        <PageInstructions
+          page={page}
+          title={PAGE_INSTRUCTIONS[page].title}
+          body={PAGE_INSTRUCTIONS[page].body}
+        />
+      )}
+
       <Footer />
     </div>
   );
