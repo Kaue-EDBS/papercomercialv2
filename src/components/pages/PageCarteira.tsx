@@ -3,11 +3,12 @@ import { ConsultorSession, EscolaData } from '@/lib/types';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
 import { useCarteira, CarteiraFile } from '@/hooks/useCarteira';
 import { resolveInepFromCarteira } from '@/lib/analysis';
+import { useLatLongProtheus } from '@/hooks/useLatLongProtheus';
 import { ArrowUp, ArrowDown, Settings2, X, Search, AlertTriangle } from 'lucide-react';
 
 interface Props {
   session: ConsultorSession;
-  onPickEscola: (codInep: string, nomeEscola: string) => void;
+  onPickEscola: (codInep: string, nomeEscola: string, coordsOverride?: { lat: number; lng: number } | null) => void;
   onBack: () => void;
   censoData: EscolaData[];
 }
@@ -31,6 +32,7 @@ type Row = CarteiraFile['rows'][number];
 
 export default function PageCarteira({ session, onPickEscola, onBack, censoData }: Props) {
   const { findByCodigo, findByNome, loading: loadingManifest } = useCarteiraManifest();
+  const { lookup: lookupLatLong } = useLatLongProtheus();
   const entry = useMemo(
     () => findByCodigo(session.codigo) || findByNome(session.nome),
     [session, findByCodigo, findByNome],
