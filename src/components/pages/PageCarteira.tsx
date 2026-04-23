@@ -12,7 +12,9 @@ interface Props {
 
 const STORAGE_KEY = 'carteira:cols:v2';
 const PRIORITY_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF', 'CONSULTOR', 'GERENTE'];
-const DEFAULT_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF', 'TIPO ESCOLA'];
+const DEFAULT_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF'];
+// Apenas estas colunas têm campo de filtro automático na header. As demais ficam livres para lapidação futura.
+const FILTERABLE_COLS = new Set(['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF']);
 const COL_LABELS: Record<string, string> = {
   'COD_PROTHEUS': 'Protheus',
   'COD_INEP': 'INEP',
@@ -96,6 +98,10 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
     if (!confirmEscola) return;
     const inep = String(confirmEscola['COD_INEP'] ?? '').trim();
     const nome = String(confirmEscola['NOME ESCOLA'] ?? '').trim();
+    if (!inep) {
+      // Sem INEP — não dá para abrir paper. Aviso permanece visível no modal.
+      return;
+    }
     setConfirmEscola(null);
     onPickEscola(inep, nome);
   };
@@ -229,17 +235,21 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
                 <tr>
                   {visibleCols.map(c => (
                     <th key={c + '-f'} className="!py-1 !px-2 !bg-card !border-b !border-t-0">
-                      <div className="relative">
-                        <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                        <input
-                          type="text"
-                          aria-label={`Filtrar ${labelOf(c)}`}
-                          placeholder="Filtrar..."
-                          value={colFilters[c] || ''}
-                          onChange={e => setColFilter(c, e.target.value)}
-                          className="w-full pl-7 pr-2 py-1.5 rounded border text-xs font-normal bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                        />
-                      </div>
+                      {FILTERABLE_COLS.has(c) ? (
+                        <div className="relative">
+                          <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                          <input
+                            type="text"
+                            aria-label={`Filtrar ${labelOf(c)}`}
+                            placeholder="Filtrar..."
+                            value={colFilters[c] || ''}
+                            onChange={e => setColFilter(c, e.target.value)}
+                            className="w-full pl-7 pr-2 py-1.5 rounded border text-xs font-normal bg-background focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          />
+                        </div>
+                      ) : (
+                        <div className="h-[30px]" aria-hidden />
+                      )}
                     </th>
                   ))}
                 </tr>
@@ -298,15 +308,30 @@ export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
               Você selecionou: <strong className="text-foreground">{String(confirmEscola['NOME ESCOLA'] ?? '—')}</strong>
               {confirmEscola['MUNICIPIO'] && <> em <strong className="text-foreground">{String(confirmEscola['MUNICIPIO'])}/{String(confirmEscola['UF'] ?? '')}</strong></>}.
             </p>
-            <p className="text-xs text-muted-foreground">Código Inep: {String(confirmEscola['COD_INEP'] ?? '—')}</p>
-            <p className="text-xs" style={{ color: 'hsl(var(--teal))' }}>
-              Ao confirmar, você seguirá para a etapa de validação dos concorrentes.
-            </p>
+            {String(confirmEscola['COD_INEP'] ?? '').trim() ? (
+              <>
+                <p className="text-xs text-muted-foreground">Código INEP: {String(confirmEscola['COD_INEP'])}</p>
+                <p className="text-xs" style={{ color: 'hsl(var(--teal))' }}>
+                  Ao confirmar, você seguirá para a etapa de validação dos concorrentes.
+                </p>
+              </>
+            ) : (
+              <div className="flex gap-2 items-start p-3 rounded-lg border" style={{ background: 'hsl(48, 96%, 95%)', borderColor: 'hsl(45, 90%, 70%)' }}>
+                <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-600 shrink-0" />
+                <div className="text-xs text-foreground">
+                  Esta escola <strong>não possui Código INEP</strong> cadastrado. A busca principal usa INEP — nesses casos raros, localize a escola pelo <strong>Código Protheus {String(confirmEscola['COD_PROTHEUS'] ?? '—')}</strong> nos próximos passos ou peça atualização do cadastro ao seu gestor.
+                </div>
+              </div>
+            )}
             <div className="flex gap-2 pt-2">
               <button onClick={() => setConfirmEscola(null)} className="flex-1 py-2.5 rounded-lg border font-semibold text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary">
                 Cancelar
               </button>
-              <button onClick={confirmPaper} className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-primary-foreground bg-primary hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+              <button
+                onClick={confirmPaper}
+                disabled={!String(confirmEscola['COD_INEP'] ?? '').trim()}
+                className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-primary-foreground bg-primary hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Confirmar e gerar paper
               </button>
             </div>

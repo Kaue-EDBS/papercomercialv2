@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, X, Check, SkipForward } from 'lucide-react';
+import { Search, X, Check, SkipForward, Info } from 'lucide-react';
 import { EscolaData } from '@/lib/types';
 
 interface Props {
@@ -9,6 +9,8 @@ interface Props {
   onConfirm: (inepList: string[]) => void;
   onSkip: () => void;
 }
+
+const INTRO_HIDE_KEY = 'etapa2:intro:hide';
 
 /**
  * 2.1 — Concorrentes essenciais.
@@ -20,6 +22,24 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
   const [selected, setSelected] = useState<string[]>(initialEssenciais);
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showIntro, setShowIntro] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  useEffect(() => {
+    try {
+      const hide = localStorage.getItem(INTRO_HIDE_KEY);
+      if (hide !== '1') setShowIntro(true);
+    } catch {
+      setShowIntro(true);
+    }
+  }, []);
+
+  const closeIntro = (persist: boolean) => {
+    if (persist) {
+      try { localStorage.setItem(INTRO_HIDE_KEY, '1'); } catch { /* noop */ }
+    }
+    setShowIntro(false);
+  };
 
   // Busca dentro do mesmo município por padrão (mais relevante p/ concorrência)
   const codMun = String(escola['Código Município']);
@@ -57,9 +77,19 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
   return (
     <div className="max-w-3xl mx-auto py-8 sm:py-12 px-4 space-y-6">
       <header className="space-y-1">
-        <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--teal))' }}>
-          Etapa 2 · Validação de Concorrência (1/3)
-        </span>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--teal))' }}>
+            Etapa 2 · Validação de Concorrência (1/3)
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowIntro(true)}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded px-1"
+            style={{ color: 'hsl(var(--teal))' }}
+          >
+            <Info className="w-3.5 h-3.5" /> Ver instruções
+          </button>
+        </div>
         <h2 className="page-title text-xl sm:text-2xl">Quais concorrentes você quer garantir na apresentação?</h2>
         <p className="page-subtitle text-sm">
           Digite o <strong>nome da escola</strong> ou o <strong>Código Inep</strong>. O sistema completa os demais concorrentes automaticamente.
@@ -153,6 +183,84 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
           Confirmar
         </button>
       </div>
+
+      {/* Modal de boas-vindas / instruções da Etapa 2 */}
+      {showIntro && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+          onClick={() => closeIntro(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="intro-etapa2-title"
+        >
+          <div
+            className="bg-card rounded-2xl border max-w-md w-full p-6 space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'hsl(var(--teal-light))' }}>
+                  <Info className="w-5 h-5" style={{ color: 'hsl(var(--teal))' }} />
+                </div>
+                <h3 id="intro-etapa2-title" className="font-bold text-lg" style={{ color: 'hsl(var(--navy))' }}>
+                  Validação de concorrência
+                </h3>
+              </div>
+              <button
+                onClick={() => closeIntro(false)}
+                aria-label="Fechar"
+                className="p-1 rounded-lg hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="text-sm text-foreground space-y-3">
+              <p>Agora você vai conferir quais escolas concorrentes entrarão na apresentação.</p>
+              <p>
+                Você pode escolher algumas escolas manualmente, se achar importante.
+                As demais serão completadas automaticamente pelo sistema.
+              </p>
+              <div>
+                <p className="font-semibold mb-1" style={{ color: 'hsl(var(--navy))' }}>Antes de seguir, você ainda poderá:</p>
+                <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+                  <li>revisar a lista;</li>
+                  <li>ver o mapa;</li>
+                  <li>ajustar o raio, se precisar.</li>
+                </ul>
+              </div>
+              <p>Quando terminar, clique em <strong>"Confirmar"</strong> para continuar.</p>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={dontShowAgain}
+                onChange={e => setDontShowAgain(e.target.checked)}
+                className="w-4 h-4 rounded border-input accent-current"
+                style={{ accentColor: 'hsl(var(--teal))' }}
+              />
+              <span className="text-muted-foreground">Não mostrar de novo</span>
+            </label>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => closeIntro(true)}
+                className="flex-1 py-2.5 rounded-lg border font-semibold text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                Não quero ler de novo
+              </button>
+              <button
+                onClick={() => closeIntro(dontShowAgain)}
+                className="flex-1 py-2.5 rounded-lg font-semibold text-sm text-white hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                style={{ background: 'hsl(var(--teal))' }}
+              >
+                OK, entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
