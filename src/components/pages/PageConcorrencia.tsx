@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { AnalysisResult, EscolaData, ConcorrenteInfo } from '@/lib/types';
 import { num, formatNumber, formatPercent, getSegmentos, getMensalidadeFaixa, rebuildConcorrentes } from '@/lib/analysis';
 import { useDataLoader } from '@/hooks/useDataLoader';
-import { MapPin, Users, Target, GitCompare, Filter, X, Ruler, Check } from 'lucide-react';
+import { MapPin, Users, Target, GitCompare, Filter, X, Ruler, Check, Crosshair, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import ConcorrenciaMap from './ConcorrenciaMap';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
@@ -110,6 +110,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
   const [selected, setSelected] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterType>('todos');
   const [highlightedInep, setHighlightedInep] = useState<string | null>(null);
+  const [centerSignal, setCenterSignal] = useState(0);
 
   const filtered: ConcorrenteInfo[] = useMemo(() => {
     return concorrentes.filter(c => {
