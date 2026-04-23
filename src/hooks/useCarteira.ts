@@ -7,6 +7,18 @@ export interface CarteiraFile {
 }
 
 const cache = new Map<string, CarteiraFile>();
+const inflight = new Map<string, Promise<CarteiraFile>>();
+
+/** Dispara o download em background (sem montar componente). Idempotente. */
+export function prefetchCarteira(arquivo: string | null | undefined) {
+  if (!arquivo) return;
+  if (cache.has(arquivo) || inflight.has(arquivo)) return;
+  const p = fetch(`/data/carteiras/${arquivo}`)
+    .then(r => { if (!r.ok) throw new Error('not found'); return r.json(); })
+    .then((d: CarteiraFile) => { cache.set(arquivo, d); inflight.delete(arquivo); return d; })
+    .catch(e => { inflight.delete(arquivo); throw e; });
+  inflight.set(arquivo, p);
+}
 
 /**
  * Carrega o XLS individual (convertido para JSON) do consultor selecionado.
@@ -22,17 +34,15 @@ export function useCarteira(arquivo: string | null) {
     const cached = cache.get(arquivo);
     if (cached) { setData(cached); setLoading(false); setError(null); return; }
     setLoading(true); setError(null);
-    fetch(`/data/carteiras/${arquivo}`)
-      .then(r => {
-        if (!r.ok) throw new Error('Arquivo não encontrado');
-        return r.json();
-      })
-      .then((d: CarteiraFile) => {
-        cache.set(arquivo, d);
-        setData(d);
-        setLoading(false);
-      })
+    // Reusa request em voo se houver (evita download duplicado)
+    const existing = inflight.get(arquivo);
+    const p = existing ?? fetch(`/data/carteiras/${arquivo}`)
+      .then(r => { if (!r.ok) throw new Error('Arquivo não encontrado'); return r.json(); })
+      .then((d: CarteiraFile) => { cache.set(arquivo, d); inflight.delete(arquivo); return d; });
+    if (!existing) inflight.set(arquivo, p);
+    p.then(d => { setData(d); setLoading(false); })
       .catch(() => {
+        inflight.delete(arquivo);
         setError('Não conseguimos abrir sua carteira. Fale com seu gestor para verificar o arquivo.');
         setLoading(false);
       });
