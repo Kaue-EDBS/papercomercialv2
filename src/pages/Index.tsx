@@ -442,6 +442,7 @@ export default function Index() {
                 analysis={analysis}
                 essenciaisInep={essenciaisInep}
                 raioAtual={raioCustom ?? analysis.raioOperacional}
+                raioPadrao={raioPadraoEtapa2 ?? analysis.raioOperacional}
                 onRaioChange={(km) => {
                   setRaioCustom(km);
                   setRaioFoiAjustado(true);
