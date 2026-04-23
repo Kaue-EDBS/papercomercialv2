@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ConsultorSession } from '@/lib/types';
+import { ConsultorSession, EscolaData } from '@/lib/types';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
 import { useCarteira, CarteiraFile } from '@/hooks/useCarteira';
+import { resolveInepFromCarteira } from '@/lib/analysis';
 import { ArrowUp, ArrowDown, Settings2, X, Search, AlertTriangle } from 'lucide-react';
 
 interface Props {
   session: ConsultorSession;
   onPickEscola: (codInep: string, nomeEscola: string) => void;
   onBack: () => void;
+  censoData: EscolaData[];
 }
 
 const STORAGE_KEY = 'carteira:cols:v2';
@@ -27,7 +29,7 @@ const labelOf = (c: string) => COL_LABELS[c] ?? c;
 
 type Row = CarteiraFile['rows'][number];
 
-export default function PageCarteira({ session, onPickEscola, onBack }: Props) {
+export default function PageCarteira({ session, onPickEscola, onBack, censoData }: Props) {
   const { findByCodigo, findByNome, loading: loadingManifest } = useCarteiraManifest();
   const entry = useMemo(
     () => findByCodigo(session.codigo) || findByNome(session.nome),
