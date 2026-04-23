@@ -267,6 +267,26 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
                 onChange={(km) => { setLiveRaio(km); onRaioChange?.(km); }}
                 hint="Ao mover a régua, o sistema reprocessa a lista de concorrentes, o mapa, os indicadores e o market share desta página."
               />
+              <div className="flex justify-end mt-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onRaioChange?.(liveRaio);
+                    const fmt = liveRaio < 1
+                      ? `${Math.round(liveRaio * 1000).toLocaleString('pt-BR')} m`
+                      : `${liveRaio.toFixed(1).replace('.', ',')} km`;
+                    toast.success(`Raio confirmado: ${fmt}`, {
+                      description: 'Mensalidade e Market Share foram atualizados.',
+                    });
+                  }}
+                  className="inline-flex items-center gap-2 px-4 h-9 rounded-lg text-sm font-semibold text-white hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  style={{ background: 'hsl(var(--teal))' }}
+                  aria-label="Confirmar raio atual"
+                >
+                  <Check className="w-4 h-4" />
+                  Confirmar raio
+                </button>
+              </div>
             </div>
             <ConcorrenciaMap
               escola={escola}
