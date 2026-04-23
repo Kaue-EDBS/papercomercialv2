@@ -320,10 +320,10 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
                   <button
                     type="button"
                     onClick={() => {
-                      setLiveRaio(analysis.raioOperacional);
-                      onRaioChange?.(analysis.raioOperacional);
+                      setLiveRaio(raioPadraoEtapa2);
+                      onRaioChange?.(raioPadraoEtapa2);
                       toast.info('Raio restaurado ao padrão da Etapa 2', {
-                        description: `${analysis.raioOperacional.toFixed(1).replace('.', ',')} km`,
+                        description: `${raioPadraoEtapa2.toFixed(1).replace('.', ',')} km`,
                       });
                     }}
                     disabled={!isCustomRaio}
