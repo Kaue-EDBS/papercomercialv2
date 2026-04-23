@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Lock } from 'lucide-react';
 
 interface Props {
   value: number;
@@ -61,13 +61,18 @@ export default function RaioSlider({
             {label}
           </span>
           <span
-            className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
             style={{
               background: isCustom ? 'hsl(40 80% 92%)' : 'hsl(var(--teal-light))',
               color: isCustom ? 'hsl(40 80% 30%)' : 'hsl(var(--teal-dark))',
             }}
-            title={isCustom ? 'Raio ajustado manualmente' : 'Raio padrão calculado pela densidade escolar'}
+            title={
+              isCustom
+                ? 'Raio ajustado manualmente nesta etapa'
+                : 'Raio padrão definido na Etapa 2 — referência fixa'
+            }
           >
+            {!isCustom && <Lock className="w-2.5 h-2.5" aria-hidden />}
             {isCustom ? 'Ajustado' : 'Padrão'}
           </span>
         </div>
