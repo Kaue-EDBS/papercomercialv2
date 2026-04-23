@@ -248,8 +248,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
       )}
 
       {/* Mapa + painel lateral + régua premium */}
-      {comCoordenadas > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 bg-card rounded-xl border overflow-hidden">
             <div
               className="px-3 py-2 border-b flex items-center gap-2"
@@ -288,12 +287,21 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
                 </button>
               </div>
             </div>
-            <ConcorrenciaMap
-              escola={escola}
-              concorrentes={concorrentes}
-              highlightedInep={highlightedInep}
-              onMarkerClick={handleMarkerClick}
-            />
+            {comCoordenadas > 0 ? (
+              <ConcorrenciaMap
+                escola={escola}
+                concorrentes={concorrentes}
+                highlightedInep={highlightedInep}
+                onMarkerClick={handleMarkerClick}
+              />
+            ) : (
+              <div
+                className="px-4 py-8 text-center text-xs text-muted-foreground"
+                style={{ background: 'hsl(var(--beige) / 0.4)' }}
+              >
+                Nenhum concorrente com coordenadas no raio atual. Aumente o raio para visualizar o mapa.
+              </div>
+            )}
           </div>
 
           {/* Painel lateral mais sofisticado */}
@@ -343,8 +351,7 @@ export default function PageConcorrencia({ analysis, essenciaisInep = [], raioAt
               </div>
             </div>
           </div>
-        </div>
-      )}
+      </div>
 
       {/* Filtros rápidos */}
       <div className="flex items-center gap-2 flex-wrap">
