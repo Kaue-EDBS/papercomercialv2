@@ -413,6 +413,8 @@ export default function Index() {
                 essenciaisInep={essenciaisInep}
                 raioAtual={raioCustom ?? analysis.raioOperacional}
                 fromRaioAdjust={raioFoiAjustado}
+                censoData={censo}
+                onRemoveConcorrente={handleRemoveConcorrente}
                 onConfirm={handleTabelaConfirm}
                 onChangeRaio={handleTabelaChangeRaio}
               />
