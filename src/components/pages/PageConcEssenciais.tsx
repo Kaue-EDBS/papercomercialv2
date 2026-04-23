@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, X, Check, SkipForward, Info } from 'lucide-react';
+import { Search, X, Check, SkipForward, Info, AlertTriangle } from 'lucide-react';
 import { EscolaData } from '@/lib/types';
 
 interface Props {
@@ -8,22 +8,39 @@ interface Props {
   initialEssenciais?: string[];
   onConfirm: (inepList: string[]) => void;
   onSkip: () => void;
+  /** Permite registrar uma faixa de mensalidade informada manualmente quando o censo não traz o dado. */
+  onMensalidadeOverride?: (faixa: string) => void;
 }
 
 const INTRO_HIDE_KEY = 'etapa2:intro:hide';
+const MENSALIDADE_PROMPT_KEY = 'etapa2:mensalidadePrompt:dismissedFor';
+
+const FAIXAS_MENSALIDADE: { value: string; label: string }[] = [
+  { value: 'até 399', label: 'Até R$ 399' },
+  { value: '400 a 799', label: 'R$ 400 a R$ 799' },
+  { value: '800 a 1.399', label: 'R$ 800 a R$ 1.399' },
+  { value: '1.400 a 2.399', label: 'R$ 1.400 a R$ 2.399' },
+  { value: 'acima de R$ 2.400', label: 'Acima de R$ 2.400' },
+];
 
 /**
  * 2.1 — Concorrentes essenciais.
  * Autocomplete por nome OU código Inep. Permite escolher múltiplos.
  * "Sem sugestão" pula sem incluir essenciais.
  */
-export default function PageConcEssenciais({ escola, censoData, initialEssenciais = [], onConfirm, onSkip }: Props) {
+export default function PageConcEssenciais({ escola, censoData, initialEssenciais = [], onConfirm, onSkip, onMensalidadeOverride }: Props) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string[]>(initialEssenciais);
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [showIntro, setShowIntro] = useState(false);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+
+  // ---- Aviso: escola sem dado de mensalidade ----
+  const semMensalidade = !escola.Mensalidade || String(escola.Mensalidade).trim() === '' || String(escola.Mensalidade).trim() === '0';
+  const inepKey = String(escola['Código Inep']);
+  const [showMensModal, setShowMensModal] = useState(false);
+  const [faixaPick, setFaixaPick] = useState<string>('');
 
   useEffect(() => {
     try {
@@ -33,6 +50,29 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
       setShowIntro(true);
     }
   }, []);
+
+  // Sobe o aviso de mensalidade ao abrir a etapa, exceto se já foi dispensado para esta escola.
+  useEffect(() => {
+    if (!semMensalidade) return;
+    try {
+      const dismissed = localStorage.getItem(MENSALIDADE_PROMPT_KEY);
+      if (dismissed === inepKey) return;
+    } catch { /* noop */ }
+    setShowMensModal(true);
+  }, [semMensalidade, inepKey]);
+
+  const closeMensModal = (persist: boolean) => {
+    if (persist) {
+      try { localStorage.setItem(MENSALIDADE_PROMPT_KEY, inepKey); } catch { /* noop */ }
+    }
+    setShowMensModal(false);
+  };
+
+  const confirmMensFaixa = () => {
+    if (!faixaPick) return;
+    onMensalidadeOverride?.(faixaPick);
+    closeMensModal(true);
+  };
 
   const closeIntro = (persist: boolean) => {
     if (persist) {
@@ -76,6 +116,21 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
 
   return (
     <div className="max-w-3xl mx-auto py-8 sm:py-12 px-4 space-y-6">
+      {semMensalidade && (
+        <button
+          type="button"
+          onClick={() => setShowMensModal(true)}
+          className="w-full flex items-start gap-2 px-3 py-2.5 rounded-lg border text-left text-xs hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+          style={{ background: 'hsl(40 95% 96%)', borderColor: 'hsl(40 80% 80%)' }}
+        >
+          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'hsl(40 80% 35%)' }} />
+          <span>
+            <strong style={{ color: 'hsl(var(--navy))' }}>Esta escola não possui mensalidade na base.</strong>{' '}
+            <span className="text-muted-foreground">Clique para informar a faixa, se souber — isso melhora a comparação na apresentação.</span>
+          </span>
+        </button>
+      )}
+
       <header className="space-y-1">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'hsl(var(--teal))' }}>
