@@ -6,6 +6,7 @@ import { AppPage, PresentationType, AnalysisResult, ConsultorSession } from '@/l
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import NavigationBar from '@/components/NavigationBar';
+import ContextBar from '@/components/ContextBar';
 import PageLogin from '@/components/pages/PageLogin';
 import PageModo from '@/components/pages/PageModo';
 import PageCarteira from '@/components/pages/PageCarteira';
@@ -53,13 +54,6 @@ export default function Index() {
   const [raioFoiAjustado, setRaioFoiAjustado] = useState(false);
   const [excluidosInep, setExcluidosInep] = useState<string[]>([]);
 
-  // Liberação progressiva do menu — guarda o maior índice já visitado em PAGE_ORDER.
-  const [maxReachedIdx, setMaxReachedIdx] = useState(0);
-  useEffect(() => {
-    const idx = PAGE_ORDER.indexOf(page);
-    if (idx > maxReachedIdx) setMaxReachedIdx(idx);
-  }, [page, maxReachedIdx]);
-
   // Restore session from localStorage
   useEffect(() => {
     try {
@@ -104,7 +98,6 @@ export default function Index() {
     setEssenciaisInep([]);
     setRaioCustom(null);
     setRaioFoiAjustado(false);
-    setMaxReachedIdx(0);
     setPage(session ? 'modo' : 'login');
   }, [session]);
 
@@ -316,10 +309,13 @@ export default function Index() {
           onNavigate={setPage}
           onBack={handleBack}
           onNewSearch={handleNewSearch}
-          maxReachedIdx={maxReachedIdx}
+        />
+      )}
+      {showNav && analysis && (
+        <ContextBar
           session={session}
-          escola={analysis?.escola}
-          raioKm={analysis ? (raioCustom ?? analysis.raioOperacional) : undefined}
+          escola={analysis.escola}
+          raioKm={raioCustom ?? analysis.raioOperacional}
           raioMode={raioCustom !== null ? 'personalizado' : 'padrao'}
           presentationType={presentationType}
           etapaLabel="3 · Apresentação"
