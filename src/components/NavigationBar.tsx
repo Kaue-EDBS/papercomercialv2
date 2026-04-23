@@ -1,6 +1,6 @@
 import { AppPage } from '@/lib/types';
 import { Home, Maximize, Minimize, User, GraduationCap, ChevronRight } from 'lucide-react';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useLayoutEffect } from 'react';
 import { ConsultorSession, EscolaData } from '@/lib/types';
 
 interface NavItem {
@@ -188,22 +188,69 @@ export default function NavigationBar({ currentPage, onNavigate, isComparative, 
           <Home className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden sm:inline">Nova Pesquisa</span>
         </button>
       )}
-      {NAV_ITEMS.map(item => (
+      <NavItemsWithIndicator items={NAV_ITEMS} currentPage={currentPage} onNavigate={onNavigate} />
+      <div className="ml-auto flex-shrink-0 pl-2">
+        <FullscreenButton />
+      </div>
+    </nav>
+  );
+}
+
+/** Pílulas de navegação com sublinhado animado que desliza para o item ativo. */
+function NavItemsWithIndicator({
+  items, currentPage, onNavigate,
+}: { items: NavItem[]; currentPage: AppPage; onNavigate: (p: AppPage) => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const [indicator, setIndicator] = useState<{ left: number; width: number; visible: boolean }>({ left: 0, width: 0, visible: false });
+
+  useLayoutEffect(() => {
+    const btn = btnRefs.current[currentPage];
+    const container = containerRef.current;
+    if (!btn || !container) { setIndicator(s => ({ ...s, visible: false })); return; }
+    const cRect = container.getBoundingClientRect();
+    const bRect = btn.getBoundingClientRect();
+    setIndicator({ left: bRect.left - cRect.left + container.scrollLeft, width: bRect.width, visible: true });
+    // Auto-scroll horizontal para manter o item ativo visível
+    const visibleStart = container.scrollLeft;
+    const visibleEnd = visibleStart + container.clientWidth;
+    const itemStart = bRect.left - cRect.left + container.scrollLeft;
+    const itemEnd = itemStart + bRect.width;
+    if (itemStart < visibleStart + 20) {
+      container.scrollTo({ left: Math.max(0, itemStart - 20), behavior: 'smooth' });
+    } else if (itemEnd > visibleEnd - 20) {
+      container.scrollTo({ left: itemEnd - container.clientWidth + 20, behavior: 'smooth' });
+    }
+  }, [currentPage, items.length]);
+
+  return (
+    <div ref={containerRef} className="relative flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-hide flex-1">
+      {items.map(item => (
         <button
           key={item.id}
+          ref={el => { btnRefs.current[item.id] = el; }}
           onClick={() => onNavigate(item.id)}
           aria-current={currentPage === item.id ? 'page' : undefined}
           aria-label={`Página ${item.short}: ${item.label}`}
           title={item.label}
-          className={`nav-pill whitespace-nowrap text-[11px] sm:text-xs ${currentPage === item.id ? 'nav-pill-active' : ''}`}
+          className={`nav-pill relative whitespace-nowrap text-[11px] sm:text-xs ${currentPage === item.id ? 'nav-pill-active' : ''}`}
         >
           <span className="font-bold mr-1">{item.short}</span>
           <span className="hidden sm:inline">{item.label}</span>
         </button>
       ))}
-      <div className="ml-auto flex-shrink-0 pl-2">
-        <FullscreenButton />
-      </div>
-    </nav>
+      {/* Sublinhado deslizante que acompanha a página ativa */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute h-[2px] rounded-full transition-all duration-300 ease-out"
+        style={{
+          background: 'hsl(var(--teal))',
+          left: indicator.left,
+          width: indicator.width,
+          bottom: -2,
+          opacity: indicator.visible ? 1 : 0,
+        }}
+      />
+    </div>
   );
 }
