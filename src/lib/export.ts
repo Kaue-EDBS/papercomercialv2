@@ -2055,47 +2055,90 @@ function pptResumoCard(
 function pptPanorama(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
   pptTitle(s, 'Panorama Educacional da Região', `${data.a.concorrentes.length + 1} escolas · ${fmtInt(data.totalAlunos)} alunos · raio ${fmtKm(ctx.raioKm)}`);
-  const cw = (PPT_W - 2 * PPT_M - 0.45) / 4;
   const lider = data.segPanorama[0];
-  pptKpi(s, PPT_M + 0 * (cw + 0.15), 1.7, cw, 0.85, 'Escolas', String(data.a.concorrentes.length + 1), C.teal);
-  pptKpi(s, PPT_M + 1 * (cw + 0.15), 1.7, cw, 0.85, 'Total de Alunos', fmtInt(data.totalAlunos), C.navy);
-  pptKpi(s, PPT_M + 2 * (cw + 0.15), 1.7, cw, 0.85, 'Média/Escola', fmtInt(Math.round(data.totalAlunos / Math.max(1, data.a.concorrentes.length + 1))), C.lime);
-  pptKpi(s, PPT_M + 3 * (cw + 0.15), 1.7, cw, 0.85, 'Segmento Líder', `${lider?.sigla ?? '—'} · ${data.totalAlunos > 0 ? fmtPct((lider?.alunos ?? 0) / data.totalAlunos * 100, 0) : '—'}`, C.teal);
+  const menor = data.segPanorama[data.segPanorama.length - 1];
+  const liderPct = data.totalAlunos > 0 ? (lider?.alunos ?? 0) / data.totalAlunos * 100 : 0;
+  const menorPct = data.totalAlunos > 0 ? (menor?.alunos ?? 0) / data.totalAlunos * 100 : 0;
 
-  // Gráfico nativo PPT
+  // ===== Cards principais — destaque do líder em lime =====
+  const cw = (PPT_W - 2 * PPT_M - 0.45) / 4;
+  const cardY = 1.85, cardH = 0.85;
+  pptKpi(s, PPT_M + 0 * (cw + 0.15), cardY, cw, cardH, 'Escolas', String(data.a.concorrentes.length + 1), C.teal);
+  pptKpi(s, PPT_M + 1 * (cw + 0.15), cardY, cw, cardH, 'Total de Alunos', fmtInt(data.totalAlunos), C.navy);
+  pptKpi(s, PPT_M + 2 * (cw + 0.15), cardY, cw, cardH, 'Média/Escola', fmtInt(Math.round(data.totalAlunos / Math.max(1, data.a.concorrentes.length + 1))), C.tealDark);
+
+  // Card "Segmento Líder" com destaque (fundo lime claro, faixa lime esquerda)
+  const lx = PPT_M + 3 * (cw + 0.15);
+  s.addShape('roundRect', { x: lx, y: cardY, w: cw, h: cardH, fill: { color: C.tealLight }, line: { color: C.lime, width: 1.25 }, rectRadius: 0.08 } as any);
+  s.addShape('rect', { x: lx, y: cardY, w: 0.07, h: cardH, fill: { color: C.lime }, line: { color: C.lime } });
+  s.addText('SEGMENTO LÍDER', { x: lx + 0.18, y: cardY + 0.10, w: cw - 0.36, h: 0.26, fontSize: 9, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1 });
+  s.addText(
+    [
+      { text: lider?.sigla ?? '—', options: { bold: true, color: C.navy, fontSize: 24 } },
+      { text: `   ${fmtPct(liderPct, 0)}`, options: { color: C.tealDark, fontSize: 14, bold: true } },
+    ] as any,
+    { x: lx + 0.18, y: cardY + 0.36, w: cw - 0.36, h: cardH - 0.42, fontFace: 'Calibri', valign: 'middle', shrinkText: true } as any,
+  );
+
+  // ===== Bloco principal: gráfico (esquerda, maior) + tabela (direita) =====
+  const blockY = 2.95;
+  const blockH = 3.55;          // ocupa até ~6.5 (deixa leitura no rodapé)
+  const chartW = 8.2;           // gráfico mais amplo
+  const tableX = PPT_M + chartW + 0.2;
+  const tableW = PPT_W - PPT_M - tableX;
+
+  // Gráfico nativo PPT — maior e respirando
   const chartData = [{
     name: 'Alunos',
     labels: data.segPanorama.map((x: any) => x.sigla),
     values: data.segPanorama.map((x: any) => x.alunos),
   }];
   s.addChart(pptxgenChartType('bar'), chartData, {
-    x: PPT_M, y: 2.85, w: 8, h: 2.6,
+    x: PPT_M, y: blockY, w: chartW, h: blockH,
     showTitle: true, title: 'Distribuição do Mercado por Segmento',
-    titleFontFace: 'Calibri', titleFontSize: 11, titleColor: C.navy,
+    titleFontFace: 'Calibri', titleFontSize: 12, titleColor: C.navy,
     chartColors: [C.teal, C.navy, C.lime, C.tealDark],
-    showValue: true, valAxisHidden: false, catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 10,
-    barDir: 'col', dataLabelFontSize: 9, dataLabelColor: C.navy,
-    showLegend: false, valAxisLabelFontSize: 9,
+    showValue: true, valAxisHidden: false,
+    catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 11, catAxisLabelColor: C.navy,
+    barDir: 'col', dataLabelFontSize: 10, dataLabelColor: C.navy, dataLabelFontBold: true,
+    showLegend: false, valAxisLabelFontSize: 9, valAxisLabelColor: C.muted,
+    barGapWidthPct: 60,
   });
 
-  // Tabela lateral
-  const rows: any[] = [
-    [
-      { text: 'Segmento', options: { bold: true, color: C.muted, fontSize: 10, fill: { color: C.beige } } },
-      { text: 'Alunos',   options: { bold: true, color: C.muted, fontSize: 10, fill: { color: C.beige } } },
-      { text: '%',         options: { bold: true, color: C.muted, fontSize: 10, fill: { color: C.beige } } },
-    ],
-    ...data.segPanorama.map((seg: any, i: number) => [
-      { text: seg.nome, options: { fontSize: 10, color: C.navy, bold: i === 0 } },
-      { text: fmtInt(seg.alunos), options: { fontSize: 10, color: C.text, align: 'right' } },
-      { text: data.totalAlunos > 0 ? fmtPct(seg.alunos / data.totalAlunos * 100, 0) : '—', options: { fontSize: 10, color: C.text, align: 'right' } },
-    ]),
-  ];
-  s.addTable(rows, { x: 8.5, y: 2.85, w: 4.4, colW: [2.3, 1.2, 0.9], rowH: 0.32, fontFace: 'Calibri', border: { type: 'solid', color: C.borderLight, pt: 0.5 } });
+  // ----- Tabela lateral (header + linhas em zebra, líder destacado)
+  s.addText('SEGMENTOS', { x: tableX, y: blockY, w: tableW, h: 0.28, fontSize: 10.5, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1 });
 
-  const lider2 = data.segPanorama[0];
-  const menor = data.segPanorama[data.segPanorama.length - 1];
-  pptLeitura(s, `${lider2?.nome ?? '—'} lidera com ${data.totalAlunos > 0 ? fmtPct(lider2.alunos / data.totalAlunos * 100, 0) : '—'}. ${menor?.nome ?? '—'}: ${data.totalAlunos > 0 ? fmtPct(menor.alunos / data.totalAlunos * 100, 0) : '—'} — ${menor?.alunos === 0 ? 'ausência de oferta' : 'oportunidade de diferenciação'}.`, 5.7, 0.55, 'LEITURA ESTRATÉGICA');
+  const rowsHeader = [
+    [
+      { text: 'Segmento', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'left', valign: 'middle' } },
+      { text: 'Alunos',   options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', valign: 'middle' } },
+      { text: '%',        options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', valign: 'middle' } },
+    ],
+    ...data.segPanorama.map((seg: any, i: number) => {
+      const isLider = i === 0;
+      const rowFill = isLider ? C.tealLight : (i % 2 === 1 ? C.borderLight : C.white);
+      const pctTxt = data.totalAlunos > 0 ? fmtPct(seg.alunos / data.totalAlunos * 100, 0) : '—';
+      return [
+        { text: `${seg.sigla} · ${seg.nome}`, options: { fontSize: 10.5, color: C.navy, bold: isLider, fill: { color: rowFill }, valign: 'middle' } },
+        { text: fmtInt(seg.alunos), options: { fontSize: 10.5, color: C.text, align: 'right', fill: { color: rowFill }, valign: 'middle' } },
+        { text: pctTxt, options: { fontSize: 10.5, color: isLider ? C.navy : C.text, bold: isLider, align: 'right', fill: { color: rowFill }, valign: 'middle' } },
+      ];
+    }),
+  ];
+  s.addTable(rowsHeader, {
+    x: tableX, y: blockY + 0.32, w: tableW,
+    colW: [tableW - 1.55, 0.9, 0.65],
+    rowH: 0.42,
+    fontFace: 'Calibri',
+    border: { type: 'solid', color: C.borderLight, pt: 0.5 },
+  });
+
+  // ===== Leitura estratégica — integrada como fechamento do bloco =====
+  pptLeitura(
+    s,
+    `${lider?.nome ?? '—'} lidera com ${fmtPct(liderPct, 0)} do mercado · ${menor?.nome ?? '—'}: ${fmtPct(menorPct, 0)} — ${menor?.alunos === 0 ? 'ausência de oferta' : 'oportunidade de diferenciação'}.`,
+    6.62, 0.5, 'LEITURA ESTRATÉGICA',
+  );
 }
 
 // helper para chart enum
