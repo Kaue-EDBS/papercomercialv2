@@ -1086,8 +1086,8 @@ function renderPdfInsights(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
       tagColor: data.popGrowth >= 0 ? TEAL : RED,
       title: 'Tendência Demográfica',
       dado: `${data.popGrowth >= 0 ? '+' : ''}${data.popGrowth.toFixed(1).replace('.', ',')}% na faixa 0–4 (2024→2025)`,
-      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por EI e séries iniciais.' : 'Faixa 0–4 em retração — captação de EI mais disputada nos próximos ciclos.',
-      implic: data.popGrowth >= 0 ? 'Reforçar comunicação de EI agora protege o pipeline.' : 'Antecipar retenção e diversificar oferta.',
+      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por Educação Infantil e séries iniciais.' : 'Faixa 0–4 em retração — captação de Educação Infantil mais disputada nos próximos ciclos.',
+      implic: data.popGrowth >= 0 ? 'Reforçar comunicação de Educação Infantil agora protege o pipeline.' : 'Antecipar retenção e diversificar oferta.',
     },
     {
       tag: data.concs.length >= 10 ? 'RISCO' : 'POSICIONAMENTO',
@@ -1887,8 +1887,8 @@ function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
   const insights = [
     { tag: data.popGrowth >= 0 ? 'OPORTUNIDADE' : 'RISCO', tagColor: data.popGrowth >= 0 ? C.teal : C.red, title: 'Tendência Demográfica',
       dado: `${data.popGrowth >= 0 ? '+' : ''}${data.popGrowth.toFixed(1).replace('.', ',')}% na faixa 0–4`,
-      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por EI e séries iniciais.' : 'Faixa 0–4 em retração — captação de EI mais disputada.',
-      implic: data.popGrowth >= 0 ? 'Reforçar EI agora protege o pipeline.' : 'Antecipar retenção e diversificar oferta.' },
+      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por Educação Infantil e séries iniciais.' : 'Faixa 0–4 em retração — captação de Educação Infantil mais disputada.',
+      implic: data.popGrowth >= 0 ? 'Reforçar Educação Infantil agora protege o pipeline.' : 'Antecipar retenção e diversificar oferta.' },
     { tag: data.concs.length >= 10 ? 'RISCO' : 'POSICIONAMENTO', tagColor: data.concs.length >= 10 ? C.red : C.navy, title: 'Pressão Competitiva',
       dado: `${data.concs.length} concorrentes · ${fmtInt(data.totalAlunadoArea)} alunos`,
       leitura: data.isFragmented ? 'Mercado fragmentado: diferenciação é o driver de escolha.' : 'Concorrência presente, espaço para ganho de share.',
