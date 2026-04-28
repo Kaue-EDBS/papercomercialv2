@@ -52,11 +52,13 @@ const C = {
   segEFI: '142648',
   segEFII: 'B5D964',
   segEM: '0A6664',
-  // Padrão editorial Santa Mônica
-  lavender: 'E8E9F7',       // chip / card de fundo
-  lavenderDark: 'C9CCEA',   // borda chip
-  blueTint: 'E6EFFA',       // callout info
-  navySoft: '2A3A66',       // texto secundário em superfícies escuras
+  // Padrão editorial — alinhado 100% à identidade web (navy + teal + lima + beige).
+  // Aliases mantidos para compatibilidade com chamadas existentes; valores remapeados
+  // para tealLight/borderLight/beige. Sem lavender/lilás.
+  lavender: 'DEF3F3',       // ex-lavanda → teal-light (chip/card de fundo)
+  lavenderDark: '9FCFCC',   // ex-lavanda escuro → teal-light borda
+  blueTint: 'DEF3F3',       // callout info → teal-light
+  navySoft: '2A3A66',       // texto secundário em superfícies escuras (mantido)
 };
 
 // Dimensões 16:9
