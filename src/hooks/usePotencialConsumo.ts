@@ -29,6 +29,12 @@ async function load(): Promise<Record<string, PotencialMunicipio>> {
   return inflight;
 }
 
+/** Dispara o download em background (idempotente) — útil para prefetch. */
+export function prefetchPotencialConsumo(): void {
+  if (cache || inflight) return;
+  void load();
+}
+
 /** Lookup por código IBGE (aceita 6 ou 7 dígitos). */
 export function findPotencialByIBGE(data: Record<string, PotencialMunicipio> | null, codMunicipio: string): PotencialMunicipio | null {
   if (!data) return null;
