@@ -2135,23 +2135,44 @@ function pptPlano(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
 }
 
 // ----- 14. Encerramento
-function pptEncerramento(s: PptxGenJS.Slide) {
-  s.background = { color: C.beige };
-  s.addShape('rect', { x: 0, y: 0, w: 0.1, h: PPT_H, fill: { color: C.teal }, line: { color: C.teal } });
-  s.addShape('rect', { x: PPT_W / 2 - 0.4, y: 0.95, w: 0.8, h: 0.06, fill: { color: C.teal }, line: { color: C.teal } });
-  s.addText('Obrigado pelo seu tempo', { x: 0, y: 1.4, w: PPT_W, h: 0.8, fontSize: 36, bold: true, color: C.navy, align: 'center', fontFace: 'Calibri' });
-  s.addText('Encerrar esta análise é também abrir espaço para novas possibilidades. A Editora do Brasil agradece pela atenção, pelo tempo dedicado e pela oportunidade de apresentar esta visão comercial e estratégica.', {
-    x: 1.5, y: 2.6, w: PPT_W - 3.0, h: 1.4, fontSize: 14, color: C.text, align: 'center', fontFace: 'Calibri',
-  });
+function pptEncerramento(s: PptxGenJS.Slide, ctx?: ExportContext) {
+  // Layout split (espelha a capa): painel navy à esquerda + texto à direita em fundo branco
+  s.background = { color: C.white };
+  const splitX = 5.3;
+  s.addShape('rect', { x: 0, y: 0, w: splitX, h: PPT_H, fill: { color: C.navy }, line: { color: C.navy } });
+  // Decoração circular sutil
+  for (let i = 0; i < 4; i++) {
+    const r = 0.5 + i * 0.6;
+    s.addShape('ellipse', {
+      x: 0.6 - r, y: PPT_H - 0.6 - r, w: r * 2, h: r * 2,
+      fill: { type: 'none' } as any, line: { color: C.navySoft, width: 0.6 },
+    });
+  }
+  s.addText('EDB', { x: 0.5, y: 0.6, w: 2, h: 0.5, fontSize: 22, bold: true, color: C.lavender, fontFace: 'Calibri', charSpacing: 2 });
+  s.addText('Editora do Brasil', { x: 0.5, y: 1.05, w: 4, h: 0.3, fontSize: 11, italic: true, color: C.lavender, fontFace: 'Calibri' });
+
+  // Lado direito (texto)
+  s.addText('Obrigado pelo Seu Tempo', { x: splitX + 0.6, y: 0.85, w: PPT_W - splitX - 1.0, h: 0.85, fontSize: 36, bold: true, color: C.navy, fontFace: 'Calibri' });
+  s.addText(
+    'Encerrar esta análise é também abrir espaço para novas possibilidades. A Editora do Brasil agradece pela atenção, pelo tempo dedicado e pela oportunidade de apresentar esta visão comercial e estratégica.',
+    { x: splitX + 0.6, y: 1.95, w: PPT_W - splitX - 1.0, h: 1.5, fontSize: 13, color: C.text, fontFace: 'Calibri', valign: 'top' }
+  );
+  // Quote com borda lateral navy
+  const qy = 3.65;
+  s.addShape('rect', { x: splitX + 0.6, y: qy, w: 0.07, h: 0.7, fill: { color: C.navy }, line: { color: C.navy } });
   s.addText('"Conte com a Editora do Brasil para crescer junto."', {
-    x: 0, y: 4.4, w: PPT_W, h: 0.5, fontSize: 20, italic: true, color: C.teal, align: 'center', fontFace: 'Calibri',
+    x: splitX + 0.85, y: qy, w: PPT_W - splitX - 1.25, h: 0.7, fontSize: 16, italic: true, color: C.navy, fontFace: 'Calibri', valign: 'middle',
   });
-  s.addText('Transformando o país pela educação.', {
-    x: 0, y: 5.0, w: PPT_W, h: 0.5, fontSize: 18, bold: true, color: C.navy, align: 'center', fontFace: 'Calibri',
-  });
-  s.addShape('rect', { x: PPT_W / 2 - 0.6, y: 5.95, w: 1.2, h: 0.04, fill: { color: C.navy }, line: { color: C.navy } });
-  s.addText('EDITORA DO BRASIL', { x: 0, y: 6.2, w: PPT_W, h: 0.35, fontSize: 12, bold: true, color: C.navy, align: 'center', fontFace: 'Calibri' });
-  s.addText('Educação que transforma, parceria que constrói.', { x: 0, y: 6.55, w: PPT_W, h: 0.35, fontSize: 11, italic: true, color: C.muted, align: 'center', fontFace: 'Calibri' });
+  // Card lavanda final
+  const cy = 4.6;
+  s.addShape('roundRect', { x: splitX + 0.6, y: cy, w: PPT_W - splitX - 1.0, h: 1.7, fill: { color: C.lavender }, line: { color: C.lavender }, rectRadius: 0.1 } as any);
+  s.addText('Editora do Brasil', { x: splitX + 0.85, y: cy + 0.18, w: 4, h: 0.3, fontSize: 12, bold: true, color: C.navy, fontFace: 'Calibri' });
+  s.addText('Transformando o país pela educação.', { x: splitX + 0.85, y: cy + 0.45, w: PPT_W - splitX - 1.5, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
+  if (ctx?.session) {
+    s.addText('Consultor Responsável', { x: splitX + 0.85, y: cy + 0.85, w: 4, h: 0.3, fontSize: 12, bold: true, color: C.navy, fontFace: 'Calibri' });
+    s.addText(`${ctx.session.nome} · ${ctx.session.codigo}`, { x: splitX + 0.85, y: cy + 1.12, w: PPT_W - splitX - 1.5, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
+  }
+  s.addText('Educação que transforma, parceria que constrói.', { x: splitX + 0.6, y: PPT_H - 0.55, w: PPT_W - splitX - 1.0, h: 0.3, fontSize: 11, italic: true, color: C.muted, fontFace: 'Calibri' });
 }
 
 // ============================================================
