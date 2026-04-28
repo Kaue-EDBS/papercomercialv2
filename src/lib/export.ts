@@ -52,11 +52,13 @@ const C = {
   segEFI: '142648',
   segEFII: 'B5D964',
   segEM: '0A6664',
-  // Padrão editorial Santa Mônica
-  lavender: 'E8E9F7',       // chip / card de fundo
-  lavenderDark: 'C9CCEA',   // borda chip
-  blueTint: 'E6EFFA',       // callout info
-  navySoft: '2A3A66',       // texto secundário em superfícies escuras
+  // Padrão editorial — alinhado 100% à identidade web (navy + teal + lima + beige).
+  // Aliases mantidos para compatibilidade com chamadas existentes; valores remapeados
+  // para tealLight/borderLight/beige. Sem lavender/lilás.
+  lavender: 'DEF3F3',       // ex-lavanda → teal-light (chip/card de fundo)
+  lavenderDark: '9FCFCC',   // ex-lavanda escuro → teal-light borda
+  blueTint: 'DEF3F3',       // callout info → teal-light
+  navySoft: '2A3A66',       // texto secundário em superfícies escuras (mantido)
 };
 
 // Dimensões 16:9
@@ -350,6 +352,7 @@ const SLIDE_TITLES = [
   'Potencial de consumo educacional e comercial',
   'Insights estratégicos',
   'Plano de ação comercial e marketing',
+  'Ação comercial e marketing',
   'Encerramento',
 ];
 
@@ -379,6 +382,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
     (p, n) => renderPdfPotencial(p, font, bold, italic, ctx, data, n, total),
     (p, n) => renderPdfInsights(p, font, bold, italic, ctx, data, n, total),
     (p, n) => renderPdfPlanoAcao(p, font, bold, italic, ctx, data, n, total),
+    (p, n) => renderPdfAcaoComercial(p, font, bold, italic, ctx, data, n, total),
     (p) => renderPdfEncerramento(p, font, bold, italic, ctx),
   ];
 
@@ -1271,6 +1275,70 @@ function renderPdfPlanoAcao(page: PDFPage, font: PDFFont, bold: PDFFont, italic:
   });
 }
 
+// ----- 14. Ação Comercial e Marketing (PDF)
+function renderPdfAcaoComercial(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
+  const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
+  drawPDFHeader(d); drawPDFFooter(d);
+  drawPDFTitle(d, 'Ação Comercial & Marketing', 'Recomendações de captação, posicionamento e comunicação');
+
+  const ms = ctx.analysis.marketShare;
+  const segShares = [
+    { l: 'Educação Infantil', v: ms.ei },
+    { l: 'Fund. AI', v: ms.efi },
+    { l: 'Fund. AF', v: ms.efii },
+    { l: 'Ensino Médio', v: ms.em },
+  ].filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+  const bestSeg = segShares[0]?.l ?? 'segmento principal';
+  const weakSeg = segShares[segShares.length - 1]?.l ?? 'segmento de menor share';
+
+  const frentes = [
+    { tag: 'CAPTAÇÃO',        titulo: `Funil dedicado em ${bestSeg}`,
+      bullets: ['Meta numérica por etapa do funil.', 'CPA-alvo por canal.', 'Portas abertas e aulas-experiência.'] },
+    { tag: 'RETENÇÃO',        titulo: `Reforço em ${weakSeg} e rematrícula`,
+      bullets: ['Mapeamento de sinais de evasão.', 'Programa de fidelidade e irmãos.', 'Encontros de transição entre segmentos.'] },
+    { tag: 'POSICIONAMENTO',  titulo: 'Comunicação de valor',
+      bullets: ['Mensagem central pedagógica.',
+        data.adotamBrasil > 0 ? `${data.adotamBrasil} concorrente(s) já adota(m) Editora do Brasil.` : 'Editora do Brasil como diferencial exclusivo.',
+        'Depoimentos e provas sociais.'] },
+    { tag: 'PRESENÇA DIGITAL', titulo: 'Marca, conteúdo e dados',
+      bullets: ['Site otimizado para conversão.', 'Conteúdo orgânico mensal.', 'Dashboard de leads e conversão.'] },
+  ];
+
+  const cardW = (PDF_W - 2 * M - 16) / 2;
+  const cardH = 130;
+  const startY = PDF_H - CONTENT_TOP - 70;
+  frentes.forEach((f, i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    const x = M + col * (cardW + 16);
+    const y = startY - row * (cardH + 14) - cardH;
+    drawCard(page, x, y, cardW, cardH, null);
+    // Borda lateral teal
+    page.drawRectangle({ x, y, width: 4, height: cardH, color: TEAL });
+    // Tag
+    page.drawText(f.tag, { x: x + 14, y: y + cardH - 18, size: 8.5, font: bold, color: TEAL });
+    // Título
+    page.drawText(truncate(f.titulo, 60), { x: x + 14, y: y + cardH - 38, size: 12, font: bold, color: NAVY });
+    // Bullets
+    let by = y + cardH - 60;
+    f.bullets.forEach(b => {
+      page.drawText('•', { x: x + 14, y: by, size: 9, font: bold, color: TEAL });
+      const lines = wrapText(b, font, 9, cardW - 38);
+      lines.slice(0, 2).forEach((ln, idx) => {
+        page.drawText(ln, { x: x + 24, y: by - idx * 11, size: 9, font, color: TEXT });
+      });
+      by -= 11 * Math.min(2, lines.length) + 4;
+    });
+  });
+
+  // Princípio (rodapé acima do footer)
+  page.drawRectangle({ x: M, y: 56, width: PDF_W - 2 * M, height: 32, color: TEAL_LIGHT });
+  page.drawRectangle({ x: M, y: 56, width: 3, height: 32, color: NAVY });
+  page.drawText('PRINCÍPIO', { x: M + 12, y: 76, size: 8, font: bold, color: NAVY });
+  page.drawText('Captação, retenção, posicionamento e presença digital se reforçam — ritual mensal sustenta o resultado.', {
+    x: M + 80, y: 64, size: 9, font, color: NAVY,
+  });
+}
+
 // ----- 14. Encerramento
 function renderPdfEncerramento(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext) {
   page.drawRectangle({ x: 0, y: 0, width: PDF_W, height: PDF_H, color: BEIGE });
@@ -1344,6 +1412,7 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
     (s, n) => pptPotencial(s, ctx, data, n, total),
     (s, n) => pptInsights(s, ctx, data, n, total),
     (s, n) => pptPlano(s, ctx, data, n, total),
+    (s, n) => pptAcaoComercial(s, ctx, data, n, total),
     (s) => pptEncerramento(s, ctx),
   ];
 
@@ -1669,10 +1738,12 @@ function pptConcorrenciaMapa(s: PptxGenJS.Slide, ctx: ExportContext, data: any, 
 // ----- 6. Concorrência tabela
 function pptConcorrenciaTabela(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Concorrência — Tabela', `Top ${Math.min(15, data.concs.length)} concorrentes ordenados por relevância`);
+  const TOP_N = 8;
+  const shown = Math.min(TOP_N, data.concs.length);
+  pptTitle(s, 'Concorrência — Tabela', `Top ${shown} concorrentes ordenados por relevância competitiva`);
   const headers = ['Escola', 'Mensalidade', 'Matrículas', 'Distância', 'Segmentos', 'Ed. Brasil'];
   const rows: any[] = [headers.map(h => ({ text: h, options: { bold: true, color: C.white, fill: { color: C.navy }, fontSize: 10, fontFace: 'Calibri' } }))];
-  data.concs.slice(0, 15).forEach((c: any, idx: number) => {
+  data.concs.slice(0, TOP_N).forEach((c: any, idx: number) => {
     const dist = c.distancia !== null ? fmtKm(c.distancia) : (c.proximidadeCEP ? 'Estimado por CEP' : 'Sem coordenadas');
     const eb = (c.escola['Adota Brasil'] || '').toLowerCase() === 'sim';
     const fill = idx % 2 === 0 ? C.beige : C.white;
@@ -1691,8 +1762,16 @@ function pptConcorrenciaTabela(s: PptxGenJS.Slide, ctx: ExportContext, data: any
     rowH: 0.32, fontFace: 'Calibri',
     border: { type: 'solid', color: C.border, pt: 0.4 },
   });
-  s.addText(`${data.concs.length} concorrente(s) elegíveis · ${data.mesmaFaixa} na mesma faixa · ${data.adotamBrasil} adota(m) Editora do Brasil.`, {
-    x: PPT_M, y: PPT_H - 1.0, w: PPT_W - 2 * PPT_M, h: 0.3, fontSize: 10, italic: true, color: C.muted, fontFace: 'Calibri',
+  const restantes = Math.max(0, data.concs.length - shown);
+  const linhaResumo = `${data.concs.length} concorrente(s) elegíveis · ${data.mesmaFaixa} na mesma faixa · ${data.adotamBrasil} adota(m) Editora do Brasil.`;
+  const nota = restantes > 0
+    ? `Top ${shown} exibidos. Demais ${restantes} concorrente(s) disponíveis na ferramenta digital. Ranking por proximidade, faixa de mensalidade e segmentos comuns.`
+    : 'Ranking por proximidade, faixa de mensalidade e segmentos comuns. Tabela completa também disponível na ferramenta digital.';
+  s.addText(linhaResumo, {
+    x: PPT_M, y: PPT_H - 1.05, w: PPT_W - 2 * PPT_M, h: 0.28, fontSize: 10, color: C.text, fontFace: 'Calibri',
+  });
+  s.addText(nota, {
+    x: PPT_M, y: PPT_H - 0.78, w: PPT_W - 2 * PPT_M, h: 0.28, fontSize: 9, italic: true, color: C.muted, fontFace: 'Calibri',
   });
 }
 
@@ -2132,6 +2211,89 @@ function pptPlano(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
     ] as any, { x: PPT_M + 0.7, y: y + 0.5, w: PPT_W - 2 * PPT_M - 0.85, h: 0.27, fontFace: 'Calibri', valign: 'top' });
     y += ch + 0.05;
   });
+}
+
+// ----- 14. Ação Comercial e Marketing
+function pptAcaoComercial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
+  pptHeader(s, ctx); pptFooter(s, ctx, n, total);
+  pptTitle(s, 'Ação Comercial & Marketing', 'Recomendações de captação, posicionamento e comunicação', 'Roteiro de execução');
+
+  const ms = ctx.analysis.marketShare;
+  const segShares = [
+    { l: 'Educação Infantil', v: ms.ei },
+    { l: 'Fund. AI', v: ms.efi },
+    { l: 'Fund. AF', v: ms.efii },
+    { l: 'Ensino Médio', v: ms.em },
+  ].filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+  const bestSeg = segShares[0]?.l ?? 'segmento principal';
+  const weakSeg = segShares[segShares.length - 1]?.l ?? 'segmento de menor share';
+
+  // 4 frentes em grid 2x2 (estilo cards com borda lateral teal)
+  const frentes = [
+    {
+      tag: 'CAPTAÇÃO',
+      titulo: `Funil dedicado em ${bestSeg}`,
+      bullets: [
+        'Meta numérica por etapa: cadastros → agendas → visitas → matrículas.',
+        'CPA-alvo definido por canal (orgânico, indicação, mídia paga).',
+        'Ofertas de portas abertas e aulas-experiência calendarizadas.',
+      ],
+    },
+    {
+      tag: 'RETENÇÃO',
+      titulo: `Reforço em ${weakSeg} e rematrícula antecipada`,
+      bullets: [
+        'Mapear sinais de evasão por turma e antecipar conversa com a família.',
+        'Programa de fidelidade e benefícios para irmãos / continuidade.',
+        'Encontros pedagógicos de transição entre segmentos.',
+      ],
+    },
+    {
+      tag: 'POSICIONAMENTO',
+      titulo: 'Comunicação de valor e diferenciais',
+      bullets: [
+        'Mensagem central: proposta pedagógica, formação docente e resultados.',
+        `${data.adotamBrasil > 0 ? `${data.adotamBrasil} concorrente(s) já adota(m) Editora do Brasil — disputar atributo.` : 'Editora do Brasil como diferencial exclusivo na praça.'}`,
+        'Depoimentos, indicadores e provas sociais em todos os pontos de contato.',
+      ],
+    },
+    {
+      tag: 'PRESENÇA DIGITAL',
+      titulo: 'Marca, conteúdo e dados',
+      bullets: [
+        'Site otimizado para conversão (formulário, WhatsApp, agendamento).',
+        'Conteúdo orgânico mensal: pedagogia, projetos, vida escolar.',
+        'Dashboard mensal de leads, custo por matrícula e taxa de conversão.',
+      ],
+    },
+  ];
+
+  const cw = (PPT_W - 2 * PPT_M - 0.3) / 2;
+  const ch = 2.0;
+  frentes.forEach((f, i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    const x = PPT_M + col * (cw + 0.3);
+    const y = 2.2 + row * (ch + 0.2);
+    // Card branco
+    s.addShape('roundRect', { x, y, w: cw, h: ch, fill: { color: C.white }, line: { color: C.border, width: 0.5 }, rectRadius: 0.05 } as any);
+    // Borda lateral teal
+    s.addShape('rect', { x, y, w: 0.07, h: ch, fill: { color: C.teal }, line: { color: C.teal } });
+    // Chip
+    pptChip(s, x + 0.25, y + 0.18, f.tag);
+    // Título
+    s.addText(f.titulo, { x: x + 0.25, y: y + 0.6, w: cw - 0.4, h: 0.45, fontSize: 13.5, bold: true, color: C.navy, fontFace: 'Calibri' });
+    // Bullets
+    s.addText(
+      f.bullets.map(b => ({ text: b, options: { bullet: { code: '25A0' }, fontSize: 10, color: C.text, paraSpaceAfter: 4 } })) as any,
+      { x: x + 0.3, y: y + 1.05, w: cw - 0.45, h: ch - 1.15, fontFace: 'Calibri', valign: 'top' }
+    );
+  });
+
+  pptLeitura(
+    s,
+    'Captação, retenção, posicionamento e presença digital se reforçam: cada frente alimenta um indicador da próxima. Ritual mensal de acompanhamento sustenta o resultado.',
+    PPT_H - 1.0, 0.5, 'PRINCÍPIO'
+  );
 }
 
 // ----- 14. Encerramento
