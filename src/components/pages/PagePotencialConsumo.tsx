@@ -1,5 +1,5 @@
 import { AnalysisResult } from '@/lib/types';
-import { formatNumber } from '@/lib/analysis';
+import { formatNumber, parseBrNumber } from '@/lib/analysis';
 import { usePotencialConsumo, findPotencialByIBGE } from '@/hooks/usePotencialConsumo';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import IndicatorCard from '@/components/IndicatorCard';
@@ -62,10 +62,40 @@ export default function PagePotencialConsumo({ analysis }: Props) {
   }
 
   if (!pot) {
+    // Fallback: proxy socioeconômico do município
+    const d = analysis.demografica;
+    const rendaMedia = d ? parseBrNumber(d['Renda Média']) : 0;
+    const pop0_19 = d ? (['0 a 4', '5 a 9', '10 a 14', '15 a 19'] as const)
+      .reduce((s, f) => s + (parseInt(d[`População por Faixa Etária (2025) - ${f} anos`] || '0')), 0) : 0;
     return (
-      <div className="max-w-5xl mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-4">
-        <h2 className="page-title text-xl sm:text-2xl">POTENCIAL DE CONSUMO EDUCACIONAL E COMERCIAL</h2>
-        <div className="badge-unavailable text-sm p-4">Dado de potencial de consumo não disponível para este município.</div>
+      <div className="max-w-5xl mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-5">
+        <div>
+          <h2 className="page-title text-xl sm:text-2xl">POTENCIAL DE CONSUMO EDUCACIONAL E COMERCIAL</h2>
+          <p className="page-subtitle text-xs sm:text-sm">
+            Município de {escola.Município}/{escola.UF} · proxy socioeconômico
+          </p>
+        </div>
+        <div className="rounded-xl border p-4 bg-muted/30">
+          <p className="text-sm font-medium" style={{ color: 'hsl(var(--navy))' }}>
+            Pyxis Potencial de Consumo não publicado para este município.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Apresentamos abaixo proxies socioeconômicos do município para sustentar a leitura comercial.
+          </p>
+        </div>
+        {d && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+            <IndicatorCard value={`R$ ${rendaMedia.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} label="Renda média" color="teal" />
+            <IndicatorCard value={String(d['IDH - Dimensão Renda Classificação'] || '—')} label="IDH Renda" color="navy" />
+            <IndicatorCard value={String(d['IDH - Dimensão Educação Classificação'] || '—')} label="IDH Educação" color="lime" />
+            <IndicatorCard value={formatNumber(pop0_19)} label="População 0–19" color="teal" />
+          </div>
+        )}
+        <div className="bg-card rounded-xl border-l-4 p-4" style={{ borderLeftColor: 'hsl(var(--teal))' }}>
+          <p className="text-sm" style={{ color: 'hsl(var(--navy))' }}>
+            Sem proxy direto de consumo educacional — use renda média e IDH como referência de capacidade de pagamento da região.
+          </p>
+        </div>
       </div>
     );
   }
