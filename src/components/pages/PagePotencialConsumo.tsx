@@ -4,6 +4,7 @@ import { usePotencialConsumo, findPotencialByIBGE } from '@/hooks/usePotencialCo
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import IndicatorCard from '@/components/IndicatorCard';
 import { ShoppingBag, GraduationCap, BookOpen, TrendingUp } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Props { analysis: AnalysisResult; }
 
@@ -38,9 +39,24 @@ export default function PagePotencialConsumo({ analysis }: Props) {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto py-6 sm:py-8 px-3 sm:px-4">
-        <h2 className="page-title text-xl sm:text-2xl">POTENCIAL DE CONSUMO EDUCACIONAL E COMERCIAL</h2>
-        <p className="text-sm text-muted-foreground mt-3">Carregando dados de potencial de consumo…</p>
+      <div className="max-w-5xl mx-auto py-6 sm:py-8 px-3 sm:px-4 space-y-5 sm:space-y-7">
+        <div>
+          <h2 className="page-title text-xl sm:text-2xl">POTENCIAL DE CONSUMO EDUCACIONAL E COMERCIAL</h2>
+          <p className="page-subtitle text-xs sm:text-sm">
+            Município de {escola.Município}/{escola.UF} · preparando massa de consumo educacional…
+          </p>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-20 sm:h-24 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-64 rounded-xl" />
+        <Skeleton className="h-48 rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Skeleton className="h-32 rounded-xl" />
+          <Skeleton className="h-32 rounded-xl" />
+        </div>
       </div>
     );
   }
