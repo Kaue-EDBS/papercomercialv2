@@ -382,6 +382,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
     (p, n) => renderPdfPotencial(p, font, bold, italic, ctx, data, n, total),
     (p, n) => renderPdfInsights(p, font, bold, italic, ctx, data, n, total),
     (p, n) => renderPdfPlanoAcao(p, font, bold, italic, ctx, data, n, total),
+    (p, n) => renderPdfAcaoComercial(p, font, bold, italic, ctx, data, n, total),
     (p) => renderPdfEncerramento(p, font, bold, italic, ctx),
   ];
 
