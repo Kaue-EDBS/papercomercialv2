@@ -1625,11 +1625,15 @@ function pptMSGeral(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number
     labels: top.map((t: any) => truncate((t.isTarget ? '★ ' : '') + t.name, 28)),
     values: top.map((t: any) => universe > 0 ? Number(((t.total / universe) * 100).toFixed(1)) : 0),
   }];
+  // Cor por barra: escola analisada destacada em navy, demais em teal claro
+  const barColors = top.map((t: any) => (t.isTarget ? C.navy : C.tealDark));
   s.addChart(pptxgenChartType('bar'), chartData, {
     x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M, h: 3.0,
     showTitle: true, title: 'Ranking de Market Share — Top 10',
     titleFontFace: 'Calibri', titleFontSize: 11, titleColor: C.navy,
-    barDir: 'bar', chartColors: [C.teal],
+    barDir: 'bar',
+    chartColors: barColors,
+    chartColorsOpacity: 100,
     showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy, dataLabelFormatCode: '0.0"%"',
     catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 9, valAxisLabelFontSize: 9,
     showLegend: false,
