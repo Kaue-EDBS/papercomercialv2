@@ -643,7 +643,7 @@ function drawPdfChip(page: PDFPage, font: PDFFont, bold: PDFFont, x: number, y: 
   page.drawText(label, { x: x + 11, y: y + 6, size: 9, font: bold, color: NAVY });
 }
 
-// Card do Resumo (PDF): faixa de acento no topo + label + valor
+// Card do Resumo (PDF) — faixa lateral esquerda + label + valor robusto
 function drawResumoCard(
   page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont,
   x: number, y: number, w: number, h: number,
@@ -652,19 +652,19 @@ function drawResumoCard(
 ) {
   const fill = destaque ? TEAL_LIGHT : WHITE;
   page.drawRectangle({ x, y, width: w, height: h, color: fill, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
-  // Acento topo
-  page.drawRectangle({ x, y: y + h - 3, width: w, height: 3, color: accent });
-  // Label
-  page.drawText(label.toUpperCase(), { x: x + 12, y: y + h - 18, size: 8, font: bold, color: MUTED });
+  // Faixa de acento à ESQUERDA (mais "premium" que faixa superior)
+  page.drawRectangle({ x, y, width: 4, height: h, color: accent });
+  // Label — pequeno, MAIÚSCULO, em muted, com tracking visual
+  page.drawText(label.toUpperCase(), { x: x + 16, y: y + h - 18, size: 8.5, font: bold, color: MUTED });
   // Valor — auto-shrink
-  const targetSize = neutro ? 11 : (destaque ? 30 : 22);
+  const targetSize = neutro ? 11 : (destaque ? 32 : 24);
   let vSize = targetSize;
   const vFont = neutro ? italic : bold;
   const vColor = neutro ? MUTED : NAVY;
-  while (vFont.widthOfTextAtSize(value, vSize) > w - 24 && vSize > 9) vSize -= 1;
-  // Centralizar verticalmente abaixo do label
+  while (vFont.widthOfTextAtSize(value, vSize) > w - 30 && vSize > 9) vSize -= 1;
+  // Posiciona o valor ocupando a parte inferior do card, com espaço respirável
   const valY = y + (destaque ? 18 : 14);
-  page.drawText(value, { x: x + 12, y: valY, size: vSize, font: vFont, color: vColor });
+  page.drawText(value, { x: x + 16, y: valY, size: vSize, font: vFont, color: vColor });
 }
 
 // ----- 4. Panorama educacional
