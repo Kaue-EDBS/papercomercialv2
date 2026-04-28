@@ -352,6 +352,7 @@ const SLIDE_TITLES = [
   'Potencial de consumo educacional e comercial',
   'Insights estratégicos',
   'Plano de ação comercial e marketing',
+  'Ação comercial e marketing',
   'Encerramento',
 ];
 
