@@ -1386,7 +1386,7 @@ function pptAbertura(s: PptxGenJS.Slide, ctx: ExportContext, n: number, total: n
   const cards = [
     { t: 'METODOLOGIA', b: 'Censo Escolar 2024, IBGE, Pyxis Potencial de Consumo e cruzamento próprio com a base territorial da Editora do Brasil.' },
     { t: 'INTELIGÊNCIA', b: 'Concorrência, market share por segmento, mensalidade, aderência econômica, potencial de consumo e plano de ação.' },
-    { t: 'COMPROMISSO', b: 'Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola.' },
+    { t: 'PARCERIA', b: 'Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola.' },
   ];
   const cw = (PPT_W - 2 * PPT_M - 0.4) / 3;
   cards.forEach((c, i) => {
@@ -1398,7 +1398,7 @@ function pptAbertura(s: PptxGenJS.Slide, ctx: ExportContext, n: number, total: n
     s.addText(c.b, { x: x + 0.15, y: y + 0.5, w: cw - 0.3, h: 1.1, fontSize: 11, color: C.text, fontFace: 'Calibri', valign: 'top' });
   });
 
-  pptLeitura(s, 'Construir caminhos, fortalecer relações e apoiar escolas que desejam crescer com consistência, relevância e valor.', 5.2, 0.7, 'COMPROMISSO');
+  pptLeitura(s, 'Construir caminhos, fortalecer relações e apoiar escolas que desejam crescer com consistência, relevância e valor.', 5.2, 0.7, 'NOSSO COMPROMISSO');
 }
 
 // ----- 3. Resumo
