@@ -1699,39 +1699,35 @@ function pptConcorrenciaTabela(s: PptxGenJS.Slide, ctx: ExportContext, data: any
 // ----- 7. MS Geral
 function pptMSGeral(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Market Share — Visão Geral', `Participação relativa em ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
+  pptTitle(s, 'Participação de Mercado — Visão Geral', undefined, 'Market Share');
   const ms = ctx.analysis.marketShare;
-  const cw = (PPT_W - 2 * PPT_M - 0.6) / 5;
-  pptKpi(s, PPT_M + 0 * (cw + 0.15), 1.7, cw, 0.85, 'Geral', fmtPct(ms.geral), C.teal);
-  pptKpi(s, PPT_M + 1 * (cw + 0.15), 1.7, cw, 0.85, 'Educação Infantil', fmtPct(ms.ei), C.navy);
-  pptKpi(s, PPT_M + 2 * (cw + 0.15), 1.7, cw, 0.85, 'Fund. AI', fmtPct(ms.efi), C.navy);
-  pptKpi(s, PPT_M + 3 * (cw + 0.15), 1.7, cw, 0.85, 'Fund. AF', fmtPct(ms.efii), C.navy);
-  pptKpi(s, PPT_M + 4 * (cw + 0.15), 1.7, cw, 0.85, 'Ensino Médio', fmtPct(ms.em), C.navy);
-
-  // Ranking horizontal
-  const top = data.allSchoolsRanked.slice(0, 10);
   const universe = data.totalAlunadoArea;
-  const chartData = [{
-    name: 'Share',
-    labels: top.map((t: any) => truncate((t.isTarget ? '★ ' : '') + t.name, 28)),
-    values: top.map((t: any) => universe > 0 ? Number(((t.total / universe) * 100).toFixed(1)) : 0),
-  }];
-  // Cor por barra: escola analisada destacada em navy, demais em teal claro
-  const barColors = top.map((t: any) => (t.isTarget ? C.navy : C.tealDark));
-  s.addChart(pptxgenChartType('bar'), chartData, {
-    x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M, h: 3.0,
-    showTitle: true, title: 'Ranking de Market Share — Top 10',
-    titleFontFace: 'Calibri', titleFontSize: 11, titleColor: C.navy,
-    barDir: 'bar',
-    chartColors: barColors,
-    chartColorsOpacity: 100,
-    showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy, dataLabelFormatCode: '0.0"%"',
-    catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 9, valAxisLabelFontSize: 9,
-    showLegend: false,
-  });
-
-  const top3 = top.slice(0, 3).reduce((acc: number, x: any) => acc + x.total, 0);
+  const top3 = data.allSchoolsRanked.slice(0, 3).reduce((acc: number, x: any) => acc + x.total, 0);
   const top3Pct = universe > 0 ? (top3 / universe) * 100 : 0;
+
+  // Parágrafo introdutório
+  s.addText(
+    `${truncate(ctx.analysis.escola.Escola, 60)} ${data.allSchoolsRanked[0]?.isTarget ? 'lidera o mercado local' : 'compõe o cenário competitivo'}, com ${fmtPct(ms.geral)} de market share geral. As 3 maiores escolas concentram ${fmtPct(top3Pct)} do alunado — indicativo de mercado ${top3Pct > 50 ? 'concentrado' : 'fragmentado'} ${top3Pct > 50 ? '' : 'com espaço real para crescimento'}.`,
+    { x: PPT_M, y: 2.05, w: PPT_W - 2 * PPT_M, h: 0.7, fontSize: 12, color: C.text, fontFace: 'Calibri' }
+  );
+
+  // 5 donuts em grid 3 + 2
+  const donuts: { v: number; label: string; sub: string }[] = [
+    { v: ms.geral, label: 'Market Share Geral', sub: `Participação total no raio de ${fmtKm(ctx.raioKm)}` },
+    { v: ms.ei,    label: 'Educação Infantil',  sub: 'Segmento Educação Infantil' },
+    { v: ms.efii,  label: 'Fund. Anos Finais',  sub: 'Segmento EFII' },
+    { v: ms.efi,   label: 'Fund. Anos Iniciais',sub: 'Segmento EFI' },
+    { v: ms.em,    label: 'Ensino Médio',       sub: 'Segmento EM' },
+  ];
+  const r = 0.75;
+  const rowY = [3.4, 5.15];
+  // Linha 1: 3 donuts
+  const cx1 = [3.0, 6.667, 10.333];
+  for (let i = 0; i < 3; i++) pptDonut(s, cx1[i], rowY[0], r, donuts[i].v, donuts[i].label, donuts[i].sub);
+  // Linha 2: 2 donuts (centralizados)
+  const cx2 = [4.667, 8.667];
+  for (let i = 0; i < 2; i++) pptDonut(s, cx2[i], rowY[1], r, donuts[i + 3].v, donuts[i + 3].label, donuts[i + 3].sub);
+
   pptLeitura(s, `As 3 maiores escolas detêm ${fmtPct(top3Pct)} do alunado. Mercado ${top3Pct > 50 ? 'concentrado' : 'fragmentado'}. Líder local: ${data.allSchoolsRanked[0]?.name ?? '—'}.`, PPT_H - 1.0, 0.5);
 }
 
