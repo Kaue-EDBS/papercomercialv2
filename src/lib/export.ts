@@ -397,38 +397,107 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
 
 // ----- 1. Capa
 function renderPdfCapa(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext) {
-  const { escola: e, presentationType } = { escola: ctx.analysis.escola, presentationType: ctx.presentationType };
+  // ============================================================
+  // CAPA PDF — composição central, alinhada ao PPT.
+  // 16:9 (960x540pt). Margem 0,4" ≈ 29pt nas bordas.
+  // ============================================================
+  const e = ctx.analysis.escola;
+  const SAFE = 29;
+  const cx = PDF_W / 2;
+  const center = (text: string, fnt: PDFFont, size: number) => cx - fnt.widthOfTextAtSize(text, size) / 2;
+
+  // Fundo navy
   page.drawRectangle({ x: 0, y: 0, width: PDF_W, height: PDF_H, color: NAVY });
-  // faixa lateral teal
-  page.drawRectangle({ x: 0, y: 0, width: 8, height: PDF_H, color: TEAL });
 
-  page.drawText('EDITORA DO BRASIL', { x: M + 8, y: PDF_H - 80, size: 11, font: bold, color: TEAL });
-  page.drawRectangle({ x: M + 8, y: PDF_H - 92, width: 50, height: 2.5, color: TEAL });
+  // Filetes lima topo/base
+  page.drawRectangle({ x: 0, y: PDF_H - 4, width: PDF_W, height: 4, color: LIME });
+  page.drawRectangle({ x: 0, y: 0, width: PDF_W, height: 4, color: LIME });
 
-  page.drawText('Diagnóstico Territorial', { x: M + 8, y: PDF_H - 150, size: 16, font, color: TEAL_LIGHT });
-  page.drawText(tipoLabel(presentationType).toUpperCase(), { x: M + 8, y: PDF_H - 200, size: 44, font: bold, color: WHITE });
+  // ---------- TOPO: marca ----------
+  const edb = 'E D B';
+  page.drawText(edb, { x: center(edb, bold, 22), y: PDF_H - SAFE - 36, size: 22, font: bold, color: WHITE });
+  const edbSub = 'EDITORA DO BRASIL';
+  page.drawText(edbSub, { x: center(edbSub, font, 9), y: PDF_H - SAFE - 56, size: 9, font, color: TEAL_LIGHT });
 
-  // Nome da escola — wrap se necessário
-  const nameLines = wrapText(e.Escola, bold, 22, PDF_W - M * 2 - 16);
-  let ny = PDF_H - 280;
-  for (const ln of nameLines.slice(0, 2)) {
-    page.drawText(ln, { x: M + 8, y: ny, size: 22, font: bold, color: WHITE });
-    ny -= 28;
+  // Filete teal centralizado
+  page.drawRectangle({ x: cx - 22, y: PDF_H - SAFE - 76, width: 44, height: 2, color: TEAL });
+
+  // ---------- BLOCO CENTRAL ----------
+  // Subtítulo: "Diagnóstico Territorial · [Tipo]"
+  const subL = 'Diagnóstico Territorial';
+  const subSep = '  ·  ';
+  const subR = tipoLabel(ctx.presentationType);
+  const subSize = 14;
+  const wL = font.widthOfTextAtSize(subL, subSize);
+  const wSep = bold.widthOfTextAtSize(subSep, subSize);
+  const wR = bold.widthOfTextAtSize(subR, subSize);
+  const subTotal = wL + wSep + wR;
+  let subX = cx - subTotal / 2;
+  const subY = PDF_H - SAFE - 130;
+  page.drawText(subL, { x: subX, y: subY, size: subSize, font, color: TEAL_LIGHT });
+  subX += wL;
+  page.drawText(subSep, { x: subX, y: subY, size: subSize, font: bold, color: LIME });
+  subX += wSep;
+  page.drawText(subR, { x: subX, y: subY, size: subSize, font: bold, color: WHITE });
+
+  // HEADLINE: nome da escola — busca tamanho que caiba (até 2 linhas)
+  const maxNameW = PDF_W - 2 * SAFE - 40;
+  let nameSize = 44;
+  let nameLines: string[] = [];
+  while (nameSize >= 26) {
+    nameLines = wrapText(e.Escola, bold, nameSize, maxNameW);
+    if (nameLines.length <= 2 && nameLines.every(l => bold.widthOfTextAtSize(l, nameSize) <= maxNameW)) break;
+    nameSize -= 2;
   }
-
-  page.drawText(`${e.Município} · ${e.UF}`, { x: M + 8, y: ny - 8, size: 14, font, color: TEAL_LIGHT });
-  page.drawText(`Código INEP ${e['Código Inep']}`, { x: M + 8, y: ny - 32, size: 12, font, color: TEAL_LIGHT });
-
-  // Rodapé da capa
-  page.drawText('Transformando o país pela educação.', {
-    x: M + 8, y: 36, size: 11, font: italic, color: TEAL_LIGHT,
+  nameLines = nameLines.slice(0, 2);
+  const lineH = nameSize * 1.15;
+  const blockH = nameLines.length * lineH;
+  const blockTop = PDF_H / 2 + blockH / 2 - 10;
+  nameLines.forEach((ln, i) => {
+    page.drawText(ln, {
+      x: center(ln, bold, nameSize),
+      y: blockTop - (i + 1) * lineH + lineH * 0.25,
+      size: nameSize, font: bold, color: WHITE,
+    });
   });
+
+  // Filete lima abaixo do nome
+  const fileteY = PDF_H / 2 - blockH / 2 - 22;
+  page.drawRectangle({ x: cx - 28, y: fileteY, width: 56, height: 2, color: LIME });
+
+  // Município/UF + INEP
+  const metaL = `${e.Município} · ${e.UF}`;
+  const metaSep = '     |     ';
+  const metaR = `Código INEP ${e['Código Inep']}`;
+  const metaSize = 12;
+  const mwL = bold.widthOfTextAtSize(metaL, metaSize);
+  const mwSep = font.widthOfTextAtSize(metaSep, metaSize);
+  const mwR = font.widthOfTextAtSize(metaR, metaSize);
+  let metaX = cx - (mwL + mwSep + mwR) / 2;
+  const metaY = fileteY - 22;
+  page.drawText(metaL, { x: metaX, y: metaY, size: metaSize, font: bold, color: WHITE });
+  metaX += mwL;
+  page.drawText(metaSep, { x: metaX, y: metaY, size: metaSize, font, color: NAVY_SOFT_OR_TEAL_LIGHT() });
+  metaX += mwSep;
+  page.drawText(metaR, { x: metaX, y: metaY, size: metaSize, font, color: TEAL_LIGHT });
+
+  // ---------- RODAPÉ: ficha técnica + lema ----------
+  // Linha divisória curta
+  page.drawRectangle({ x: cx - 90, y: 88, width: 180, height: 0.6, color: TEAL });
+
   if (ctx.session) {
-    const right = `Consultor: ${ctx.session.nome} · ${ctx.session.codigo}`;
-    const w = font.widthOfTextAtSize(right, 10);
-    page.drawText(right, { x: PDF_W - M - w, y: 36, size: 10, font, color: TEAL_LIGHT });
+    const lbl = 'CONSULTOR RESPONSÁVEL';
+    page.drawText(lbl, { x: center(lbl, bold, 7.5), y: 70, size: 7.5, font: bold, color: LIME });
+    const cons = `${ctx.session.nome}  ·  Cód. ${ctx.session.codigo}`;
+    page.drawText(cons, { x: center(cons, font, 11), y: 52, size: 11, font, color: WHITE });
   }
+
+  const lema = 'Transformando o país pela educação.';
+  page.drawText(lema, { x: center(lema, italic, 10), y: 28, size: 10, font: italic, color: TEAL_LIGHT });
 }
+
+// helper local para reutilizar TEAL_LIGHT (separador discreto no centro)
+function NAVY_SOFT_OR_TEAL_LIGHT() { return TEAL_LIGHT; }
 
 // ----- 2. Abertura comercial
 function renderPdfAbertura(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, n: number, total: number) {
