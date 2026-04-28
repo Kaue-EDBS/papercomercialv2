@@ -1837,6 +1837,20 @@ function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
       rowH: 0.28, fontFace: 'Calibri',
       border: { type: 'solid', color: C.borderLight, pt: 0.4 },
     });
+  } else {
+    // Fallback: gráfico de barras de população 0–19
+    const faixas = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
+    const vals = faixas.map(f => parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'));
+    const chartData = [{ name: 'População', labels: faixas, values: vals }];
+    s.addChart(pptxgenChartType('bar'), chartData, {
+      x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M, h: 2.7,
+      showTitle: true, title: 'Distribuição etária 0–19 · município',
+      titleFontFace: 'Calibri', titleFontSize: 11, titleColor: C.navy,
+      barDir: 'col', chartColors: [C.teal],
+      showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy,
+      catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 10, valAxisLabelFontSize: 9,
+      showLegend: false,
+    });
   }
 
   const aderencia = data.aderencia;
