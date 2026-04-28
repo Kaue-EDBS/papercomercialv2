@@ -982,6 +982,17 @@ function renderPdfSocioeconomico(page: PDFPage, font: PDFFont, bold: PDFFont, it
       ry -= 22;
     });
     page.drawText('● Faixas com poder de compra aderente ao ticket atual da escola.', { x: M, y: ry, size: 8, font: italic, color: MUTED });
+  } else {
+    // Fallback: pirâmide etária 0–19 a partir da demográfica
+    page.drawText('DISTRIBUIÇÃO ETÁRIA 0–19 · MUNICÍPIO', { x: M, y: cardY - 26, size: 10, font: bold, color: NAVY });
+    const faixas = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
+    const popData = faixas.map((f) => ({
+      label: f,
+      value: parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'),
+      color: TEAL,
+    }));
+    drawVBars(page, font, M + 30, cardY - 200, PDF_W - 2 * M - 60, 150, popData, undefined, fmtInt);
+    page.drawText('Faixa etária com filhos em idade escolar — base de mercado potencial para captação no município.', { x: M, y: cardY - 220, size: 8.5, font: italic, color: MUTED });
   }
 
   // Leitura comercial
