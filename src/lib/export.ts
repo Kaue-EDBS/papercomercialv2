@@ -1475,29 +1475,37 @@ function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext) {
 
 // ----- 2. Abertura
 function pptAbertura(s: PptxGenJS.Slide, ctx: ExportContext, n: number, total: number) {
-  pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Abertura Comercial', `${tipoLabel(ctx.presentationType)} · ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
+  pptFooter(s, ctx, n, total);
+  pptTitle(s, 'Uma Análise Construída Para a Sua Escola', undefined, 'Abertura Comercial');
   const intro = ctx.presentationType === 'prospeccao'
-    ? 'Esta análise foi construída para apoiar a conversa comercial com a sua escola. Reunimos dados públicos atualizados — Censo Escolar, IBGE e estudos socioeconômicos — e cruzamos com inteligência de mercado para mapear oportunidades reais de captação, retenção e fortalecimento da marca.'
-    : 'Esta análise consolida o cenário competitivo, demográfico e socioeconômico da sua área de influência para sustentar a conversa de renovação. Tornamos visíveis as alavancas de crescimento e os riscos a serem endereçados nos próximos ciclos.';
-  s.addText(intro, { x: PPT_M, y: 1.7, w: PPT_W - 2 * PPT_M, h: 1.0, fontSize: 13, color: C.text, fontFace: 'Calibri' });
+    ? `Reunimos dados públicos atualizados — Censo Escolar 2024, IBGE e estudos socioeconômicos — e cruzamos com inteligência de mercado para mapear oportunidades reais de captação, retenção e fortalecimento da marca da ${ctx.analysis.escola.Escola}.`
+    : `Esta análise consolida o cenário competitivo, demográfico e socioeconômico da área de influência da ${ctx.analysis.escola.Escola} para sustentar a conversa de renovação. Tornamos visíveis as alavancas de crescimento e os riscos a serem endereçados nos próximos ciclos.`;
+  s.addText(intro, { x: PPT_M, y: 2.05, w: PPT_W - 2 * PPT_M, h: 1.1, fontSize: 13, color: C.text, fontFace: 'Calibri' });
 
-  const cards = [
-    { t: 'METODOLOGIA', b: 'Censo Escolar 2024, IBGE, Pyxis Potencial de Consumo e cruzamento próprio com a base territorial da Editora do Brasil.' },
-    { t: 'INTELIGÊNCIA', b: 'Concorrência, market share por segmento, mensalidade, aderência econômica, potencial de consumo e plano de ação.' },
-    { t: 'PARCERIA', b: 'Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola.' },
-  ];
-  const cw = (PPT_W - 2 * PPT_M - 0.4) / 3;
-  cards.forEach((c, i) => {
-    const x = PPT_M + i * (cw + 0.2);
-    const y = 3.0;
-    s.addShape('rect', { x, y, w: cw, h: 1.7, fill: { color: C.white }, line: { color: C.border, width: 0.5 } });
-    s.addShape('rect', { x, y: y + 1.64, w: cw, h: 0.06, fill: { color: C.teal }, line: { color: C.teal } });
-    s.addText(c.t, { x: x + 0.15, y: y + 0.15, w: cw - 0.3, h: 0.3, fontSize: 11, bold: true, color: C.teal, fontFace: 'Calibri' });
-    s.addText(c.b, { x: x + 0.15, y: y + 0.5, w: cw - 0.3, h: 1.1, fontSize: 11, color: C.text, fontFace: 'Calibri', valign: 'top' });
+  // Dois blocos lado a lado: card navy "Inteligência de Dados" + texto "Nosso Compromisso"
+  const colW = (PPT_W - 2 * PPT_M - 0.4) / 2;
+  // Card navy à esquerda
+  const cx = PPT_M, cy = 3.4, ch = 2.6;
+  s.addShape('roundRect', { x: cx, y: cy, w: colW, h: ch, fill: { color: C.navy }, line: { color: C.navy }, rectRadius: 0.12 } as any);
+  s.addText('Inteligência de Dados', { x: cx + 0.3, y: cy + 0.2, w: colW - 0.6, h: 0.45, fontSize: 18, bold: true, color: C.white, fontFace: 'Calibri' });
+  s.addText('Censo Escolar 2024, IBGE, Pyxis Potencial de Consumo e cruzamento próprio com a base territorial da Editora do Brasil.', {
+    x: cx + 0.3, y: cy + 0.75, w: colW - 0.6, h: 0.7, fontSize: 11, color: C.lavender, fontFace: 'Calibri', valign: 'top',
+  });
+  const bullets = ['Market share por segmento', 'Concorrência e mensalidade', 'Aderência econômica'];
+  bullets.forEach((b, i) => {
+    s.addText(`•  ${b}`, { x: cx + 0.3, y: cy + 1.55 + i * 0.32, w: colW - 0.6, h: 0.3, fontSize: 11, color: C.white, fontFace: 'Calibri' });
   });
 
-  pptLeitura(s, 'Construir caminhos, fortalecer relações e apoiar escolas que desejam crescer com consistência, relevância e valor.', 5.2, 0.7, 'NOSSO COMPROMISSO');
+  // Texto "Nosso Compromisso" à direita
+  const rx = cx + colW + 0.4;
+  s.addText('Nosso Compromisso', { x: rx, y: cy + 0.2, w: colW, h: 0.45, fontSize: 18, bold: true, color: C.navy, fontFace: 'Calibri' });
+  s.addText('Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola — fortalecendo relações e apoiando instituições que desejam crescer com consistência, relevância e valor.', {
+    x: rx, y: cy + 0.8, w: colW, h: ch - 1.0, fontSize: 12, color: C.text, fontFace: 'Calibri', valign: 'top',
+  });
+
+  s.addText(`${ctx.analysis.escola.Escola} · INEP ${ctx.analysis.escola['Código Inep']} · Raio ${fmtKm(ctx.raioKm)} ${ctx.raioMode === 'personalizado' ? '(personalizado)' : '(padrão)'}`, {
+    x: PPT_M, y: 6.15, w: PPT_W - 2 * PPT_M, h: 0.3, fontSize: 11, italic: true, color: C.muted, fontFace: 'Calibri',
+  });
 }
 
 // ----- 3. Resumo
