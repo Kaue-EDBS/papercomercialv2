@@ -52,6 +52,11 @@ const C = {
   segEFI: '142648',
   segEFII: 'B5D964',
   segEM: '0A6664',
+  // Padrão editorial Santa Mônica
+  lavender: 'E8E9F7',       // chip / card de fundo
+  lavenderDark: 'C9CCEA',   // borda chip
+  blueTint: 'E6EFFA',       // callout info
+  navySoft: '2A3A66',       // texto secundário em superfícies escuras
 };
 
 // Dimensões 16:9
