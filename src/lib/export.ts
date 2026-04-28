@@ -52,6 +52,11 @@ const C = {
   segEFI: '142648',
   segEFII: 'B5D964',
   segEM: '0A6664',
+  // Padrão editorial Santa Mônica
+  lavender: 'E8E9F7',       // chip / card de fundo
+  lavenderDark: 'C9CCEA',   // borda chip
+  blueTint: 'E6EFFA',       // callout info
+  navySoft: '2A3A66',       // texto secundário em superfícies escuras
 };
 
 // Dimensões 16:9
@@ -1339,7 +1344,7 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
     (s, n) => pptPotencial(s, ctx, data, n, total),
     (s, n) => pptInsights(s, ctx, data, n, total),
     (s, n) => pptPlano(s, ctx, data, n, total),
-    (s) => pptEncerramento(s),
+    (s) => pptEncerramento(s, ctx),
   ];
 
   renderers.forEach((render, i) => {
@@ -1352,80 +1357,155 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
 }
 
 // ----- helpers PPT -----
-function pptHeader(s: PptxGenJS.Slide, ctx: ExportContext) {
-  s.addShape('rect', { x: 0, y: 0, w: PPT_W, h: PPT_HEADER, fill: { color: C.beige }, line: { color: C.beige } });
-  s.addShape('rect', { x: 0, y: 0, w: 0.06, h: PPT_HEADER, fill: { color: C.teal }, line: { color: C.teal } });
-  s.addText('EDITORA DO BRASIL', { x: 0.18, y: 0.06, w: 2.0, h: 0.3, fontSize: 10, bold: true, color: C.navy, fontFace: 'Calibri' });
-  s.addText('Diagnóstico Territorial · Análise Estratégica', { x: 2.2, y: 0.06, w: 6, h: 0.3, fontSize: 10, color: C.muted, fontFace: 'Calibri' });
-  const right = `${ctx.session?.nome ?? '—'} · ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`;
-  s.addText(right, { x: PPT_W - 5, y: 0.06, w: 4.85, h: 0.3, fontSize: 10, color: C.muted, align: 'right', fontFace: 'Calibri' });
-}
+// Padrão editorial Santa Mônica:
+// - sem header pesado; rodapé enxuto com 1 linha cinza
+// - chip lavanda em vez de "linha teal" sob o título
+// - cards lavanda discretos para KPI
+// - leitura/callout: card branco com borda ESQUERDA grossa navy
 function pptFooter(s: PptxGenJS.Slide, ctx: ExportContext, n: number, total: number) {
-  s.addShape('line', { x: PPT_M, y: PPT_H - PPT_FOOTER, w: PPT_W - 2 * PPT_M, h: 0, line: { color: C.border, width: 0.5 } });
-  const left = `${truncate(ctx.analysis.escola.Escola, 60)} · INEP ${ctx.analysis.escola['Código Inep']} · Raio ${fmtKm(ctx.raioKm)} ${ctx.raioMode === 'personalizado' ? '(personalizado)' : '(padrão)'}`;
-  s.addText(left, { x: PPT_M, y: PPT_H - 0.32, w: PPT_W - 2 * PPT_M - 1.5, h: 0.25, fontSize: 9, color: C.muted, fontFace: 'Calibri' });
-  s.addText(`${n} / ${total}`, { x: PPT_W - PPT_M - 1.5, y: PPT_H - 0.32, w: 1.5, h: 0.25, fontSize: 9, color: C.muted, align: 'right', fontFace: 'Calibri' });
+  s.addText(
+    `${truncate(ctx.analysis.escola.Escola, 60)} · INEP ${ctx.analysis.escola['Código Inep']} · Raio ${fmtKm(ctx.raioKm)} ${ctx.raioMode === 'personalizado' ? '(personalizado)' : '(padrão)'}`,
+    { x: PPT_M, y: PPT_H - 0.32, w: PPT_W - 2 * PPT_M - 0.8, h: 0.22, fontSize: 8.5, color: C.muted, italic: true, fontFace: 'Calibri' }
+  );
+  s.addText(`${n} · ${total}`, { x: PPT_W - PPT_M - 0.8, y: PPT_H - 0.32, w: 0.8, h: 0.22, fontSize: 8.5, color: C.muted, align: 'right', fontFace: 'Calibri' });
 }
-function pptTitle(s: PptxGenJS.Slide, title: string, subtitle?: string) {
-  s.addText(title, { x: PPT_M, y: 0.55, w: PPT_W - 2 * PPT_M, h: 0.55, fontSize: 26, bold: true, color: C.navy, fontFace: 'Calibri' });
-  s.addShape('rect', { x: PPT_M, y: 1.08, w: 0.55, h: 0.05, fill: { color: C.teal }, line: { color: C.teal } });
-  if (subtitle) s.addText(subtitle, { x: PPT_M, y: 1.16, w: PPT_W - 2 * PPT_M, h: 0.32, fontSize: 13, color: C.muted, fontFace: 'Calibri' });
+// Mantido por compatibilidade (não chama mais nada visual no topo)
+function pptHeader(_s: PptxGenJS.Slide, _ctx: ExportContext) { /* no-op no padrão Santa Mônica */ }
+
+// Chip "tag" lavanda no estilo Santa Mônica
+function pptChip(s: PptxGenJS.Slide, x: number, y: number, label: string) {
+  const w = Math.max(0.9, label.length * 0.085 + 0.4);
+  s.addShape('roundRect', { x, y, w, h: 0.32, fill: { color: C.lavender }, line: { color: C.lavender }, rectRadius: 0.06 } as any);
+  s.addText(label.toUpperCase(), { x, y: y + 0.04, w, h: 0.24, fontSize: 9.5, bold: true, color: C.navy, align: 'center', fontFace: 'Calibri', charSpacing: 1 });
 }
-function pptKpi(s: PptxGenJS.Slide, x: number, y: number, w: number, h: number, label: string, value: string, accent = C.teal) {
-  s.addShape('rect', { x, y, w, h, fill: { color: C.white }, line: { color: C.border, width: 0.5 } });
-  s.addShape('rect', { x, y, w, h: 0.06, fill: { color: accent }, line: { color: accent } });
-  s.addText(label.toUpperCase(), { x: x + 0.15, y: y + 0.15, w: w - 0.3, h: 0.25, fontSize: 9, color: C.muted, fontFace: 'Calibri' });
-  s.addText(value, { x: x + 0.15, y: y + h - 0.55, w: w - 0.3, h: 0.45, fontSize: 18, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true });
+
+// Título grande estilo editorial: chip + headline 32pt + parágrafo opcional
+function pptTitle(s: PptxGenJS.Slide, title: string, subtitle?: string, chip?: string) {
+  let yCursor = 0.55;
+  if (chip) { pptChip(s, PPT_M, yCursor, chip); yCursor += 0.45; }
+  s.addText(title, { x: PPT_M, y: yCursor, w: PPT_W - 2 * PPT_M, h: 0.85, fontSize: 32, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true });
+  if (subtitle) s.addText(subtitle, { x: PPT_M, y: yCursor + 0.85, w: PPT_W - 2 * PPT_M, h: 0.45, fontSize: 12, color: C.text, fontFace: 'Calibri' });
 }
+
+// KPI estilo Santa Mônica: card lavanda discreto, label cinza pequeno, valor grande navy
+function pptKpi(s: PptxGenJS.Slide, x: number, y: number, w: number, h: number, label: string, value: string, _accent = C.teal) {
+  s.addShape('roundRect', { x, y, w, h, fill: { color: C.lavender }, line: { color: C.lavender }, rectRadius: 0.08 } as any);
+  s.addText(label, { x: x + 0.18, y: y + 0.14, w: w - 0.36, h: 0.28, fontSize: 10, color: C.muted, fontFace: 'Calibri' });
+  s.addText(value, { x: x + 0.18, y: y + 0.42, w: w - 0.36, h: h - 0.5, fontSize: 22, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true, valign: 'top' });
+}
+
+// Callout de leitura: card branco com borda lateral ESQUERDA grossa navy + chip de prefixo
 function pptLeitura(s: PptxGenJS.Slide, txt: string, y = PPT_H - 1.0, h = 0.5, prefix = 'LEITURA') {
-  s.addShape('rect', { x: PPT_M, y, w: PPT_W - 2 * PPT_M, h, fill: { color: C.tealLight }, line: { color: C.teal, width: 0.5 } });
-  s.addText(prefix, { x: PPT_M + 0.15, y: y + 0.04, w: 2, h: 0.2, fontSize: 9, bold: true, color: C.teal, fontFace: 'Calibri' });
-  s.addText(txt, { x: PPT_M + 0.15, y: y + 0.22, w: PPT_W - 2 * PPT_M - 0.3, h: h - 0.24, fontSize: 11, color: C.navy, fontFace: 'Calibri', valign: 'top' });
+  const x = PPT_M;
+  const w = PPT_W - 2 * PPT_M;
+  // Borda lateral grossa
+  s.addShape('rect', { x, y, w: 0.07, h, fill: { color: C.navy }, line: { color: C.navy } });
+  // Texto: prefixo bold navy + corpo
+  s.addText(
+    [
+      { text: `${prefix.toUpperCase()}  `, options: { bold: true, color: C.navy, fontSize: 9.5, charSpacing: 1 } },
+      { text: txt, options: { color: C.text, fontSize: 11 } },
+    ] as any,
+    { x: x + 0.22, y: y + 0.03, w: w - 0.3, h: h - 0.04, fontFace: 'Calibri', valign: 'middle' }
+  );
+}
+
+// Donut "fake" via 2 elipses sobrepostas + texto central. valuePct entre 0 e 100.
+function pptDonut(s: PptxGenJS.Slide, cx: number, cy: number, r: number, valuePct: number, label: string, sub?: string) {
+  // Anel de fundo (lavanda) e arco "preenchido" simulado por um anel mais escuro coberto parcialmente.
+  // Como pptxgenjs não suporta arco parcial real, usamos chart pie nativo embebido.
+  const data = [{
+    name: 'donut',
+    labels: ['v', 'r'],
+    values: [Math.max(0, Math.min(100, valuePct)), Math.max(0, 100 - valuePct)],
+  }];
+  s.addChart((PptxGenJS as any).ChartType?.doughnut ?? 'doughnut', data, {
+    x: cx - r, y: cy - r, w: r * 2, h: r * 2,
+    chartColors: [C.navy, C.lavender],
+    showLegend: false, showTitle: false, showValue: false,
+    dataBorder: { pt: 0, color: C.white },
+    holeSize: 70,
+  } as any);
+  // Valor central
+  s.addText(`${valuePct.toFixed(valuePct >= 10 ? 1 : 1).replace('.', ',')}%`, {
+    x: cx - r, y: cy - 0.22, w: r * 2, h: 0.45, fontSize: 20, bold: true, color: C.navy, align: 'center', valign: 'middle', fontFace: 'Calibri',
+  });
+  // Label abaixo
+  s.addText(label, { x: cx - r - 0.3, y: cy + r + 0.05, w: r * 2 + 0.6, h: 0.3, fontSize: 11, bold: true, color: C.navy, align: 'center', fontFace: 'Calibri' });
+  if (sub) s.addText(sub, { x: cx - r - 0.3, y: cy + r + 0.32, w: r * 2 + 0.6, h: 0.3, fontSize: 9, color: C.muted, align: 'center', fontFace: 'Calibri' });
 }
 
 // ----- 1. Capa
 function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext) {
-  s.background = { color: C.navy };
-  s.addShape('rect', { x: 0, y: 0, w: 0.1, h: PPT_H, fill: { color: C.teal }, line: { color: C.teal } });
-  s.addText('EDITORA DO BRASIL', { x: 0.6, y: 0.7, w: 6, h: 0.4, fontSize: 13, bold: true, color: C.teal, fontFace: 'Calibri' });
-  s.addShape('rect', { x: 0.6, y: 1.18, w: 0.7, h: 0.04, fill: { color: C.teal }, line: { color: C.teal } });
-  s.addText('Diagnóstico Territorial', { x: 0.6, y: 1.6, w: 12, h: 0.45, fontSize: 18, color: C.tealLight, fontFace: 'Calibri' });
-  s.addText(tipoLabel(ctx.presentationType).toUpperCase(), { x: 0.6, y: 2.15, w: 12, h: 1.0, fontSize: 50, bold: true, color: C.white, fontFace: 'Calibri' });
-  s.addText(ctx.analysis.escola.Escola, { x: 0.6, y: 3.4, w: 12, h: 1.1, fontSize: 24, bold: true, color: C.white, fontFace: 'Calibri', shrinkText: true });
-  s.addText(`${ctx.analysis.escola.Município} · ${ctx.analysis.escola.UF}`, { x: 0.6, y: 4.55, w: 12, h: 0.45, fontSize: 16, color: C.tealLight, fontFace: 'Calibri' });
-  s.addText(`Código INEP ${ctx.analysis.escola['Código Inep']}`, { x: 0.6, y: 5.05, w: 12, h: 0.4, fontSize: 13, color: C.tealLight, fontFace: 'Calibri' });
-
-  s.addText('Transformando o país pela educação.', { x: 0.6, y: PPT_H - 0.7, w: 7, h: 0.4, fontSize: 12, italic: true, color: C.tealLight, fontFace: 'Calibri' });
-  if (ctx.session) {
-    s.addText(`Consultor: ${ctx.session.nome} · ${ctx.session.codigo}`, { x: PPT_W - 5.5, y: PPT_H - 0.7, w: 5, h: 0.4, fontSize: 11, color: C.tealLight, align: 'right', fontFace: 'Calibri' });
+  // Layout split: 60% texto branco | 40% painel navy decorativo
+  const splitX = 8.0;
+  s.background = { color: C.white };
+  s.addShape('rect', { x: splitX, y: 0, w: PPT_W - splitX, h: PPT_H, fill: { color: C.navy }, line: { color: C.navy } });
+  // Detalhes decorativos no painel navy (círculos concêntricos sutis)
+  for (let i = 0; i < 4; i++) {
+    const r = 0.6 + i * 0.7;
+    s.addShape('ellipse', {
+      x: PPT_W - 1.2 - r, y: PPT_H - 1.2 - r, w: r * 2, h: r * 2,
+      fill: { type: 'none' } as any, line: { color: C.navySoft, width: 0.6 },
+    });
   }
+  s.addText('EDB', { x: PPT_W - 2.2, y: 0.6, w: 1.7, h: 0.5, fontSize: 22, bold: true, color: C.lavender, align: 'right', fontFace: 'Calibri', charSpacing: 2 });
+  s.addText('Editora do Brasil', { x: PPT_W - 3.5, y: 1.0, w: 3.0, h: 0.3, fontSize: 11, italic: true, color: C.lavender, align: 'right', fontFace: 'Calibri' });
+
+  // Lado esquerdo: chip + título grande + dados
+  pptChip(s, 0.6, 0.85, `Diagnóstico Territorial · ${tipoLabel(ctx.presentationType)}`);
+  s.addText(ctx.analysis.escola.Escola, {
+    x: 0.6, y: 1.5, w: splitX - 1.0, h: 2.6,
+    fontSize: 44, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top', shrinkText: true,
+  });
+  s.addText(`${ctx.analysis.escola.Município} · ${ctx.analysis.escola.UF}  |  Código INEP ${ctx.analysis.escola['Código Inep']}`, {
+    x: 0.6, y: 4.3, w: splitX - 1.0, h: 0.4, fontSize: 13, color: C.text, fontFace: 'Calibri',
+  });
+
+  // Card lavanda com consultor
+  s.addShape('roundRect', { x: 0.6, y: 5.0, w: splitX - 1.0, h: 1.5, fill: { color: C.lavender }, line: { color: C.lavender }, rectRadius: 0.1 } as any);
+  if (ctx.session) {
+    s.addText('Consultor', { x: 0.85, y: 5.15, w: 4, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
+    s.addText(`${ctx.session.nome} · ${ctx.session.codigo}`, { x: 0.85, y: 5.42, w: splitX - 1.5, h: 0.35, fontSize: 14, bold: true, color: C.navy, fontFace: 'Calibri' });
+  }
+  s.addShape('line', { x: 0.85, y: 5.85, w: splitX - 1.5, h: 0, line: { color: C.lavenderDark, width: 0.5 } });
+  s.addText('Editora do Brasil', { x: 0.85, y: 5.92, w: 4, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
+  s.addText('Transformando o país pela educação.', { x: 0.85, y: 6.18, w: splitX - 1.5, h: 0.3, fontSize: 12, color: C.navy, fontFace: 'Calibri' });
 }
 
 // ----- 2. Abertura
 function pptAbertura(s: PptxGenJS.Slide, ctx: ExportContext, n: number, total: number) {
-  pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Abertura Comercial', `${tipoLabel(ctx.presentationType)} · ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
+  pptFooter(s, ctx, n, total);
+  pptTitle(s, 'Uma Análise Construída Para a Sua Escola', undefined, 'Abertura Comercial');
   const intro = ctx.presentationType === 'prospeccao'
-    ? 'Esta análise foi construída para apoiar a conversa comercial com a sua escola. Reunimos dados públicos atualizados — Censo Escolar, IBGE e estudos socioeconômicos — e cruzamos com inteligência de mercado para mapear oportunidades reais de captação, retenção e fortalecimento da marca.'
-    : 'Esta análise consolida o cenário competitivo, demográfico e socioeconômico da sua área de influência para sustentar a conversa de renovação. Tornamos visíveis as alavancas de crescimento e os riscos a serem endereçados nos próximos ciclos.';
-  s.addText(intro, { x: PPT_M, y: 1.7, w: PPT_W - 2 * PPT_M, h: 1.0, fontSize: 13, color: C.text, fontFace: 'Calibri' });
+    ? `Reunimos dados públicos atualizados — Censo Escolar 2024, IBGE e estudos socioeconômicos — e cruzamos com inteligência de mercado para mapear oportunidades reais de captação, retenção e fortalecimento da marca da ${ctx.analysis.escola.Escola}.`
+    : `Esta análise consolida o cenário competitivo, demográfico e socioeconômico da área de influência da ${ctx.analysis.escola.Escola} para sustentar a conversa de renovação. Tornamos visíveis as alavancas de crescimento e os riscos a serem endereçados nos próximos ciclos.`;
+  s.addText(intro, { x: PPT_M, y: 2.05, w: PPT_W - 2 * PPT_M, h: 1.1, fontSize: 13, color: C.text, fontFace: 'Calibri' });
 
-  const cards = [
-    { t: 'METODOLOGIA', b: 'Censo Escolar 2024, IBGE, Pyxis Potencial de Consumo e cruzamento próprio com a base territorial da Editora do Brasil.' },
-    { t: 'INTELIGÊNCIA', b: 'Concorrência, market share por segmento, mensalidade, aderência econômica, potencial de consumo e plano de ação.' },
-    { t: 'PARCERIA', b: 'Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola.' },
-  ];
-  const cw = (PPT_W - 2 * PPT_M - 0.4) / 3;
-  cards.forEach((c, i) => {
-    const x = PPT_M + i * (cw + 0.2);
-    const y = 3.0;
-    s.addShape('rect', { x, y, w: cw, h: 1.7, fill: { color: C.white }, line: { color: C.border, width: 0.5 } });
-    s.addShape('rect', { x, y: y + 1.64, w: cw, h: 0.06, fill: { color: C.teal }, line: { color: C.teal } });
-    s.addText(c.t, { x: x + 0.15, y: y + 0.15, w: cw - 0.3, h: 0.3, fontSize: 11, bold: true, color: C.teal, fontFace: 'Calibri' });
-    s.addText(c.b, { x: x + 0.15, y: y + 0.5, w: cw - 0.3, h: 1.1, fontSize: 11, color: C.text, fontFace: 'Calibri', valign: 'top' });
+  // Dois blocos lado a lado: card navy "Inteligência de Dados" + texto "Nosso Compromisso"
+  const colW = (PPT_W - 2 * PPT_M - 0.4) / 2;
+  // Card navy à esquerda
+  const cx = PPT_M, cy = 3.4, ch = 2.6;
+  s.addShape('roundRect', { x: cx, y: cy, w: colW, h: ch, fill: { color: C.navy }, line: { color: C.navy }, rectRadius: 0.12 } as any);
+  s.addText('Inteligência de Dados', { x: cx + 0.3, y: cy + 0.2, w: colW - 0.6, h: 0.45, fontSize: 18, bold: true, color: C.white, fontFace: 'Calibri' });
+  s.addText('Censo Escolar 2024, IBGE, Pyxis Potencial de Consumo e cruzamento próprio com a base territorial da Editora do Brasil.', {
+    x: cx + 0.3, y: cy + 0.75, w: colW - 0.6, h: 0.7, fontSize: 11, color: C.lavender, fontFace: 'Calibri', valign: 'top',
+  });
+  const bullets = ['Market share por segmento', 'Concorrência e mensalidade', 'Aderência econômica'];
+  bullets.forEach((b, i) => {
+    s.addText(`•  ${b}`, { x: cx + 0.3, y: cy + 1.55 + i * 0.32, w: colW - 0.6, h: 0.3, fontSize: 11, color: C.white, fontFace: 'Calibri' });
   });
 
-  pptLeitura(s, 'Construir caminhos, fortalecer relações e apoiar escolas que desejam crescer com consistência, relevância e valor.', 5.2, 0.7, 'NOSSO COMPROMISSO');
+  // Texto "Nosso Compromisso" à direita
+  const rx = cx + colW + 0.4;
+  s.addText('Nosso Compromisso', { x: rx, y: cy + 0.2, w: colW, h: 0.45, fontSize: 18, bold: true, color: C.navy, fontFace: 'Calibri' });
+  s.addText('Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola — fortalecendo relações e apoiando instituições que desejam crescer com consistência, relevância e valor.', {
+    x: rx, y: cy + 0.8, w: colW, h: ch - 1.0, fontSize: 12, color: C.text, fontFace: 'Calibri', valign: 'top',
+  });
+
+  s.addText(`${ctx.analysis.escola.Escola} · INEP ${ctx.analysis.escola['Código Inep']} · Raio ${fmtKm(ctx.raioKm)} ${ctx.raioMode === 'personalizado' ? '(personalizado)' : '(padrão)'}`, {
+    x: PPT_M, y: 6.15, w: PPT_W - 2 * PPT_M, h: 0.3, fontSize: 11, italic: true, color: C.muted, fontFace: 'Calibri',
+  });
 }
 
 // ----- 3. Resumo
@@ -1619,39 +1699,35 @@ function pptConcorrenciaTabela(s: PptxGenJS.Slide, ctx: ExportContext, data: any
 // ----- 7. MS Geral
 function pptMSGeral(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Market Share — Visão Geral', `Participação relativa em ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
+  pptTitle(s, 'Participação de Mercado — Visão Geral', undefined, 'Market Share');
   const ms = ctx.analysis.marketShare;
-  const cw = (PPT_W - 2 * PPT_M - 0.6) / 5;
-  pptKpi(s, PPT_M + 0 * (cw + 0.15), 1.7, cw, 0.85, 'Geral', fmtPct(ms.geral), C.teal);
-  pptKpi(s, PPT_M + 1 * (cw + 0.15), 1.7, cw, 0.85, 'Educação Infantil', fmtPct(ms.ei), C.navy);
-  pptKpi(s, PPT_M + 2 * (cw + 0.15), 1.7, cw, 0.85, 'Fund. AI', fmtPct(ms.efi), C.navy);
-  pptKpi(s, PPT_M + 3 * (cw + 0.15), 1.7, cw, 0.85, 'Fund. AF', fmtPct(ms.efii), C.navy);
-  pptKpi(s, PPT_M + 4 * (cw + 0.15), 1.7, cw, 0.85, 'Ensino Médio', fmtPct(ms.em), C.navy);
-
-  // Ranking horizontal
-  const top = data.allSchoolsRanked.slice(0, 10);
   const universe = data.totalAlunadoArea;
-  const chartData = [{
-    name: 'Share',
-    labels: top.map((t: any) => truncate((t.isTarget ? '★ ' : '') + t.name, 28)),
-    values: top.map((t: any) => universe > 0 ? Number(((t.total / universe) * 100).toFixed(1)) : 0),
-  }];
-  // Cor por barra: escola analisada destacada em navy, demais em teal claro
-  const barColors = top.map((t: any) => (t.isTarget ? C.navy : C.tealDark));
-  s.addChart(pptxgenChartType('bar'), chartData, {
-    x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M, h: 3.0,
-    showTitle: true, title: 'Ranking de Market Share — Top 10',
-    titleFontFace: 'Calibri', titleFontSize: 11, titleColor: C.navy,
-    barDir: 'bar',
-    chartColors: barColors,
-    chartColorsOpacity: 100,
-    showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy, dataLabelFormatCode: '0.0"%"',
-    catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 9, valAxisLabelFontSize: 9,
-    showLegend: false,
-  });
-
-  const top3 = top.slice(0, 3).reduce((acc: number, x: any) => acc + x.total, 0);
+  const top3 = data.allSchoolsRanked.slice(0, 3).reduce((acc: number, x: any) => acc + x.total, 0);
   const top3Pct = universe > 0 ? (top3 / universe) * 100 : 0;
+
+  // Parágrafo introdutório
+  s.addText(
+    `${truncate(ctx.analysis.escola.Escola, 60)} ${data.allSchoolsRanked[0]?.isTarget ? 'lidera o mercado local' : 'compõe o cenário competitivo'}, com ${fmtPct(ms.geral)} de market share geral. As 3 maiores escolas concentram ${fmtPct(top3Pct)} do alunado — indicativo de mercado ${top3Pct > 50 ? 'concentrado' : 'fragmentado'} ${top3Pct > 50 ? '' : 'com espaço real para crescimento'}.`,
+    { x: PPT_M, y: 2.05, w: PPT_W - 2 * PPT_M, h: 0.7, fontSize: 12, color: C.text, fontFace: 'Calibri' }
+  );
+
+  // 5 donuts em grid 3 + 2
+  const donuts: { v: number; label: string; sub: string }[] = [
+    { v: ms.geral, label: 'Market Share Geral', sub: `Participação total no raio de ${fmtKm(ctx.raioKm)}` },
+    { v: ms.ei,    label: 'Educação Infantil',  sub: 'Segmento Educação Infantil' },
+    { v: ms.efii,  label: 'Fund. Anos Finais',  sub: 'Segmento EFII' },
+    { v: ms.efi,   label: 'Fund. Anos Iniciais',sub: 'Segmento EFI' },
+    { v: ms.em,    label: 'Ensino Médio',       sub: 'Segmento EM' },
+  ];
+  const r = 0.75;
+  const rowY = [3.4, 5.15];
+  // Linha 1: 3 donuts
+  const cx1 = [3.0, 6.667, 10.333];
+  for (let i = 0; i < 3; i++) pptDonut(s, cx1[i], rowY[0], r, donuts[i].v, donuts[i].label, donuts[i].sub);
+  // Linha 2: 2 donuts (centralizados)
+  const cx2 = [4.667, 8.667];
+  for (let i = 0; i < 2; i++) pptDonut(s, cx2[i], rowY[1], r, donuts[i + 3].v, donuts[i + 3].label, donuts[i + 3].sub);
+
   pptLeitura(s, `As 3 maiores escolas detêm ${fmtPct(top3Pct)} do alunado. Mercado ${top3Pct > 50 ? 'concentrado' : 'fragmentado'}. Líder local: ${data.allSchoolsRanked[0]?.name ?? '—'}.`, PPT_H - 1.0, 0.5);
 }
 
@@ -1931,7 +2007,11 @@ function pptPotencial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numb
 // ----- 12. Insights
 function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Insights Estratégicos', 'Dado observado · leitura · implicação comercial');
+  pptTitle(s, 'Leituras e Implicações Comerciais', undefined, 'Insights Estratégicos');
+  s.addText(
+    'Os dados consolidados revelam oportunidades concretas e riscos a serem gerenciados. A seguir, os principais insights com suas implicações diretas para a gestão comercial da escola.',
+    { x: PPT_M, y: 2.05, w: PPT_W - 2 * PPT_M, h: 0.7, fontSize: 12, color: C.text, fontFace: 'Calibri' }
+  );
   const ms = ctx.analysis.marketShare;
   const segShares = [
     { l: 'Educação Infantil', v: ms.ei },
@@ -1940,56 +2020,57 @@ function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
     { l: 'Ensino Médio', v: ms.em },
   ].filter(x => x.v > 0).sort((a, b) => b.v - a.v);
   const bestSeg = segShares[0];
+
+  // 4 insights principais (estilo Santa Mônica): tag + título + dado + leitura + implicação
   const insights = [
-    { tag: data.popGrowth >= 0 ? 'OPORTUNIDADE' : 'RISCO', tagColor: data.popGrowth >= 0 ? C.teal : C.red, title: 'Tendência Demográfica',
-      dado: `${data.popGrowth >= 0 ? '+' : ''}${data.popGrowth.toFixed(1).replace('.', ',')}% na faixa 0–4`,
-      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por Educação Infantil e séries iniciais.' : 'Faixa 0–4 em retração — captação de Educação Infantil mais disputada.',
-      implic: data.popGrowth >= 0 ? 'Reforçar Educação Infantil agora protege o pipeline.' : 'Antecipar retenção e diversificar oferta.' },
-    { tag: data.concs.length >= 10 ? 'RISCO' : 'POSICIONAMENTO', tagColor: data.concs.length >= 10 ? C.red : C.navy, title: 'Pressão Competitiva',
-      dado: `${data.concs.length} concorrentes · ${fmtInt(data.totalAlunadoArea)} alunos`,
-      leitura: data.isFragmented ? 'Mercado fragmentado: diferenciação é o driver de escolha.' : 'Concorrência presente, espaço para ganho de share.',
-      implic: data.adotamBrasil > 0 ? `${data.adotamBrasil} concorrente(s) adota(m) Editora do Brasil.` : 'Editora do Brasil é diferencial disponível.' },
-    { tag: 'POSICIONAMENTO', tagColor: C.navy, title: 'Posicionamento',
-      dado: `${fmtPct(ms.geral)} share · raio ${fmtKm(ctx.raioKm)}`,
-      leitura: bestSeg ? `Maior penetração em ${bestSeg.l} (${fmtPct(bestSeg.v)}).` : 'Sem segmento dominante.',
-      implic: data.isLeader ? 'Capitalizar liderança em comunicação.' : 'Concentrar esforços no segmento líder.' },
-    { tag: 'ADERÊNCIA', tagColor: C.lime, title: 'Aderência Econômica',
-      dado: data.matrix ? `${data.aderencia.toFixed(0)}% da pop. 0–19 nas faixas aderentes` : 'Dado não disponível',
-      leitura: data.matrix ? `${data.aderenteCls.label} ao ticket atual.` : '',
-      implic: data.aderencia >= 30 ? 'Comunicar valor sem desconto.' : data.aderencia >= 15 ? 'Reforçar custo-benefício.' : 'Calibrar discurso e bolsas.' },
-    { tag: 'OPORTUNIDADE', tagColor: C.teal, title: 'Oportunidade Comercial',
-      dado: bestSeg?.l ?? 'Captação ampla',
-      leitura: `Vitrine forte em ${bestSeg?.l || 'segmento principal'} — porta de entrada para outros segmentos.`,
+    { tag: data.popGrowth >= 0 ? 'OPORTUNIDADE' : 'RISCO',
+      title: 'Tendência Demográfica — Faixa 0–4 anos',
+      dado: `${data.popGrowth >= 0 ? '+' : ''}${data.popGrowth.toFixed(1).replace('.', ',')}% na faixa 0–4 anos.`,
+      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por Educação Infantil.' : 'Captação de Educação Infantil ficará mais disputada nos próximos anos.',
+      implic: data.popGrowth >= 0 ? 'Reforçar Educação Infantil agora protege o pipeline.' : 'Antecipar ações de retenção e diversificar oferta de segmentos.' },
+    { tag: data.concs.length >= 10 ? 'POSICIONAMENTO' : 'POSICIONAMENTO',
+      title: `Pressão Competitiva — ${data.concs.length} Concorrentes`,
+      dado: `${data.concs.length} concorrentes · ${fmtInt(data.totalAlunadoArea)} alunos no raio.`,
+      leitura: data.isFragmented ? 'Mercado fragmentado: diferenciação é o principal driver de escolha.' : 'Concorrência presente, mas há espaço real para ganho de share.',
+      implic: data.adotamBrasil > 0 ? `${data.adotamBrasil} concorrente(s) adota(m) Editora do Brasil — diferencial em disputa.` : 'A Editora do Brasil é um diferencial disponível e ainda não explorado pela concorrência local.' },
+    { tag: 'OPORTUNIDADE',
+      title: bestSeg ? `Liderança em ${bestSeg.l}` : 'Oportunidade de Captação',
+      dado: bestSeg ? `${fmtPct(bestSeg.v)} de participação em ${bestSeg.l} — maior entre os segmentos.` : 'Captação ampla disponível.',
+      leitura: `${bestSeg?.l || 'O segmento principal'} é vitrine forte e porta de entrada para outros níveis.`,
       implic: 'Estruturar funil dedicado: cadastros → agendas → visitas → matrículas.' },
-    { tag: 'RISCO', tagColor: C.red, title: 'Risco de Captação',
-      dado: data.popGrowth < 0 || data.isFragmented || data.aderencia < 15 ? 'Atenção' : 'Controlado',
-      leitura: [
-        data.popGrowth < 0 ? 'queda demográfica' : null,
-        data.isFragmented ? 'mercado pulverizado' : null,
-        data.aderencia < 15 ? 'baixa aderência' : null,
-      ].filter(Boolean).join(' · ') || 'Sem fatores de risco relevantes.',
-      implic: 'Meta agressiva e funil mais largo no topo.' },
+    { tag: 'ATENÇÃO',
+      title: 'Aderência Econômica',
+      dado: data.matrix ? `Aderência ao ticket classificada como ${data.aderenteCls.label.toLowerCase()}.` : 'Aderência ao ticket não disponível.',
+      leitura: data.matrix
+        ? (data.aderencia >= 30 ? 'Base aderente sólida — espaço para reforçar valor agregado.' : data.aderencia >= 15 ? 'Existe nicho relevante — comunique custo-benefício.' : 'Base aderente limitada — elasticidade de preço relevante.')
+        : 'Use renda média e IDH como referência de capacidade de pagamento.',
+      implic: 'Calibrar discurso comercial, estruturar bolsas estratégicas e comunicar retorno do investimento educacional.' },
   ];
-  // Grade 3×2
-  const cw = (PPT_W - 2 * PPT_M - 0.4) / 3;
-  const ch = 1.95;
+
+  // Grid 2x2 com cards estilo Santa Mônica (borda lateral navy + chip)
+  const cw = (PPT_W - 2 * PPT_M - 0.3) / 2;
+  const ch = 2.0;
   insights.forEach((it, i) => {
-    const col = i % 3, row = Math.floor(i / 3);
-    const x = PPT_M + col * (cw + 0.2);
-    const y = 1.7 + row * (ch + 0.18);
-    s.addShape('rect', { x, y, w: cw, h: ch, fill: { color: C.white }, line: { color: C.border, width: 0.5 } });
-    s.addShape('rect', { x, y: y + ch - 0.06, w: cw, h: 0.06, fill: { color: it.tagColor }, line: { color: it.tagColor } });
-    s.addText(it.title.toUpperCase(), { x: x + 0.15, y: y + 0.1, w: cw - 1.4, h: 0.25, fontSize: 10, bold: true, color: C.navy, fontFace: 'Calibri' });
-    s.addText(it.tag, { x: x + cw - 1.3, y: y + 0.1, w: 1.15, h: 0.25, fontSize: 8, bold: true, color: it.tagColor, align: 'right', fontFace: 'Calibri' });
-    s.addText(it.dado, { x: x + 0.15, y: y + 0.4, w: cw - 0.3, h: 0.4, fontSize: 13, bold: true, color: it.tagColor, fontFace: 'Calibri', shrinkText: true });
+    const col = i % 2, row = Math.floor(i / 2);
+    const x = PPT_M + col * (cw + 0.3);
+    const y = 2.85 + row * (ch + 0.2);
+    // Card branco com borda fina cinza
+    s.addShape('roundRect', { x, y, w: cw, h: ch, fill: { color: C.white }, line: { color: C.border, width: 0.5 }, rectRadius: 0.05 } as any);
+    // Borda esquerda grossa navy
+    s.addShape('rect', { x, y, w: 0.07, h: ch, fill: { color: C.navy }, line: { color: C.navy } });
+    // Chip
+    pptChip(s, x + 0.25, y + 0.18, it.tag);
+    // Título
+    s.addText(it.title, { x: x + 0.25, y: y + 0.6, w: cw - 0.4, h: 0.4, fontSize: 14, bold: true, color: C.navy, fontFace: 'Calibri' });
+    // Dado
     s.addText([
-      { text: 'Leitura: ', options: { bold: true, fontSize: 9.5, color: C.text } },
-      { text: it.leitura, options: { fontSize: 9.5, color: C.text } },
-    ] as any, { x: x + 0.15, y: y + 0.85, w: cw - 0.3, h: 0.55, fontFace: 'Calibri', valign: 'top' });
-    s.addText([
-      { text: 'Implicação: ', options: { bold: true, fontSize: 9.5, color: C.muted } },
-      { text: it.implic, options: { fontSize: 9.5, color: C.muted } },
-    ] as any, { x: x + 0.15, y: y + ch - 0.7, w: cw - 0.3, h: 0.55, fontFace: 'Calibri', valign: 'top' });
+      { text: 'Dado: ', options: { bold: true, fontSize: 10, color: C.navy } },
+      { text: it.dado + ' ', options: { fontSize: 10, color: C.text } },
+      { text: 'Leitura: ', options: { bold: true, fontSize: 10, color: C.navy } },
+      { text: it.leitura + ' ', options: { fontSize: 10, color: C.text } },
+      { text: 'Implicação: ', options: { bold: true, fontSize: 10, color: C.navy } },
+      { text: it.implic, options: { fontSize: 10, color: C.text } },
+    ] as any, { x: x + 0.25, y: y + 1.05, w: cw - 0.4, h: ch - 1.15, fontFace: 'Calibri', valign: 'top' });
   });
 }
 
@@ -2054,23 +2135,44 @@ function pptPlano(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
 }
 
 // ----- 14. Encerramento
-function pptEncerramento(s: PptxGenJS.Slide) {
-  s.background = { color: C.beige };
-  s.addShape('rect', { x: 0, y: 0, w: 0.1, h: PPT_H, fill: { color: C.teal }, line: { color: C.teal } });
-  s.addShape('rect', { x: PPT_W / 2 - 0.4, y: 0.95, w: 0.8, h: 0.06, fill: { color: C.teal }, line: { color: C.teal } });
-  s.addText('Obrigado pelo seu tempo', { x: 0, y: 1.4, w: PPT_W, h: 0.8, fontSize: 36, bold: true, color: C.navy, align: 'center', fontFace: 'Calibri' });
-  s.addText('Encerrar esta análise é também abrir espaço para novas possibilidades. A Editora do Brasil agradece pela atenção, pelo tempo dedicado e pela oportunidade de apresentar esta visão comercial e estratégica.', {
-    x: 1.5, y: 2.6, w: PPT_W - 3.0, h: 1.4, fontSize: 14, color: C.text, align: 'center', fontFace: 'Calibri',
-  });
+function pptEncerramento(s: PptxGenJS.Slide, ctx?: ExportContext) {
+  // Layout split (espelha a capa): painel navy à esquerda + texto à direita em fundo branco
+  s.background = { color: C.white };
+  const splitX = 5.3;
+  s.addShape('rect', { x: 0, y: 0, w: splitX, h: PPT_H, fill: { color: C.navy }, line: { color: C.navy } });
+  // Decoração circular sutil
+  for (let i = 0; i < 4; i++) {
+    const r = 0.5 + i * 0.6;
+    s.addShape('ellipse', {
+      x: 0.6 - r, y: PPT_H - 0.6 - r, w: r * 2, h: r * 2,
+      fill: { type: 'none' } as any, line: { color: C.navySoft, width: 0.6 },
+    });
+  }
+  s.addText('EDB', { x: 0.5, y: 0.6, w: 2, h: 0.5, fontSize: 22, bold: true, color: C.lavender, fontFace: 'Calibri', charSpacing: 2 });
+  s.addText('Editora do Brasil', { x: 0.5, y: 1.05, w: 4, h: 0.3, fontSize: 11, italic: true, color: C.lavender, fontFace: 'Calibri' });
+
+  // Lado direito (texto)
+  s.addText('Obrigado pelo Seu Tempo', { x: splitX + 0.6, y: 0.85, w: PPT_W - splitX - 1.0, h: 0.85, fontSize: 36, bold: true, color: C.navy, fontFace: 'Calibri' });
+  s.addText(
+    'Encerrar esta análise é também abrir espaço para novas possibilidades. A Editora do Brasil agradece pela atenção, pelo tempo dedicado e pela oportunidade de apresentar esta visão comercial e estratégica.',
+    { x: splitX + 0.6, y: 1.95, w: PPT_W - splitX - 1.0, h: 1.5, fontSize: 13, color: C.text, fontFace: 'Calibri', valign: 'top' }
+  );
+  // Quote com borda lateral navy
+  const qy = 3.65;
+  s.addShape('rect', { x: splitX + 0.6, y: qy, w: 0.07, h: 0.7, fill: { color: C.navy }, line: { color: C.navy } });
   s.addText('"Conte com a Editora do Brasil para crescer junto."', {
-    x: 0, y: 4.4, w: PPT_W, h: 0.5, fontSize: 20, italic: true, color: C.teal, align: 'center', fontFace: 'Calibri',
+    x: splitX + 0.85, y: qy, w: PPT_W - splitX - 1.25, h: 0.7, fontSize: 16, italic: true, color: C.navy, fontFace: 'Calibri', valign: 'middle',
   });
-  s.addText('Transformando o país pela educação.', {
-    x: 0, y: 5.0, w: PPT_W, h: 0.5, fontSize: 18, bold: true, color: C.navy, align: 'center', fontFace: 'Calibri',
-  });
-  s.addShape('rect', { x: PPT_W / 2 - 0.6, y: 5.95, w: 1.2, h: 0.04, fill: { color: C.navy }, line: { color: C.navy } });
-  s.addText('EDITORA DO BRASIL', { x: 0, y: 6.2, w: PPT_W, h: 0.35, fontSize: 12, bold: true, color: C.navy, align: 'center', fontFace: 'Calibri' });
-  s.addText('Educação que transforma, parceria que constrói.', { x: 0, y: 6.55, w: PPT_W, h: 0.35, fontSize: 11, italic: true, color: C.muted, align: 'center', fontFace: 'Calibri' });
+  // Card lavanda final
+  const cy = 4.6;
+  s.addShape('roundRect', { x: splitX + 0.6, y: cy, w: PPT_W - splitX - 1.0, h: 1.7, fill: { color: C.lavender }, line: { color: C.lavender }, rectRadius: 0.1 } as any);
+  s.addText('Editora do Brasil', { x: splitX + 0.85, y: cy + 0.18, w: 4, h: 0.3, fontSize: 12, bold: true, color: C.navy, fontFace: 'Calibri' });
+  s.addText('Transformando o país pela educação.', { x: splitX + 0.85, y: cy + 0.45, w: PPT_W - splitX - 1.5, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
+  if (ctx?.session) {
+    s.addText('Consultor Responsável', { x: splitX + 0.85, y: cy + 0.85, w: 4, h: 0.3, fontSize: 12, bold: true, color: C.navy, fontFace: 'Calibri' });
+    s.addText(`${ctx.session.nome} · ${ctx.session.codigo}`, { x: splitX + 0.85, y: cy + 1.12, w: PPT_W - splitX - 1.5, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
+  }
+  s.addText('Educação que transforma, parceria que constrói.', { x: splitX + 0.6, y: PPT_H - 0.55, w: PPT_W - splitX - 1.0, h: 0.3, fontSize: 11, italic: true, color: C.muted, fontFace: 'Calibri' });
 }
 
 // ============================================================
