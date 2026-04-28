@@ -2007,7 +2007,11 @@ function pptPotencial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numb
 // ----- 12. Insights
 function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Insights Estratégicos', 'Dado observado · leitura · implicação comercial');
+  pptTitle(s, 'Leituras e Implicações Comerciais', undefined, 'Insights Estratégicos');
+  s.addText(
+    'Os dados consolidados revelam oportunidades concretas e riscos a serem gerenciados. A seguir, os principais insights com suas implicações diretas para a gestão comercial da escola.',
+    { x: PPT_M, y: 2.05, w: PPT_W - 2 * PPT_M, h: 0.7, fontSize: 12, color: C.text, fontFace: 'Calibri' }
+  );
   const ms = ctx.analysis.marketShare;
   const segShares = [
     { l: 'Educação Infantil', v: ms.ei },
@@ -2016,56 +2020,57 @@ function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
     { l: 'Ensino Médio', v: ms.em },
   ].filter(x => x.v > 0).sort((a, b) => b.v - a.v);
   const bestSeg = segShares[0];
+
+  // 4 insights principais (estilo Santa Mônica): tag + título + dado + leitura + implicação
   const insights = [
-    { tag: data.popGrowth >= 0 ? 'OPORTUNIDADE' : 'RISCO', tagColor: data.popGrowth >= 0 ? C.teal : C.red, title: 'Tendência Demográfica',
-      dado: `${data.popGrowth >= 0 ? '+' : ''}${data.popGrowth.toFixed(1).replace('.', ',')}% na faixa 0–4`,
-      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por Educação Infantil e séries iniciais.' : 'Faixa 0–4 em retração — captação de Educação Infantil mais disputada.',
-      implic: data.popGrowth >= 0 ? 'Reforçar Educação Infantil agora protege o pipeline.' : 'Antecipar retenção e diversificar oferta.' },
-    { tag: data.concs.length >= 10 ? 'RISCO' : 'POSICIONAMENTO', tagColor: data.concs.length >= 10 ? C.red : C.navy, title: 'Pressão Competitiva',
-      dado: `${data.concs.length} concorrentes · ${fmtInt(data.totalAlunadoArea)} alunos`,
-      leitura: data.isFragmented ? 'Mercado fragmentado: diferenciação é o driver de escolha.' : 'Concorrência presente, espaço para ganho de share.',
-      implic: data.adotamBrasil > 0 ? `${data.adotamBrasil} concorrente(s) adota(m) Editora do Brasil.` : 'Editora do Brasil é diferencial disponível.' },
-    { tag: 'POSICIONAMENTO', tagColor: C.navy, title: 'Posicionamento',
-      dado: `${fmtPct(ms.geral)} share · raio ${fmtKm(ctx.raioKm)}`,
-      leitura: bestSeg ? `Maior penetração em ${bestSeg.l} (${fmtPct(bestSeg.v)}).` : 'Sem segmento dominante.',
-      implic: data.isLeader ? 'Capitalizar liderança em comunicação.' : 'Concentrar esforços no segmento líder.' },
-    { tag: 'ADERÊNCIA', tagColor: C.lime, title: 'Aderência Econômica',
-      dado: data.matrix ? `${data.aderencia.toFixed(0)}% da pop. 0–19 nas faixas aderentes` : 'Dado não disponível',
-      leitura: data.matrix ? `${data.aderenteCls.label} ao ticket atual.` : '',
-      implic: data.aderencia >= 30 ? 'Comunicar valor sem desconto.' : data.aderencia >= 15 ? 'Reforçar custo-benefício.' : 'Calibrar discurso e bolsas.' },
-    { tag: 'OPORTUNIDADE', tagColor: C.teal, title: 'Oportunidade Comercial',
-      dado: bestSeg?.l ?? 'Captação ampla',
-      leitura: `Vitrine forte em ${bestSeg?.l || 'segmento principal'} — porta de entrada para outros segmentos.`,
+    { tag: data.popGrowth >= 0 ? 'OPORTUNIDADE' : 'RISCO',
+      title: 'Tendência Demográfica — Faixa 0–4 anos',
+      dado: `${data.popGrowth >= 0 ? '+' : ''}${data.popGrowth.toFixed(1).replace('.', ',')}% na faixa 0–4 anos.`,
+      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por Educação Infantil.' : 'Captação de Educação Infantil ficará mais disputada nos próximos anos.',
+      implic: data.popGrowth >= 0 ? 'Reforçar Educação Infantil agora protege o pipeline.' : 'Antecipar ações de retenção e diversificar oferta de segmentos.' },
+    { tag: data.concs.length >= 10 ? 'POSICIONAMENTO' : 'POSICIONAMENTO',
+      title: `Pressão Competitiva — ${data.concs.length} Concorrentes`,
+      dado: `${data.concs.length} concorrentes · ${fmtInt(data.totalAlunadoArea)} alunos no raio.`,
+      leitura: data.isFragmented ? 'Mercado fragmentado: diferenciação é o principal driver de escolha.' : 'Concorrência presente, mas há espaço real para ganho de share.',
+      implic: data.adotamBrasil > 0 ? `${data.adotamBrasil} concorrente(s) adota(m) Editora do Brasil — diferencial em disputa.` : 'A Editora do Brasil é um diferencial disponível e ainda não explorado pela concorrência local.' },
+    { tag: 'OPORTUNIDADE',
+      title: bestSeg ? `Liderança em ${bestSeg.l}` : 'Oportunidade de Captação',
+      dado: bestSeg ? `${fmtPct(bestSeg.v)} de participação em ${bestSeg.l} — maior entre os segmentos.` : 'Captação ampla disponível.',
+      leitura: `${bestSeg?.l || 'O segmento principal'} é vitrine forte e porta de entrada para outros níveis.`,
       implic: 'Estruturar funil dedicado: cadastros → agendas → visitas → matrículas.' },
-    { tag: 'RISCO', tagColor: C.red, title: 'Risco de Captação',
-      dado: data.popGrowth < 0 || data.isFragmented || data.aderencia < 15 ? 'Atenção' : 'Controlado',
-      leitura: [
-        data.popGrowth < 0 ? 'queda demográfica' : null,
-        data.isFragmented ? 'mercado pulverizado' : null,
-        data.aderencia < 15 ? 'baixa aderência' : null,
-      ].filter(Boolean).join(' · ') || 'Sem fatores de risco relevantes.',
-      implic: 'Meta agressiva e funil mais largo no topo.' },
+    { tag: 'ATENÇÃO',
+      title: 'Aderência Econômica',
+      dado: data.matrix ? `Aderência ao ticket classificada como ${data.aderenteCls.label.toLowerCase()}.` : 'Aderência ao ticket não disponível.',
+      leitura: data.matrix
+        ? (data.aderencia >= 30 ? 'Base aderente sólida — espaço para reforçar valor agregado.' : data.aderencia >= 15 ? 'Existe nicho relevante — comunique custo-benefício.' : 'Base aderente limitada — elasticidade de preço relevante.')
+        : 'Use renda média e IDH como referência de capacidade de pagamento.',
+      implic: 'Calibrar discurso comercial, estruturar bolsas estratégicas e comunicar retorno do investimento educacional.' },
   ];
-  // Grade 3×2
-  const cw = (PPT_W - 2 * PPT_M - 0.4) / 3;
-  const ch = 1.95;
+
+  // Grid 2x2 com cards estilo Santa Mônica (borda lateral navy + chip)
+  const cw = (PPT_W - 2 * PPT_M - 0.3) / 2;
+  const ch = 2.0;
   insights.forEach((it, i) => {
-    const col = i % 3, row = Math.floor(i / 3);
-    const x = PPT_M + col * (cw + 0.2);
-    const y = 1.7 + row * (ch + 0.18);
-    s.addShape('rect', { x, y, w: cw, h: ch, fill: { color: C.white }, line: { color: C.border, width: 0.5 } });
-    s.addShape('rect', { x, y: y + ch - 0.06, w: cw, h: 0.06, fill: { color: it.tagColor }, line: { color: it.tagColor } });
-    s.addText(it.title.toUpperCase(), { x: x + 0.15, y: y + 0.1, w: cw - 1.4, h: 0.25, fontSize: 10, bold: true, color: C.navy, fontFace: 'Calibri' });
-    s.addText(it.tag, { x: x + cw - 1.3, y: y + 0.1, w: 1.15, h: 0.25, fontSize: 8, bold: true, color: it.tagColor, align: 'right', fontFace: 'Calibri' });
-    s.addText(it.dado, { x: x + 0.15, y: y + 0.4, w: cw - 0.3, h: 0.4, fontSize: 13, bold: true, color: it.tagColor, fontFace: 'Calibri', shrinkText: true });
+    const col = i % 2, row = Math.floor(i / 2);
+    const x = PPT_M + col * (cw + 0.3);
+    const y = 2.85 + row * (ch + 0.2);
+    // Card branco com borda fina cinza
+    s.addShape('roundRect', { x, y, w: cw, h: ch, fill: { color: C.white }, line: { color: C.border, width: 0.5 }, rectRadius: 0.05 } as any);
+    // Borda esquerda grossa navy
+    s.addShape('rect', { x, y, w: 0.07, h: ch, fill: { color: C.navy }, line: { color: C.navy } });
+    // Chip
+    pptChip(s, x + 0.25, y + 0.18, it.tag);
+    // Título
+    s.addText(it.title, { x: x + 0.25, y: y + 0.6, w: cw - 0.4, h: 0.4, fontSize: 14, bold: true, color: C.navy, fontFace: 'Calibri' });
+    // Dado
     s.addText([
-      { text: 'Leitura: ', options: { bold: true, fontSize: 9.5, color: C.text } },
-      { text: it.leitura, options: { fontSize: 9.5, color: C.text } },
-    ] as any, { x: x + 0.15, y: y + 0.85, w: cw - 0.3, h: 0.55, fontFace: 'Calibri', valign: 'top' });
-    s.addText([
-      { text: 'Implicação: ', options: { bold: true, fontSize: 9.5, color: C.muted } },
-      { text: it.implic, options: { fontSize: 9.5, color: C.muted } },
-    ] as any, { x: x + 0.15, y: y + ch - 0.7, w: cw - 0.3, h: 0.55, fontFace: 'Calibri', valign: 'top' });
+      { text: 'Dado: ', options: { bold: true, fontSize: 10, color: C.navy } },
+      { text: it.dado + ' ', options: { fontSize: 10, color: C.text } },
+      { text: 'Leitura: ', options: { bold: true, fontSize: 10, color: C.navy } },
+      { text: it.leitura + ' ', options: { fontSize: 10, color: C.text } },
+      { text: 'Implicação: ', options: { bold: true, fontSize: 10, color: C.navy } },
+      { text: it.implic, options: { fontSize: 10, color: C.text } },
+    ] as any, { x: x + 0.25, y: y + 1.05, w: cw - 0.4, h: ch - 1.15, fontFace: 'Calibri', valign: 'top' });
   });
 }
 
