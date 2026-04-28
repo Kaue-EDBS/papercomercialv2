@@ -1488,8 +1488,8 @@ function pptConcorrenciaMapa(s: PptxGenJS.Slide, ctx: ExportContext, data: any, 
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
   pptTitle(s, 'Concorrência — Mapa e Régua', `Raio ${fmtKm(ctx.raioKm)} · ${ctx.raioMode === 'personalizado' ? 'Personalizado' : 'Padrão'} · ${data.concs.length} concorrentes`);
 
-  // Área do mapa
-  const mx = PPT_M, my = 1.7, mw = 8, mh = 4.0;
+  // Área do mapa — começa um pouco mais abaixo para não conflitar com subtítulo
+  const mx = PPT_M, my = 1.95, mw = 8, mh = 3.8;
   s.addShape('rect', { x: mx, y: my, w: mw, h: mh, fill: { color: C.beige }, line: { color: C.border, width: 0.5 } });
 
   const e = data.e;
