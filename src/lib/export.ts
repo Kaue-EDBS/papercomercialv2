@@ -609,10 +609,10 @@ function renderPdfResumo(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PD
   drawResumoCard(page, font, bold, italic, M, muniRowY, muniW, muniRowH, 'Total de Escolas', fmtInt(a.escolasMunicipio.length), NAVY, false);
   drawResumoCard(page, font, bold, italic, M + muniW + 14, muniRowY, muniW, muniRowH, 'Total de Alunos', fmtInt(a.escolasMunicipio.reduce((s, x) => s + num(x['Alunado Total']), 0)), NAVY, false);
 
-  // ---------- BLOCO 3 · ESCOLA ANALISADA ----------
+  // ---------- BLOCO 3 · RAIO OPERACIONAL ----------
   const b3Top = muniRowY - 22;
-  drawPdfChip(page, font, bold, M, b3Top - 20, 'ESCOLA ANALISADA');
-  page.drawText('Indicadores operacionais e posicionamento competitivo', {
+  drawPdfChip(page, font, bold, M, b3Top - 20, 'RAIO OPERACIONAL');
+  page.drawText('Indicadores escolares no raio operacional', {
     x: M + 178, y: b3Top - 14, size: 9.5, font: italic, color: MUTED,
   });
   const escRowH = 92;
@@ -624,11 +624,6 @@ function renderPdfResumo(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PD
   drawResumoCard(page, font, bold, italic, M + 2 * (escW + 12), escRowY, escW, escRowH, 'Faixa de Mensalidade', mensRaw || ND, NAVY, false, !mensRaw);
 
   // ---------- METODOLOGIA — filete + texto mais legível ----------
-  // Filete sutil acima da metodologia, separando do rodapé do template
-  page.drawLine({
-    start: { x: M, y: 56 }, end: { x: PDF_W - M, y: 56 },
-    thickness: 0.4, color: BORDER_LIGHT,
-  });
   page.drawText('Metodologia ·', { x: M, y: 44, size: 8.5, font: bold, color: TEAL_DARK });
   const methX = M + bold.widthOfTextAtSize('Metodologia ·', 8.5) + 4;
   page.drawText('Censo Escolar 2024 + critérios de proximidade (CEP), faixa de mensalidade e segmentos comuns. Top 15 concorrentes por relevância competitiva.', {
@@ -1969,10 +1964,10 @@ function pptResumo(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number,
   pptResumoCard(s, SAFE,                muniRowY, wM, muniH, 'Total de Escolas', fmtInt(a.escolasMunicipio.length), C.navy, false);
   pptResumoCard(s, SAFE + wM + 0.3,     muniRowY, wM, muniH, 'Total de Alunos',  fmtInt(a.escolasMunicipio.reduce((s2: number, x: any) => s2 + num(x['Alunado Total']), 0)), C.navy, false);
 
-  // ---------- BLOCO 3 · ESCOLA ANALISADA ----------
+  // ---------- BLOCO 3 · RAIO OPERACIONAL ----------
   const b3Y = muniRowY + muniH + 0.30;
-  pptChip(s, SAFE, b3Y, 'Escola Analisada');
-  s.addText('Indicadores operacionais e posicionamento competitivo', {
+  pptChip(s, SAFE, b3Y, 'Raio Operacional');
+  s.addText('Indicadores escolares no raio operacional', {
     x: SAFE + 2.35, y: b3Y + 0.04, w: W - 2.4, h: 0.3,
     fontSize: 10.5, italic: true, color: C.muted, fontFace: 'Calibri', valign: 'middle',
   });
@@ -1988,11 +1983,6 @@ function pptResumo(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number,
   pptResumoCard(s, SAFE + 2 * (wE + 0.2),   escRowY, wE, escH, 'Faixa de Mensalidade',  mensRaw || ND,               C.navy, false, !mensRaw);
 
   // ---------- METODOLOGIA — rodapé com filete separador, mais legível ----------
-  // Filete sutil acima da metodologia para destacá-la do bloco de cards
-  s.addShape('rect', {
-    x: SAFE, y: PPT_H - 0.72, w: W, h: 0.012,
-    fill: { color: C.borderLight }, line: { color: C.borderLight },
-  });
   s.addText([
     { text: 'Metodologia  ·  ', options: { color: C.tealDark, fontSize: 9, bold: true, charSpacing: 1 } },
     { text: 'Censo Escolar 2024 + critérios de proximidade (CEP), faixa de mensalidade e segmentos comuns. Top 15 concorrentes por relevância competitiva.', options: { color: C.muted, fontSize: 9, italic: true } },
