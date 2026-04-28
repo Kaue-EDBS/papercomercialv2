@@ -1506,40 +1506,133 @@ function pptDonut(s: PptxGenJS.Slide, cx: number, cy: number, r: number, valuePc
 
 // ----- 1. Capa
 function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext) {
-  // Layout split: 60% texto branco | 40% painel navy decorativo
-  const splitX = 8.0;
+  // ============================================================
+  // CAPA — paper executivo 16:9
+  // Margem de segurança 0,4". Painel branco (esq.) + painel navy (dir.).
+  // Hierarquia: chip > headline (escola) > meta > consultor > assinatura.
+  // Sem rodapé/numeração na capa (padrão executivo).
+  // ============================================================
+  const SAFE = 0.4;                       // margem de segurança 16:9
+  const splitX = PPT_W * 0.62;            // 62% branco | 38% navy
+  const leftX = SAFE;
+  const leftW = splitX - SAFE - 0.3;      // largura útil do painel esquerdo
+
   s.background = { color: C.white };
+
+  // ---------- Painel direito (navy) ----------
   s.addShape('rect', { x: splitX, y: 0, w: PPT_W - splitX, h: PPT_H, fill: { color: C.navy }, line: { color: C.navy } });
-  // Detalhes decorativos no painel navy (círculos concêntricos sutis)
-  for (let i = 0; i < 4; i++) {
-    const r = 0.6 + i * 0.7;
-    s.addShape('ellipse', {
-      x: PPT_W - 1.2 - r, y: PPT_H - 1.2 - r, w: r * 2, h: r * 2,
-      fill: { type: 'none' } as any, line: { color: C.navySoft, width: 0.6 },
-    });
-  }
-  s.addText('EDB', { x: PPT_W - 2.2, y: 0.6, w: 1.7, h: 0.5, fontSize: 22, bold: true, color: C.lavender, align: 'right', fontFace: 'Calibri', charSpacing: 2 });
-  s.addText('Editora do Brasil', { x: PPT_W - 3.5, y: 1.0, w: 3.0, h: 0.3, fontSize: 11, italic: true, color: C.lavender, align: 'right', fontFace: 'Calibri' });
 
-  // Lado esquerdo: chip + título grande + dados
-  pptChip(s, 0.6, 0.85, `Diagnóstico Territorial · ${tipoLabel(ctx.presentationType)}`);
+  // Filete lima fino no topo do painel — único acento de cor
+  s.addShape('rect', { x: splitX, y: 0, w: PPT_W - splitX, h: 0.06, fill: { color: C.lime }, line: { color: C.lime } });
+
+  // Marca institucional no topo do painel navy
+  const panelX = splitX + 0.45;
+  const panelW = PPT_W - splitX - 0.9;
+  s.addText('EDB', {
+    x: panelX, y: 0.55, w: panelW, h: 0.55,
+    fontSize: 28, bold: true, color: C.white, align: 'left', fontFace: 'Calibri', charSpacing: 4,
+  });
+  s.addText('Editora do Brasil', {
+    x: panelX, y: 1.05, w: panelW, h: 0.32,
+    fontSize: 12, italic: true, color: C.tealLight, align: 'left', fontFace: 'Calibri',
+  });
+
+  // Linha divisória sutil
+  s.addShape('line', {
+    x: panelX, y: 1.6, w: panelW, h: 0,
+    line: { color: C.navySoft, width: 0.75 },
+  });
+
+  // Selo institucional no rodapé do painel navy
+  s.addText('INTELIGÊNCIA DE MERCADO', {
+    x: panelX, y: PPT_H - 1.55, w: panelW, h: 0.3,
+    fontSize: 10, bold: true, color: C.lime, fontFace: 'Calibri', charSpacing: 2,
+  });
+  s.addText('Educação Básica · Brasil', {
+    x: panelX, y: PPT_H - 1.22, w: panelW, h: 0.3,
+    fontSize: 11, color: C.tealLight, fontFace: 'Calibri',
+  });
+  s.addShape('line', {
+    x: panelX, y: PPT_H - 0.8, w: panelW * 0.4, h: 0,
+    line: { color: C.lime, width: 1.25 },
+  });
+  s.addText(new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./, c => c.toUpperCase()), {
+    x: panelX, y: PPT_H - 0.65, w: panelW, h: 0.3,
+    fontSize: 10, color: C.white, fontFace: 'Calibri',
+  });
+
+  // ---------- Painel esquerdo (branco) ----------
+  // 1) Chip categoria
+  pptChip(s, leftX, SAFE + 0.2, `Diagnóstico Territorial · ${tipoLabel(ctx.presentationType)}`);
+
+  // 2) Eyebrow
+  s.addText('PAPER EXECUTIVO', {
+    x: leftX, y: SAFE + 0.75, w: leftW, h: 0.3,
+    fontSize: 10, bold: true, color: C.teal, fontFace: 'Calibri', charSpacing: 3,
+  });
+
+  // 3) Headline — nome da escola (hierarquia máxima)
   s.addText(ctx.analysis.escola.Escola, {
-    x: 0.6, y: 1.5, w: splitX - 1.0, h: 2.6,
-    fontSize: 44, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top', shrinkText: true,
-  });
-  s.addText(`${ctx.analysis.escola.Município} · ${ctx.analysis.escola.UF}  |  Código INEP ${ctx.analysis.escola['Código Inep']}`, {
-    x: 0.6, y: 4.3, w: splitX - 1.0, h: 0.4, fontSize: 13, color: C.text, fontFace: 'Calibri',
+    x: leftX, y: SAFE + 1.1, w: leftW, h: 2.4,
+    fontSize: 40, bold: true, color: C.navy, fontFace: 'Calibri',
+    valign: 'top', shrinkText: true, paraSpaceAfter: 0,
   });
 
-  // Card lavanda com consultor
-  s.addShape('roundRect', { x: 0.6, y: 5.0, w: splitX - 1.0, h: 1.5, fill: { color: C.lavender }, line: { color: C.lavender }, rectRadius: 0.1 } as any);
+  // 4) Filete teal fino abaixo do título — separador editorial
+  s.addShape('rect', {
+    x: leftX, y: SAFE + 3.55, w: 1.2, h: 0.05,
+    fill: { color: C.teal }, line: { color: C.teal },
+  });
+
+  // 5) Meta (município · UF · INEP)
+  s.addText(
+    [
+      { text: `${ctx.analysis.escola.Município} · ${ctx.analysis.escola.UF}`, options: { bold: true, color: C.navy } },
+      { text: '   |   ', options: { color: C.border } },
+      { text: `INEP ${ctx.analysis.escola['Código Inep']}`, options: { color: C.muted } },
+      { text: '   |   ', options: { color: C.border } },
+      { text: `Raio ${fmtKm(ctx.raioKm)} ${ctx.raioMode === 'personalizado' ? '(personalizado)' : ''}`.trim(), options: { color: C.muted } },
+    ] as any,
+    { x: leftX, y: SAFE + 3.75, w: leftW, h: 0.4, fontSize: 13, fontFace: 'Calibri' }
+  );
+
+  // 6) Bloco "Preparado para" — consultor (estilo ficha técnica)
+  const consY = SAFE + 4.55;
+  s.addText('PREPARADO PARA', {
+    x: leftX, y: consY, w: leftW, h: 0.28,
+    fontSize: 9, bold: true, color: C.muted, fontFace: 'Calibri', charSpacing: 2,
+  });
+  s.addText(ctx.analysis.escola.Escola, {
+    x: leftX, y: consY + 0.28, w: leftW, h: 0.36,
+    fontSize: 14, bold: true, color: C.navy, fontFace: 'Calibri',
+  });
+
   if (ctx.session) {
-    s.addText('Consultor', { x: 0.85, y: 5.15, w: 4, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
-    s.addText(`${ctx.session.nome} · ${ctx.session.codigo}`, { x: 0.85, y: 5.42, w: splitX - 1.5, h: 0.35, fontSize: 14, bold: true, color: C.navy, fontFace: 'Calibri' });
+    s.addText('CONSULTOR RESPONSÁVEL', {
+      x: leftX, y: consY + 0.85, w: leftW, h: 0.28,
+      fontSize: 9, bold: true, color: C.muted, fontFace: 'Calibri', charSpacing: 2,
+    });
+    s.addText(
+      [
+        { text: ctx.session.nome, options: { bold: true, color: C.navy } },
+        { text: `   ·   Cód. ${ctx.session.codigo}`, options: { color: C.muted } },
+      ] as any,
+      { x: leftX, y: consY + 1.13, w: leftW, h: 0.36, fontSize: 13, fontFace: 'Calibri' }
+    );
   }
-  s.addShape('line', { x: 0.85, y: 5.85, w: splitX - 1.5, h: 0, line: { color: C.lavenderDark, width: 0.5 } });
-  s.addText('Editora do Brasil', { x: 0.85, y: 5.92, w: 4, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
-  s.addText('Transformando o país pela educação.', { x: 0.85, y: 6.18, w: splitX - 1.5, h: 0.3, fontSize: 12, color: C.navy, fontFace: 'Calibri' });
+
+  // 7) Rodapé institucional do painel esquerdo
+  s.addShape('line', {
+    x: leftX, y: PPT_H - SAFE - 0.55, w: leftW, h: 0,
+    line: { color: C.borderLight, width: 0.75 },
+  });
+  s.addText(
+    [
+      { text: 'Editora do Brasil', options: { bold: true, color: C.navy } },
+      { text: '   ·   Transformando o país pela educação.', options: { italic: true, color: C.muted } },
+    ] as any,
+    { x: leftX, y: PPT_H - SAFE - 0.4, w: leftW, h: 0.3, fontSize: 11, fontFace: 'Calibri' }
+  );
 }
 
 // ----- 2. Abertura
