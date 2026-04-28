@@ -434,26 +434,25 @@ function renderPdfAbertura(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
     : 'Esta análise consolida o cenário competitivo, demográfico e socioeconômico da sua área de influência para sustentar a conversa de renovação. Nosso objetivo é tornar visíveis as alavancas de crescimento e os riscos a serem endereçados nos próximos ciclos.';
   y = drawParagraph(page, font, intro, M, y, PDF_W - 2 * M, 11, TEXT, 4);
 
-  // Cards institucionais
+  // Cards institucionais (3 pilares)
   const cardW = (PDF_W - 2 * M - 24) / 3;
-  const cardY = 130;
+  const cardY = 150;
   const cards = [
     { title: 'METODOLOGIA', body: 'Censo Escolar 2024, IBGE, Pyxis Potencial de Consumo e cruzamento próprio com a base territorial da Editora do Brasil.' },
     { title: 'INTELIGÊNCIA', body: 'Concorrência, market share por segmento, mensalidade, aderência econômica, potencial de consumo e plano de ação.' },
-    { title: 'COMPROMISSO', body: 'Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola.' },
+    { title: 'PARCERIA', body: 'Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola.' },
   ];
   cards.forEach((c, i) => {
     const x = M + i * (cardW + 12);
-    drawCard(page, x, cardY, cardW, 130, TEAL);
-    page.drawText(c.title, { x: x + 12, y: cardY + 110, size: 9, font: bold, color: TEAL });
-    drawParagraph(page, font, c.body, x + 12, cardY + 88, cardW - 24, 10, TEXT, 3);
+    drawCard(page, x, cardY, cardW, 150, TEAL);
+    page.drawText(c.title, { x: x + 12, y: cardY + 128, size: 9, font: bold, color: TEAL });
+    drawParagraph(page, font, c.body, x + 12, cardY + 102, cardW - 24, 10, TEXT, 3);
   });
 
-  // Bloco de compromisso
-  page.drawRectangle({ x: M, y: 60, width: PDF_W - 2 * M, height: 50, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  page.drawText('Compromisso da Editora do Brasil', { x: M + 14, y: 88, size: 11, font: bold, color: NAVY });
+  // Frase de fechamento (sem repetir COMPROMISSO)
+  page.drawRectangle({ x: M, y: 70, width: PDF_W - 2 * M, height: 50, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
   page.drawText('Construir caminhos, fortalecer relações e apoiar escolas que desejam crescer com consistência, relevância e valor.', {
-    x: M + 14, y: 70, size: 10, font: italic, color: TEXT,
+    x: M + 14, y: 90, size: 11, font: italic, color: NAVY,
   });
 }
 
@@ -983,6 +982,17 @@ function renderPdfSocioeconomico(page: PDFPage, font: PDFFont, bold: PDFFont, it
       ry -= 22;
     });
     page.drawText('● Faixas com poder de compra aderente ao ticket atual da escola.', { x: M, y: ry, size: 8, font: italic, color: MUTED });
+  } else {
+    // Fallback: pirâmide etária 0–19 a partir da demográfica
+    page.drawText('DISTRIBUIÇÃO ETÁRIA 0–19 · MUNICÍPIO', { x: M, y: cardY - 26, size: 10, font: bold, color: NAVY });
+    const faixas = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
+    const popData = faixas.map((f) => ({
+      label: f,
+      value: parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'),
+      color: TEAL,
+    }));
+    drawVBars(page, font, M + 30, cardY - 200, PDF_W - 2 * M - 60, 150, popData, undefined, fmtInt);
+    page.drawText('Faixa etária com filhos em idade escolar — base de mercado potencial para captação no município.', { x: M, y: cardY - 220, size: 8.5, font: italic, color: MUTED });
   }
 
   // Leitura comercial
@@ -1003,7 +1013,23 @@ function renderPdfPotencial(page: PDFPage, font: PDFFont, bold: PDFFont, italic:
   drawPDFTitle(d, 'Potencial de Consumo Educacional e Comercial', `Município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
 
   if (!data.potencial) {
-    page.drawText('Dado de potencial de consumo não disponível para este município.', { x: M, y: PDF_H / 2, size: 12, font: italic, color: MUTED });
+    // Fallback: painel proxy com indicadores socioeconômicos disponíveis
+    let y = PDF_H - CONTENT_TOP - 70;
+    page.drawRectangle({ x: M, y: y - 36, width: PDF_W - 2 * M, height: 32, color: BEIGE, borderColor: BORDER, borderWidth: 0.5 });
+    page.drawText('Pyxis Potencial de Consumo não publicado para este município.', { x: M + 14, y: y - 22, size: 10.5, font: italic, color: NAVY });
+    page.drawText('Apresentamos abaixo proxies socioeconômicos do município para sustentar a leitura comercial.', { x: M + 14, y: y - 36, size: 9, font, color: MUTED });
+    y -= 60;
+
+    if (data.d) {
+      const cardW = (PDF_W - 2 * M - 36) / 4;
+      drawKpiCard(page, font, bold, M + 0 * (cardW + 12), y - 60, cardW, 60, 'Renda Média', fmtBRL(data.rendaMedia), TEAL);
+      drawKpiCard(page, font, bold, M + 1 * (cardW + 12), y - 60, cardW, 60, 'IDH Renda', String(data.idhRenda), NAVY);
+      drawKpiCard(page, font, bold, M + 2 * (cardW + 12), y - 60, cardW, 60, 'IDH Educação', String(data.idhEduc), LIME);
+      drawKpiCard(page, font, bold, M + 3 * (cardW + 12), y - 60, cardW, 60, 'Pop. 0–19', fmtInt(data.pop0_19), TEAL);
+    }
+
+    page.drawRectangle({ x: M, y: 50, width: PDF_W - 2 * M, height: 28, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
+    page.drawText('Sem proxy direto de consumo educacional — use renda média e IDH como referência de capacidade de pagamento da região.', { x: M + 12, y: 60, size: 9.5, font, color: NAVY });
     return;
   }
 
@@ -1087,8 +1113,8 @@ function renderPdfInsights(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
       tagColor: data.popGrowth >= 0 ? TEAL : RED,
       title: 'Tendência Demográfica',
       dado: `${data.popGrowth >= 0 ? '+' : ''}${data.popGrowth.toFixed(1).replace('.', ',')}% na faixa 0–4 (2024→2025)`,
-      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por EI e séries iniciais.' : 'Faixa 0–4 em retração — captação de EI mais disputada nos próximos ciclos.',
-      implic: data.popGrowth >= 0 ? 'Reforçar comunicação de EI agora protege o pipeline.' : 'Antecipar retenção e diversificar oferta.',
+      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por Educação Infantil e séries iniciais.' : 'Faixa 0–4 em retração — captação de Educação Infantil mais disputada nos próximos ciclos.',
+      implic: data.popGrowth >= 0 ? 'Reforçar comunicação de Educação Infantil agora protege o pipeline.' : 'Antecipar retenção e diversificar oferta.',
     },
     {
       tag: data.concs.length >= 10 ? 'RISCO' : 'POSICIONAMENTO',
@@ -1387,7 +1413,7 @@ function pptAbertura(s: PptxGenJS.Slide, ctx: ExportContext, n: number, total: n
   const cards = [
     { t: 'METODOLOGIA', b: 'Censo Escolar 2024, IBGE, Pyxis Potencial de Consumo e cruzamento próprio com a base territorial da Editora do Brasil.' },
     { t: 'INTELIGÊNCIA', b: 'Concorrência, market share por segmento, mensalidade, aderência econômica, potencial de consumo e plano de ação.' },
-    { t: 'COMPROMISSO', b: 'Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola.' },
+    { t: 'PARCERIA', b: 'Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola.' },
   ];
   const cw = (PPT_W - 2 * PPT_M - 0.4) / 3;
   cards.forEach((c, i) => {
@@ -1399,7 +1425,7 @@ function pptAbertura(s: PptxGenJS.Slide, ctx: ExportContext, n: number, total: n
     s.addText(c.b, { x: x + 0.15, y: y + 0.5, w: cw - 0.3, h: 1.1, fontSize: 11, color: C.text, fontFace: 'Calibri', valign: 'top' });
   });
 
-  pptLeitura(s, 'Construir caminhos, fortalecer relações e apoiar escolas que desejam crescer com consistência, relevância e valor.', 5.2, 0.7, 'COMPROMISSO');
+  pptLeitura(s, 'Construir caminhos, fortalecer relações e apoiar escolas que desejam crescer com consistência, relevância e valor.', 5.2, 0.7, 'NOSSO COMPROMISSO');
 }
 
 // ----- 3. Resumo
@@ -1489,8 +1515,8 @@ function pptConcorrenciaMapa(s: PptxGenJS.Slide, ctx: ExportContext, data: any, 
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
   pptTitle(s, 'Concorrência — Mapa e Régua', `Raio ${fmtKm(ctx.raioKm)} · ${ctx.raioMode === 'personalizado' ? 'Personalizado' : 'Padrão'} · ${data.concs.length} concorrentes`);
 
-  // Área do mapa
-  const mx = PPT_M, my = 1.7, mw = 8, mh = 4.0;
+  // Área do mapa — começa um pouco mais abaixo para não conflitar com subtítulo
+  const mx = PPT_M, my = 1.95, mw = 8, mh = 3.8;
   s.addShape('rect', { x: mx, y: my, w: mw, h: mh, fill: { color: C.beige }, line: { color: C.border, width: 0.5 } });
 
   const e = data.e;
@@ -1610,11 +1636,15 @@ function pptMSGeral(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number
     labels: top.map((t: any) => truncate((t.isTarget ? '★ ' : '') + t.name, 28)),
     values: top.map((t: any) => universe > 0 ? Number(((t.total / universe) * 100).toFixed(1)) : 0),
   }];
+  // Cor por barra: escola analisada destacada em navy, demais em teal claro
+  const barColors = top.map((t: any) => (t.isTarget ? C.navy : C.tealDark));
   s.addChart(pptxgenChartType('bar'), chartData, {
     x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M, h: 3.0,
     showTitle: true, title: 'Ranking de Market Share — Top 10',
     titleFontFace: 'Calibri', titleFontSize: 11, titleColor: C.navy,
-    barDir: 'bar', chartColors: [C.teal],
+    barDir: 'bar',
+    chartColors: barColors,
+    chartColorsOpacity: 100,
     showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy, dataLabelFormatCode: '0.0"%"',
     catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 9, valAxisLabelFontSize: 9,
     showLegend: false,
@@ -1807,6 +1837,20 @@ function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
       rowH: 0.28, fontFace: 'Calibri',
       border: { type: 'solid', color: C.borderLight, pt: 0.4 },
     });
+  } else {
+    // Fallback: gráfico de barras de população 0–19
+    const faixas = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
+    const vals = faixas.map(f => parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'));
+    const chartData = [{ name: 'População', labels: faixas, values: vals }];
+    s.addChart(pptxgenChartType('bar'), chartData, {
+      x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M, h: 2.7,
+      showTitle: true, title: 'Distribuição etária 0–19 · município',
+      titleFontFace: 'Calibri', titleFontSize: 11, titleColor: C.navy,
+      barDir: 'col', chartColors: [C.teal],
+      showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy,
+      catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 10, valAxisLabelFontSize: 9,
+      showLegend: false,
+    });
   }
 
   const aderencia = data.aderencia;
@@ -1822,7 +1866,18 @@ function pptPotencial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numb
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
   pptTitle(s, 'Potencial de Consumo Educacional e Comercial', `Município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
   if (!data.potencial) {
-    s.addText('Dado de potencial de consumo não disponível para este município.', { x: PPT_M, y: 3, w: PPT_W - 2 * PPT_M, h: 0.5, fontSize: 14, italic: true, color: C.muted, align: 'center', fontFace: 'Calibri' });
+    // Fallback: painel proxy
+    s.addShape('rect', { x: PPT_M, y: 1.7, w: PPT_W - 2 * PPT_M, h: 0.7, fill: { color: C.beige }, line: { color: C.border, width: 0.5 } });
+    s.addText('Pyxis Potencial de Consumo não publicado para este município.', { x: PPT_M + 0.2, y: 1.78, w: PPT_W - 2 * PPT_M - 0.4, h: 0.3, fontSize: 12, italic: true, color: C.navy, fontFace: 'Calibri' });
+    s.addText('Apresentamos proxies socioeconômicos do município para sustentar a leitura comercial.', { x: PPT_M + 0.2, y: 2.05, w: PPT_W - 2 * PPT_M - 0.4, h: 0.3, fontSize: 10, color: C.muted, fontFace: 'Calibri' });
+    if (data.d) {
+      const cw0 = (PPT_W - 2 * PPT_M - 0.45) / 4;
+      pptKpi(s, PPT_M + 0 * (cw0 + 0.15), 2.65, cw0, 0.85, 'Renda Média', fmtBRL(data.rendaMedia), C.teal);
+      pptKpi(s, PPT_M + 1 * (cw0 + 0.15), 2.65, cw0, 0.85, 'IDH Renda', String(data.idhRenda), C.navy);
+      pptKpi(s, PPT_M + 2 * (cw0 + 0.15), 2.65, cw0, 0.85, 'IDH Educação', String(data.idhEduc), C.lime);
+      pptKpi(s, PPT_M + 3 * (cw0 + 0.15), 2.65, cw0, 0.85, 'Pop. 0–19', fmtInt(data.pop0_19), C.teal);
+    }
+    pptLeitura(s, 'Sem proxy direto de consumo educacional — use renda média e IDH como referência de capacidade de pagamento da região.', PPT_H - 1.0, 0.5, 'LEITURA COMERCIAL');
     return;
   }
   const p = data.potencial;
@@ -1888,8 +1943,8 @@ function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
   const insights = [
     { tag: data.popGrowth >= 0 ? 'OPORTUNIDADE' : 'RISCO', tagColor: data.popGrowth >= 0 ? C.teal : C.red, title: 'Tendência Demográfica',
       dado: `${data.popGrowth >= 0 ? '+' : ''}${data.popGrowth.toFixed(1).replace('.', ',')}% na faixa 0–4`,
-      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por EI e séries iniciais.' : 'Faixa 0–4 em retração — captação de EI mais disputada.',
-      implic: data.popGrowth >= 0 ? 'Reforçar EI agora protege o pipeline.' : 'Antecipar retenção e diversificar oferta.' },
+      leitura: data.popGrowth >= 0 ? 'Base infantil cresce — sustenta demanda futura por Educação Infantil e séries iniciais.' : 'Faixa 0–4 em retração — captação de Educação Infantil mais disputada.',
+      implic: data.popGrowth >= 0 ? 'Reforçar Educação Infantil agora protege o pipeline.' : 'Antecipar retenção e diversificar oferta.' },
     { tag: data.concs.length >= 10 ? 'RISCO' : 'POSICIONAMENTO', tagColor: data.concs.length >= 10 ? C.red : C.navy, title: 'Pressão Competitiva',
       dado: `${data.concs.length} concorrentes · ${fmtInt(data.totalAlunadoArea)} alunos`,
       leitura: data.isFragmented ? 'Mercado fragmentado: diferenciação é o driver de escolha.' : 'Concorrência presente, espaço para ganho de share.',

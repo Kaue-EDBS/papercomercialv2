@@ -25,7 +25,7 @@ function InsightCard({
           <Icon className="w-4 h-4" style={{ color: t.fg }} />
           <span className="font-semibold text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>{title}</span>
         </div>
-        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: t.fg, color: 'white' }}>{t.label}</span>
+        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap" style={{ background: t.fg, color: 'white' }}>{t.label}</span>
       </div>
       <div className="text-lg sm:text-xl font-bold" style={{ color: t.fg }}>{dado}</div>
       <p className="text-[11px] sm:text-xs leading-relaxed" style={{ color: 'hsl(var(--navy))' }}>
