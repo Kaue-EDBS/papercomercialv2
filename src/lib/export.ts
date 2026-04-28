@@ -1973,8 +1973,9 @@ function pptResumo(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number,
   });
 }
 
-// Card local do Resumo: borda fina + acento superior colorido + label + valor
-// destaque=true → valor maior + faixa de fundo tealLight discreta
+// Card local do Resumo — robusto, executivo, com forte hierarquia label/valor
+// destaque=true → fundo tealLight + valor maior
+// neutro=true   → valor menor + itálico (para "dado não disponível")
 function pptResumoCard(
   s: PptxGenJS.Slide,
   x: number, y: number, w: number, h: number,
@@ -1982,19 +1983,20 @@ function pptResumoCard(
   destaque = false, neutro = false,
 ) {
   const fill = destaque ? C.tealLight : C.white;
+  // Card com sombra sutil (linha discreta) + borda fina
   s.addShape('rect', { x, y, w, h, fill: { color: fill }, line: { color: C.borderLight, width: 0.75 } });
-  // Acento superior
-  s.addShape('rect', { x, y, w, h: 0.06, fill: { color: accent }, line: { color: accent } });
-  // Label
+  // Faixa de acento na lateral esquerda (mais "premium" que faixa superior fina)
+  s.addShape('rect', { x, y, w: 0.07, h, fill: { color: accent }, line: { color: accent } });
+  // Label — pequeno, MAIÚSCULO, com tracking, em muted
   s.addText(label.toUpperCase(), {
-    x: x + 0.18, y: y + 0.16, w: w - 0.36, h: 0.26,
-    fontSize: 9, bold: true, color: C.muted, charSpacing: 1.5, fontFace: 'Calibri',
+    x: x + 0.28, y: y + 0.18, w: w - 0.46, h: 0.28,
+    fontSize: 9.5, bold: true, color: C.muted, charSpacing: 2, fontFace: 'Calibri', valign: 'top',
   });
-  // Valor
-  const vSize = destaque ? 30 : 22;
+  // Valor — grande, navy, ocupa o restante do card
+  const vSize = neutro ? 13 : (destaque ? 34 : 26);
   s.addText(value, {
-    x: x + 0.18, y: y + 0.45, w: w - 0.36, h: h - 0.55,
-    fontSize: neutro ? 12 : vSize, bold: !neutro, italic: neutro,
+    x: x + 0.28, y: y + 0.5, w: w - 0.46, h: h - 0.6,
+    fontSize: vSize, bold: !neutro, italic: neutro,
     color: neutro ? C.muted : C.navy,
     fontFace: 'Calibri', shrinkText: true, valign: 'middle',
   });
