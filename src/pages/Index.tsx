@@ -44,6 +44,12 @@ export default function Index() {
   const [error, setError] = useState('');
   const [session, setSession] = useState<ConsultorSession | null>(null);
 
+  // Prefetch do JSON pesado de potencial de consumo (~4MB) em background,
+  // assim quando o usuário chegar na página os dados já estão em cache.
+  useEffect(() => {
+    if (!loading) prefetchPotencialConsumo();
+  }, [loading]);
+
   // Comparative
   const [isComparative, setIsComparative] = useState(false);
   const [compA1, setCompA1] = useState<AnalysisResult | null>(null);
