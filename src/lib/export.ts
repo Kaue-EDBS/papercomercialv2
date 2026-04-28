@@ -636,11 +636,11 @@ function renderPdfResumo(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PD
   });
 }
 
-// Chip teal-light pequeno (PDF) — mesmo espírito do pptChip
+// Chip teal-light (PDF) — equivalente ao pptChip
 function drawPdfChip(page: PDFPage, font: PDFFont, bold: PDFFont, x: number, y: number, label: string) {
-  const w = Math.max(110, bold.widthOfTextAtSize(label, 9) + 22);
-  page.drawRectangle({ x, y, width: w, height: 20, color: TEAL_LIGHT });
-  page.drawText(label, { x: x + 11, y: y + 6, size: 9, font: bold, color: NAVY });
+  const w = Math.max(168, bold.widthOfTextAtSize(label, 9.5) + 28);
+  page.drawRectangle({ x, y, width: w, height: 22, color: TEAL_LIGHT });
+  page.drawText(label, { x: x + 12, y: y + 7, size: 9.5, font: bold, color: NAVY });
 }
 
 // Card do Resumo (PDF) — faixa lateral esquerda + label + valor robusto
