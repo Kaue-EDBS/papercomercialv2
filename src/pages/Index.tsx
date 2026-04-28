@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDataLoader } from '@/hooks/useDataLoader';
+import { prefetchPotencialConsumo } from '@/hooks/usePotencialConsumo';
 import { runAnalysis, rebuildConcorrentes, pickReplacement } from '@/lib/analysis';
 import { AppPage, PresentationType, AnalysisResult, ConsultorSession } from '@/lib/types';
 import Header from '@/components/Header';
