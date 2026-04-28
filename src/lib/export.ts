@@ -1437,20 +1437,40 @@ function pptDonut(s: PptxGenJS.Slide, cx: number, cy: number, r: number, valuePc
 
 // ----- 1. Capa
 function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext) {
-  s.background = { color: C.navy };
-  s.addShape('rect', { x: 0, y: 0, w: 0.1, h: PPT_H, fill: { color: C.teal }, line: { color: C.teal } });
-  s.addText('EDITORA DO BRASIL', { x: 0.6, y: 0.7, w: 6, h: 0.4, fontSize: 13, bold: true, color: C.teal, fontFace: 'Calibri' });
-  s.addShape('rect', { x: 0.6, y: 1.18, w: 0.7, h: 0.04, fill: { color: C.teal }, line: { color: C.teal } });
-  s.addText('Diagnóstico Territorial', { x: 0.6, y: 1.6, w: 12, h: 0.45, fontSize: 18, color: C.tealLight, fontFace: 'Calibri' });
-  s.addText(tipoLabel(ctx.presentationType).toUpperCase(), { x: 0.6, y: 2.15, w: 12, h: 1.0, fontSize: 50, bold: true, color: C.white, fontFace: 'Calibri' });
-  s.addText(ctx.analysis.escola.Escola, { x: 0.6, y: 3.4, w: 12, h: 1.1, fontSize: 24, bold: true, color: C.white, fontFace: 'Calibri', shrinkText: true });
-  s.addText(`${ctx.analysis.escola.Município} · ${ctx.analysis.escola.UF}`, { x: 0.6, y: 4.55, w: 12, h: 0.45, fontSize: 16, color: C.tealLight, fontFace: 'Calibri' });
-  s.addText(`Código INEP ${ctx.analysis.escola['Código Inep']}`, { x: 0.6, y: 5.05, w: 12, h: 0.4, fontSize: 13, color: C.tealLight, fontFace: 'Calibri' });
-
-  s.addText('Transformando o país pela educação.', { x: 0.6, y: PPT_H - 0.7, w: 7, h: 0.4, fontSize: 12, italic: true, color: C.tealLight, fontFace: 'Calibri' });
-  if (ctx.session) {
-    s.addText(`Consultor: ${ctx.session.nome} · ${ctx.session.codigo}`, { x: PPT_W - 5.5, y: PPT_H - 0.7, w: 5, h: 0.4, fontSize: 11, color: C.tealLight, align: 'right', fontFace: 'Calibri' });
+  // Layout split: 60% texto branco | 40% painel navy decorativo
+  const splitX = 8.0;
+  s.background = { color: C.white };
+  s.addShape('rect', { x: splitX, y: 0, w: PPT_W - splitX, h: PPT_H, fill: { color: C.navy }, line: { color: C.navy } });
+  // Detalhes decorativos no painel navy (círculos concêntricos sutis)
+  for (let i = 0; i < 4; i++) {
+    const r = 0.6 + i * 0.7;
+    s.addShape('ellipse', {
+      x: PPT_W - 1.2 - r, y: PPT_H - 1.2 - r, w: r * 2, h: r * 2,
+      fill: { type: 'none' } as any, line: { color: C.navySoft, width: 0.6 },
+    });
   }
+  s.addText('EDB', { x: PPT_W - 2.2, y: 0.6, w: 1.7, h: 0.5, fontSize: 22, bold: true, color: C.lavender, align: 'right', fontFace: 'Calibri', charSpacing: 2 });
+  s.addText('Editora do Brasil', { x: PPT_W - 3.5, y: 1.0, w: 3.0, h: 0.3, fontSize: 11, italic: true, color: C.lavender, align: 'right', fontFace: 'Calibri' });
+
+  // Lado esquerdo: chip + título grande + dados
+  pptChip(s, 0.6, 0.85, `Diagnóstico Territorial · ${tipoLabel(ctx.presentationType)}`);
+  s.addText(ctx.analysis.escola.Escola, {
+    x: 0.6, y: 1.5, w: splitX - 1.0, h: 2.6,
+    fontSize: 44, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top', shrinkText: true,
+  });
+  s.addText(`${ctx.analysis.escola.Município} · ${ctx.analysis.escola.UF}  |  Código INEP ${ctx.analysis.escola['Código Inep']}`, {
+    x: 0.6, y: 4.3, w: splitX - 1.0, h: 0.4, fontSize: 13, color: C.text, fontFace: 'Calibri',
+  });
+
+  // Card lavanda com consultor
+  s.addShape('roundRect', { x: 0.6, y: 5.0, w: splitX - 1.0, h: 1.5, fill: { color: C.lavender }, line: { color: C.lavender }, rectRadius: 0.1 } as any);
+  if (ctx.session) {
+    s.addText('Consultor', { x: 0.85, y: 5.15, w: 4, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
+    s.addText(`${ctx.session.nome} · ${ctx.session.codigo}`, { x: 0.85, y: 5.42, w: splitX - 1.5, h: 0.35, fontSize: 14, bold: true, color: C.navy, fontFace: 'Calibri' });
+  }
+  s.addShape('line', { x: 0.85, y: 5.85, w: splitX - 1.5, h: 0, line: { color: C.lavenderDark, width: 0.5 } });
+  s.addText('Editora do Brasil', { x: 0.85, y: 5.92, w: 4, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
+  s.addText('Transformando o país pela educação.', { x: 0.85, y: 6.18, w: splitX - 1.5, h: 0.3, fontSize: 12, color: C.navy, fontFace: 'Calibri' });
 }
 
 // ----- 2. Abertura
