@@ -397,38 +397,107 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
 
 // ----- 1. Capa
 function renderPdfCapa(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext) {
-  const { escola: e, presentationType } = { escola: ctx.analysis.escola, presentationType: ctx.presentationType };
+  // ============================================================
+  // CAPA PDF — composição central, alinhada ao PPT.
+  // 16:9 (960x540pt). Margem 0,4" ≈ 29pt nas bordas.
+  // ============================================================
+  const e = ctx.analysis.escola;
+  const SAFE = 29;
+  const cx = PDF_W / 2;
+  const center = (text: string, fnt: PDFFont, size: number) => cx - fnt.widthOfTextAtSize(text, size) / 2;
+
+  // Fundo navy
   page.drawRectangle({ x: 0, y: 0, width: PDF_W, height: PDF_H, color: NAVY });
-  // faixa lateral teal
-  page.drawRectangle({ x: 0, y: 0, width: 8, height: PDF_H, color: TEAL });
 
-  page.drawText('EDITORA DO BRASIL', { x: M + 8, y: PDF_H - 80, size: 11, font: bold, color: TEAL });
-  page.drawRectangle({ x: M + 8, y: PDF_H - 92, width: 50, height: 2.5, color: TEAL });
+  // Filetes lima topo/base
+  page.drawRectangle({ x: 0, y: PDF_H - 4, width: PDF_W, height: 4, color: LIME });
+  page.drawRectangle({ x: 0, y: 0, width: PDF_W, height: 4, color: LIME });
 
-  page.drawText('Diagnóstico Territorial', { x: M + 8, y: PDF_H - 150, size: 16, font, color: TEAL_LIGHT });
-  page.drawText(tipoLabel(presentationType).toUpperCase(), { x: M + 8, y: PDF_H - 200, size: 44, font: bold, color: WHITE });
+  // ---------- TOPO: marca ----------
+  const edb = 'E D B';
+  page.drawText(edb, { x: center(edb, bold, 22), y: PDF_H - SAFE - 36, size: 22, font: bold, color: WHITE });
+  const edbSub = 'EDITORA DO BRASIL';
+  page.drawText(edbSub, { x: center(edbSub, font, 9), y: PDF_H - SAFE - 56, size: 9, font, color: TEAL_LIGHT });
 
-  // Nome da escola — wrap se necessário
-  const nameLines = wrapText(e.Escola, bold, 22, PDF_W - M * 2 - 16);
-  let ny = PDF_H - 280;
-  for (const ln of nameLines.slice(0, 2)) {
-    page.drawText(ln, { x: M + 8, y: ny, size: 22, font: bold, color: WHITE });
-    ny -= 28;
+  // Filete teal centralizado
+  page.drawRectangle({ x: cx - 22, y: PDF_H - SAFE - 76, width: 44, height: 2, color: TEAL });
+
+  // ---------- BLOCO CENTRAL ----------
+  // Subtítulo: "Diagnóstico Territorial · [Tipo]"
+  const subL = 'Diagnóstico Territorial';
+  const subSep = '  ·  ';
+  const subR = tipoLabel(ctx.presentationType);
+  const subSize = 14;
+  const wL = font.widthOfTextAtSize(subL, subSize);
+  const wSep = bold.widthOfTextAtSize(subSep, subSize);
+  const wR = bold.widthOfTextAtSize(subR, subSize);
+  const subTotal = wL + wSep + wR;
+  let subX = cx - subTotal / 2;
+  const subY = PDF_H - SAFE - 130;
+  page.drawText(subL, { x: subX, y: subY, size: subSize, font, color: TEAL_LIGHT });
+  subX += wL;
+  page.drawText(subSep, { x: subX, y: subY, size: subSize, font: bold, color: LIME });
+  subX += wSep;
+  page.drawText(subR, { x: subX, y: subY, size: subSize, font: bold, color: WHITE });
+
+  // HEADLINE: nome da escola — busca tamanho que caiba (até 2 linhas)
+  const maxNameW = PDF_W - 2 * SAFE - 40;
+  let nameSize = 44;
+  let nameLines: string[] = [];
+  while (nameSize >= 26) {
+    nameLines = wrapText(e.Escola, bold, nameSize, maxNameW);
+    if (nameLines.length <= 2 && nameLines.every(l => bold.widthOfTextAtSize(l, nameSize) <= maxNameW)) break;
+    nameSize -= 2;
   }
-
-  page.drawText(`${e.Município} · ${e.UF}`, { x: M + 8, y: ny - 8, size: 14, font, color: TEAL_LIGHT });
-  page.drawText(`Código INEP ${e['Código Inep']}`, { x: M + 8, y: ny - 32, size: 12, font, color: TEAL_LIGHT });
-
-  // Rodapé da capa
-  page.drawText('Transformando o país pela educação.', {
-    x: M + 8, y: 36, size: 11, font: italic, color: TEAL_LIGHT,
+  nameLines = nameLines.slice(0, 2);
+  const lineH = nameSize * 1.15;
+  const blockH = nameLines.length * lineH;
+  const blockTop = PDF_H / 2 + blockH / 2 - 10;
+  nameLines.forEach((ln, i) => {
+    page.drawText(ln, {
+      x: center(ln, bold, nameSize),
+      y: blockTop - (i + 1) * lineH + lineH * 0.25,
+      size: nameSize, font: bold, color: WHITE,
+    });
   });
+
+  // Filete lima abaixo do nome
+  const fileteY = PDF_H / 2 - blockH / 2 - 22;
+  page.drawRectangle({ x: cx - 28, y: fileteY, width: 56, height: 2, color: LIME });
+
+  // Município/UF + INEP
+  const metaL = `${e.Município} · ${e.UF}`;
+  const metaSep = '     |     ';
+  const metaR = `Código INEP ${e['Código Inep']}`;
+  const metaSize = 12;
+  const mwL = bold.widthOfTextAtSize(metaL, metaSize);
+  const mwSep = font.widthOfTextAtSize(metaSep, metaSize);
+  const mwR = font.widthOfTextAtSize(metaR, metaSize);
+  let metaX = cx - (mwL + mwSep + mwR) / 2;
+  const metaY = fileteY - 22;
+  page.drawText(metaL, { x: metaX, y: metaY, size: metaSize, font: bold, color: WHITE });
+  metaX += mwL;
+  page.drawText(metaSep, { x: metaX, y: metaY, size: metaSize, font, color: NAVY_SOFT_OR_TEAL_LIGHT() });
+  metaX += mwSep;
+  page.drawText(metaR, { x: metaX, y: metaY, size: metaSize, font, color: TEAL_LIGHT });
+
+  // ---------- RODAPÉ: ficha técnica + lema ----------
+  // Linha divisória curta
+  page.drawRectangle({ x: cx - 90, y: 88, width: 180, height: 0.6, color: TEAL });
+
   if (ctx.session) {
-    const right = `Consultor: ${ctx.session.nome} · ${ctx.session.codigo}`;
-    const w = font.widthOfTextAtSize(right, 10);
-    page.drawText(right, { x: PDF_W - M - w, y: 36, size: 10, font, color: TEAL_LIGHT });
+    const lbl = 'CONSULTOR RESPONSÁVEL';
+    page.drawText(lbl, { x: center(lbl, bold, 7.5), y: 70, size: 7.5, font: bold, color: LIME });
+    const cons = `${ctx.session.nome}  ·  Cód. ${ctx.session.codigo}`;
+    page.drawText(cons, { x: center(cons, font, 11), y: 52, size: 11, font, color: WHITE });
   }
+
+  const lema = 'Transformando o país pela educação.';
+  page.drawText(lema, { x: center(lema, italic, 10), y: 28, size: 10, font: italic, color: TEAL_LIGHT });
 }
+
+// helper local para reutilizar TEAL_LIGHT (separador discreto no centro)
+function NAVY_SOFT_OR_TEAL_LIGHT() { return TEAL_LIGHT; }
 
 // ----- 2. Abertura comercial
 function renderPdfAbertura(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, n: number, total: number) {
@@ -1507,132 +1576,100 @@ function pptDonut(s: PptxGenJS.Slide, cx: number, cy: number, r: number, valuePc
 // ----- 1. Capa
 function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext) {
   // ============================================================
-  // CAPA — paper executivo 16:9
-  // Margem de segurança 0,4". Painel branco (esq.) + painel navy (dir.).
-  // Hierarquia: chip > headline (escola) > meta > consultor > assinatura.
-  // Sem rodapé/numeração na capa (padrão executivo).
+  // CAPA — paper executivo 16:9 · composição central
+  // Fundo navy institucional, conteúdo centralizado, hierarquia
+  // dominada pelo nome da escola. Sem rodapé/numeração.
   // ============================================================
-  const SAFE = 0.4;                       // margem de segurança 16:9
-  const splitX = PPT_W * 0.62;            // 62% branco | 38% navy
-  const leftX = SAFE;
-  const leftW = splitX - SAFE - 0.3;      // largura útil do painel esquerdo
+  const SAFE = 0.4;
+  const cx = PPT_W / 2;
 
-  s.background = { color: C.white };
+  // Fundo navy
+  s.background = { color: C.navy };
 
-  // ---------- Painel direito (navy) ----------
-  s.addShape('rect', { x: splitX, y: 0, w: PPT_W - splitX, h: PPT_H, fill: { color: C.navy }, line: { color: C.navy } });
+  // Filetes finos lima nas bordas superior e inferior — moldura editorial
+  s.addShape('rect', { x: 0, y: 0, w: PPT_W, h: 0.06, fill: { color: C.lime }, line: { color: C.lime } });
+  s.addShape('rect', { x: 0, y: PPT_H - 0.06, w: PPT_W, h: 0.06, fill: { color: C.lime }, line: { color: C.lime } });
 
-  // Filete lima fino no topo do painel — único acento de cor
-  s.addShape('rect', { x: splitX, y: 0, w: PPT_W - splitX, h: 0.06, fill: { color: C.lime }, line: { color: C.lime } });
-
-  // Marca institucional no topo do painel navy
-  const panelX = splitX + 0.45;
-  const panelW = PPT_W - splitX - 0.9;
+  // ---------- TOPO: marca EDB centralizada ----------
   s.addText('EDB', {
-    x: panelX, y: 0.55, w: panelW, h: 0.55,
-    fontSize: 28, bold: true, color: C.white, align: 'left', fontFace: 'Calibri', charSpacing: 4,
+    x: 0, y: SAFE + 0.25, w: PPT_W, h: 0.55,
+    fontSize: 26, bold: true, color: C.white, align: 'center', fontFace: 'Calibri', charSpacing: 6,
   });
-  s.addText('Editora do Brasil', {
-    x: panelX, y: 1.05, w: panelW, h: 0.32,
-    fontSize: 12, italic: true, color: C.tealLight, align: 'left', fontFace: 'Calibri',
-  });
-
-  // Linha divisória sutil
-  s.addShape('line', {
-    x: panelX, y: 1.6, w: panelW, h: 0,
-    line: { color: C.navySoft, width: 0.75 },
+  s.addText('EDITORA DO BRASIL', {
+    x: 0, y: SAFE + 0.85, w: PPT_W, h: 0.3,
+    fontSize: 10, color: C.tealLight, align: 'center', fontFace: 'Calibri', charSpacing: 4,
   });
 
-  // Selo institucional no rodapé do painel navy
-  s.addText('INTELIGÊNCIA DE MERCADO', {
-    x: panelX, y: PPT_H - 1.55, w: panelW, h: 0.3,
-    fontSize: 10, bold: true, color: C.lime, fontFace: 'Calibri', charSpacing: 2,
-  });
-  s.addText('Educação Básica · Brasil', {
-    x: panelX, y: PPT_H - 1.22, w: panelW, h: 0.3,
-    fontSize: 11, color: C.tealLight, fontFace: 'Calibri',
-  });
-  s.addShape('line', {
-    x: panelX, y: PPT_H - 0.8, w: panelW * 0.4, h: 0,
-    line: { color: C.lime, width: 1.25 },
-  });
-  s.addText(new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./, c => c.toUpperCase()), {
-    x: panelX, y: PPT_H - 0.65, w: panelW, h: 0.3,
-    fontSize: 10, color: C.white, fontFace: 'Calibri',
-  });
-
-  // ---------- Painel esquerdo (branco) ----------
-  // 1) Chip categoria
-  pptChip(s, leftX, SAFE + 0.2, `Diagnóstico Territorial · ${tipoLabel(ctx.presentationType)}`);
-
-  // 2) Eyebrow
-  s.addText('PAPER EXECUTIVO', {
-    x: leftX, y: SAFE + 0.75, w: leftW, h: 0.3,
-    fontSize: 10, bold: true, color: C.teal, fontFace: 'Calibri', charSpacing: 3,
-  });
-
-  // 3) Headline — nome da escola (hierarquia máxima)
-  s.addText(ctx.analysis.escola.Escola, {
-    x: leftX, y: SAFE + 1.1, w: leftW, h: 2.4,
-    fontSize: 40, bold: true, color: C.navy, fontFace: 'Calibri',
-    valign: 'top', shrinkText: true, paraSpaceAfter: 0,
-  });
-
-  // 4) Filete teal fino abaixo do título — separador editorial
+  // Filete teal centralizado (separador)
   s.addShape('rect', {
-    x: leftX, y: SAFE + 3.55, w: 1.2, h: 0.05,
+    x: cx - 0.3, y: SAFE + 1.3, w: 0.6, h: 0.04,
     fill: { color: C.teal }, line: { color: C.teal },
   });
 
-  // 5) Meta (município · UF · INEP)
+  // ---------- BLOCO CENTRAL ----------
+  // Subtítulo reforçado: "Diagnóstico Territorial · Prospecção/Renovação"
   s.addText(
     [
-      { text: `${ctx.analysis.escola.Município} · ${ctx.analysis.escola.UF}`, options: { bold: true, color: C.navy } },
-      { text: '   |   ', options: { color: C.border } },
-      { text: `INEP ${ctx.analysis.escola['Código Inep']}`, options: { color: C.muted } },
-      { text: '   |   ', options: { color: C.border } },
-      { text: `Raio ${fmtKm(ctx.raioKm)} ${ctx.raioMode === 'personalizado' ? '(personalizado)' : ''}`.trim(), options: { color: C.muted } },
+      { text: 'Diagnóstico Territorial', options: { color: C.tealLight } },
+      { text: '   ·   ', options: { color: C.lime, bold: true } },
+      { text: tipoLabel(ctx.presentationType), options: { color: C.white, bold: true } },
     ] as any,
-    { x: leftX, y: SAFE + 3.75, w: leftW, h: 0.4, fontSize: 13, fontFace: 'Calibri' }
+    {
+      x: SAFE, y: 2.15, w: PPT_W - 2 * SAFE, h: 0.5,
+      fontSize: 16, align: 'center', fontFace: 'Calibri', charSpacing: 2,
+    }
   );
 
-  // 6) Bloco "Preparado para" — consultor (estilo ficha técnica)
-  const consY = SAFE + 4.55;
-  s.addText('PREPARADO PARA', {
-    x: leftX, y: consY, w: leftW, h: 0.28,
-    fontSize: 9, bold: true, color: C.muted, fontFace: 'Calibri', charSpacing: 2,
-  });
+  // HEADLINE: nome da escola (dominante)
   s.addText(ctx.analysis.escola.Escola, {
-    x: leftX, y: consY + 0.28, w: leftW, h: 0.36,
-    fontSize: 14, bold: true, color: C.navy, fontFace: 'Calibri',
+    x: SAFE, y: 2.85, w: PPT_W - 2 * SAFE, h: 1.85,
+    fontSize: 52, bold: true, color: C.white, align: 'center', valign: 'middle',
+    fontFace: 'Calibri', shrinkText: true,
   });
 
+  // Filete lima curto centralizado abaixo do nome
+  s.addShape('rect', {
+    x: cx - 0.5, y: 4.85, w: 1.0, h: 0.04,
+    fill: { color: C.lime }, line: { color: C.lime },
+  });
+
+  // Município/UF + INEP — compacto, uma linha
+  s.addText(
+    [
+      { text: `${ctx.analysis.escola.Município} · ${ctx.analysis.escola.UF}`, options: { bold: true, color: C.white } },
+      { text: '     |     ', options: { color: C.navySoft } },
+      { text: `Código INEP ${ctx.analysis.escola['Código Inep']}`, options: { color: C.tealLight } },
+    ] as any,
+    {
+      x: SAFE, y: 5.05, w: PPT_W - 2 * SAFE, h: 0.4,
+      fontSize: 13, align: 'center', fontFace: 'Calibri',
+    }
+  );
+
+  // ---------- BLOCO INFERIOR: ficha técnica discreta ----------
+  // Linha divisória sutil
+  s.addShape('line', {
+    x: cx - 2.5, y: PPT_H - 1.45, w: 5.0, h: 0,
+    line: { color: C.navySoft, width: 0.5 },
+  });
+
+  // Consultor — mais discreto (label pequeno + nome em peso médio)
   if (ctx.session) {
     s.addText('CONSULTOR RESPONSÁVEL', {
-      x: leftX, y: consY + 0.85, w: leftW, h: 0.28,
-      fontSize: 9, bold: true, color: C.muted, fontFace: 'Calibri', charSpacing: 2,
+      x: SAFE, y: PPT_H - 1.3, w: PPT_W - 2 * SAFE, h: 0.25,
+      fontSize: 8, color: C.lime, align: 'center', fontFace: 'Calibri', charSpacing: 3,
     });
-    s.addText(
-      [
-        { text: ctx.session.nome, options: { bold: true, color: C.navy } },
-        { text: `   ·   Cód. ${ctx.session.codigo}`, options: { color: C.muted } },
-      ] as any,
-      { x: leftX, y: consY + 1.13, w: leftW, h: 0.36, fontSize: 13, fontFace: 'Calibri' }
-    );
+    s.addText(`${ctx.session.nome}  ·  Cód. ${ctx.session.codigo}`, {
+      x: SAFE, y: PPT_H - 1.05, w: PPT_W - 2 * SAFE, h: 0.32,
+      fontSize: 12, color: C.white, align: 'center', fontFace: 'Calibri',
+    });
   }
 
-  // 7) Rodapé institucional do painel esquerdo
-  s.addShape('line', {
-    x: leftX, y: PPT_H - SAFE - 0.55, w: leftW, h: 0,
-    line: { color: C.borderLight, width: 0.75 },
+  // Lema institucional no rodapé
+  s.addText('Transformando o país pela educação.', {
+    x: SAFE, y: PPT_H - 0.6, w: PPT_W - 2 * SAFE, h: 0.3,
+    fontSize: 11, italic: true, color: C.tealLight, align: 'center', fontFace: 'Calibri',
   });
-  s.addText(
-    [
-      { text: 'Editora do Brasil', options: { bold: true, color: C.navy } },
-      { text: '   ·   Transformando o país pela educação.', options: { italic: true, color: C.muted } },
-    ] as any,
-    { x: leftX, y: PPT_H - SAFE - 0.4, w: leftW, h: 0.3, fontSize: 11, fontFace: 'Calibri' }
-  );
 }
 
 // ----- 2. Abertura
