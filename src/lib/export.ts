@@ -543,38 +543,99 @@ function renderPdfResumo(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PD
   const e = ctx.analysis.escola;
   const a = ctx.analysis;
   const segs = escolaSegmentos(e);
+  const ND = 'Dado não disponível na base fornecida.';
+  const W = PDF_W - 2 * M;
 
-  // Texto executivo
-  const resumo = `${e.Escola}, em ${e.Município}/${e.UF}, atende ${segs.length} segmento(s) ` +
-    `(${segs.join(', ') || 'não informado'}). A área de influência (raio de ${fmtKm(ctx.raioKm)}) reúne ` +
-    `${a.concorrentes.length + 1} escolas elegíveis e ${fmtInt(data.totalAlunadoArea)} alunos. ` +
-    `Market share geral atual de ${fmtPct(a.marketShare.geral)} no município.`;
-  let y = PDF_H - CONTENT_TOP - 64;
-  y = drawParagraph(page, font, resumo, M, y, PDF_W - 2 * M, 11, TEXT, 4);
+  // ---------- BLOCO 1 · LEITURA EXECUTIVA (callout navy) ----------
+  const b1Top = PDF_H - CONTENT_TOP - 50;
+  const b1H = 78;
+  const b1Y = b1Top - b1H;
+  page.drawRectangle({ x: M, y: b1Y, width: W, height: b1H, color: WHITE, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
+  page.drawRectangle({ x: M, y: b1Y, width: 5, height: b1H, color: NAVY });
+  page.drawText('LEITURA EXECUTIVA', { x: M + 14, y: b1Y + b1H - 16, size: 8.5, font: bold, color: NAVY });
+  // Linha 1: nome em navy + município muted
+  const nomeSize = 13;
+  page.drawText(truncate(e.Escola, 60), { x: M + 14, y: b1Y + b1H - 36, size: nomeSize, font: bold, color: NAVY });
+  const nomeW = bold.widthOfTextAtSize(truncate(e.Escola, 60), nomeSize);
+  page.drawText(`  ·  ${e.Município}/${e.UF}`, { x: M + 14 + nomeW, y: b1Y + b1H - 36, size: 11, font, color: MUTED });
+  // Linha 2: chips inline (label muted + valor bold)
+  const segTxt = segs.length ? segs.join(' · ') : ND;
+  const inlineY = b1Y + b1H - 56;
+  let cx = M + 14;
+  const drawPair = (label: string, val: string, valColor: RGB = TEXT, valFont: PDFFont = bold) => {
+    page.drawText(label, { x: cx, y: inlineY, size: 9.5, font, color: MUTED });
+    cx += font.widthOfTextAtSize(label, 9.5) + 2;
+    page.drawText(val, { x: cx, y: inlineY, size: 9.5, font: valFont, color: valColor });
+    cx += valFont.widthOfTextAtSize(val, 9.5) + 14;
+  };
+  drawPair('Segmentos:', segTxt, TEXT, segs.length ? bold : italic);
+  drawPair('Área:', `${a.concorrentes.length + 1} escolas · ${fmtInt(data.totalAlunadoArea)} alunos`, TEXT, bold);
+  drawPair('Market share:', fmtPct(a.marketShare.geral), TEAL_DARK, bold);
 
-  // Cenário do município
-  page.drawText('CENÁRIO EDUCACIONAL DO MUNICÍPIO', { x: M, y: y - 14, size: 9, font: bold, color: TEAL });
-  y -= 30;
-  const muniW = (PDF_W - 2 * M - 12) / 2;
-  drawKpiCard(page, font, bold, M, y - 60, muniW, 60, 'Total de Escolas', fmtInt(a.escolasMunicipio.length), NAVY);
-  drawKpiCard(page, font, bold, M + muniW + 12, y - 60, muniW, 60, 'Total de Alunos', fmtInt(a.escolasMunicipio.reduce((s, x) => s + num(x['Alunado Total']), 0)), NAVY);
-  y -= 76;
-
-  // Indicadores da escola
-  page.drawText('INDICADORES DA ESCOLA ANALISADA', { x: M, y: y - 14, size: 9, font: bold, color: TEAL });
-  y -= 30;
-  const escW = (PDF_W - 2 * M - 24) / 3;
-  const mensLabel = (!e.Mensalidade || e.Mensalidade === '0')
-    ? 'Dado não disponível'
-    : e.Mensalidade;
-  drawKpiCard(page, font, bold, M, y - 60, escW, 60, 'Raio Operacional', fmtKm(ctx.raioKm), TEAL);
-  drawKpiCard(page, font, bold, M + escW + 12, y - 60, escW, 60, 'Market Share', fmtPct(a.marketShare.geral), LIME);
-  drawKpiCard(page, font, bold, M + 2 * (escW + 12), y - 60, escW, 60, 'Faixa de Mensalidade', mensLabel, NAVY);
-
-  // Metodologia (rodapé)
-  page.drawText('Metodologia: Censo Escolar 2024 + critérios de proximidade, faixa de mensalidade e segmentos comuns. Top 15 concorrentes por relevância competitiva.', {
-    x: M, y: 56, size: 8.5, font: italic, color: MUTED,
+  // ---------- BLOCO 2 · CENÁRIO DO MUNICÍPIO ----------
+  const b2Top = b1Y - 22;
+  // Chip + sub-rótulo
+  drawPdfChip(page, font, bold, M, b2Top - 18, 'CENÁRIO DO MUNICÍPIO');
+  page.drawText('Dimensão total do mercado escolar no município de referência', {
+    x: M + 158, y: b2Top - 14, size: 9, font: italic, color: MUTED,
   });
+  // Faixa beige
+  const muniRowH = 66;
+  const muniRowY = b2Top - 28 - muniRowH;
+  page.drawRectangle({ x: M, y: muniRowY, width: W, height: muniRowH, color: BEIGE });
+  const muniW = (W - 36) / 2;
+  drawResumoCard(page, font, bold, italic, M + 12, muniRowY + 9, muniW, muniRowH - 18, 'Total de Escolas', fmtInt(a.escolasMunicipio.length), NAVY, false);
+  drawResumoCard(page, font, bold, italic, M + 12 + muniW + 12, muniRowY + 9, muniW, muniRowH - 18, 'Total de Alunos', fmtInt(a.escolasMunicipio.reduce((s, x) => s + num(x['Alunado Total']), 0)), NAVY, false);
+
+  // ---------- BLOCO 3 · INDICADORES DA ESCOLA ANALISADA ----------
+  const b3Top = muniRowY - 22;
+  drawPdfChip(page, font, bold, M, b3Top - 18, 'ESCOLA ANALISADA');
+  page.drawText('Indicadores operacionais e de posicionamento competitivo', {
+    x: M + 158, y: b3Top - 14, size: 9, font: italic, color: MUTED,
+  });
+  const escRowH = 88;
+  const escRowY = b3Top - 28 - escRowH;
+  const escW = (W - 24) / 3;
+  const mensRaw = (!e.Mensalidade || e.Mensalidade === '0') ? '' : e.Mensalidade;
+  drawResumoCard(page, font, bold, italic, M, escRowY, escW, escRowH, 'Market Share', fmtPct(a.marketShare.geral), LIME, true);
+  drawResumoCard(page, font, bold, italic, M + escW + 12, escRowY, escW, escRowH, 'Raio Operacional', fmtKm(ctx.raioKm), TEAL, true);
+  drawResumoCard(page, font, bold, italic, M + 2 * (escW + 12), escRowY, escW, escRowH, 'Faixa de Mensalidade', mensRaw || ND, NAVY, false, !mensRaw);
+
+  // ---------- METODOLOGIA — discreta no rodapé ----------
+  page.drawText('Metodologia · Censo Escolar 2024 + critérios de proximidade (CEP), faixa de mensalidade e segmentos comuns. Top 15 concorrentes por relevância competitiva.', {
+    x: M, y: 44, size: 7.5, font: italic, color: MUTED,
+  });
+}
+
+// Chip teal-light pequeno (PDF) — mesmo espírito do pptChip
+function drawPdfChip(page: PDFPage, font: PDFFont, bold: PDFFont, x: number, y: number, label: string) {
+  const w = Math.max(110, bold.widthOfTextAtSize(label, 9) + 22);
+  page.drawRectangle({ x, y, width: w, height: 20, color: TEAL_LIGHT });
+  page.drawText(label, { x: x + 11, y: y + 6, size: 9, font: bold, color: NAVY });
+}
+
+// Card do Resumo (PDF): faixa de acento no topo + label + valor
+function drawResumoCard(
+  page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont,
+  x: number, y: number, w: number, h: number,
+  label: string, value: string, accent: RGB,
+  destaque = false, neutro = false,
+) {
+  const fill = destaque ? TEAL_LIGHT : WHITE;
+  page.drawRectangle({ x, y, width: w, height: h, color: fill, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
+  // Acento topo
+  page.drawRectangle({ x, y: y + h - 3, width: w, height: 3, color: accent });
+  // Label
+  page.drawText(label.toUpperCase(), { x: x + 12, y: y + h - 18, size: 8, font: bold, color: MUTED });
+  // Valor — auto-shrink
+  const targetSize = neutro ? 11 : (destaque ? 30 : 22);
+  let vSize = targetSize;
+  const vFont = neutro ? italic : bold;
+  const vColor = neutro ? MUTED : NAVY;
+  while (vFont.widthOfTextAtSize(value, vSize) > w - 24 && vSize > 9) vSize -= 1;
+  // Centralizar verticalmente abaixo do label
+  const valY = y + (destaque ? 18 : 14);
+  page.drawText(value, { x: x + 12, y: valY, size: vSize, font: vFont, color: vColor });
 }
 
 // ----- 4. Panorama educacional
@@ -1795,25 +1856,113 @@ function pptResumo(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number,
   const e = ctx.analysis.escola;
   const a = ctx.analysis;
   const segs = escolaSegmentos(e);
-  const resumo = `${e.Escola}, em ${e.Município}/${e.UF}, atende ${segs.length} segmento(s) (${segs.join(', ') || 'não informado'}). A área de influência (raio de ${fmtKm(ctx.raioKm)}) reúne ${a.concorrentes.length + 1} escolas elegíveis e ${fmtInt(data.totalAlunadoArea)} alunos. Market share geral atual de ${fmtPct(a.marketShare.geral)} no município.`;
-  s.addText(resumo, { x: PPT_M, y: 1.7, w: PPT_W - 2 * PPT_M, h: 0.9, fontSize: 12, color: C.text, fontFace: 'Calibri' });
 
-  // Cenário município
-  s.addText('CENÁRIO EDUCACIONAL DO MUNICÍPIO', { x: PPT_M, y: 2.7, w: 8, h: 0.3, fontSize: 10, bold: true, color: C.teal, fontFace: 'Calibri' });
-  const w2 = (PPT_W - 2 * PPT_M - 0.2) / 2;
-  pptKpi(s, PPT_M, 3.05, w2, 0.85, 'Total de Escolas', fmtInt(a.escolasMunicipio.length), C.navy);
-  pptKpi(s, PPT_M + w2 + 0.2, 3.05, w2, 0.85, 'Total de Alunos', fmtInt(a.escolasMunicipio.reduce((s2: number, x: any) => s2 + num(x['Alunado Total']), 0)), C.navy);
+  // ============================================================
+  // RESUMO EXECUTIVO — 3 blocos com forte hierarquia visual
+  // 1) Leitura executiva (callout navy à esquerda)
+  // 2) Cenário educacional do município (chip teal + 2 cards navy)
+  // 3) Indicadores da escola analisada (chip teal + 3 cards, MS+raio em destaque)
+  // Rodapé: metodologia discreta
+  // ============================================================
+  const SAFE = 0.4;
+  const W = PPT_W - 2 * SAFE;
+  const ND = 'Dado não disponível na base fornecida.';
 
-  // Indicadores escola
-  s.addText('INDICADORES DA ESCOLA ANALISADA', { x: PPT_M, y: 4.1, w: 8, h: 0.3, fontSize: 10, bold: true, color: C.teal, fontFace: 'Calibri' });
-  const w3 = (PPT_W - 2 * PPT_M - 0.4) / 3;
-  const mensLabel = (!e.Mensalidade || e.Mensalidade === '0') ? 'Dado não disponível' : e.Mensalidade;
-  pptKpi(s, PPT_M, 4.45, w3, 0.85, 'Raio Operacional', fmtKm(ctx.raioKm), C.teal);
-  pptKpi(s, PPT_M + w3 + 0.2, 4.45, w3, 0.85, 'Market Share', fmtPct(a.marketShare.geral), C.lime);
-  pptKpi(s, PPT_M + 2 * (w3 + 0.2), 4.45, w3, 0.85, 'Faixa de Mensalidade', mensLabel, C.navy);
+  // ---------- BLOCO 1 · LEITURA EXECUTIVA ----------
+  const b1Y = 1.65;
+  const b1H = 1.25;
+  // Card branco com borda lateral grossa navy
+  s.addShape('rect', { x: SAFE, y: b1Y, w: W, h: b1H, fill: { color: C.white }, line: { color: C.borderLight, width: 0.75 } });
+  s.addShape('rect', { x: SAFE, y: b1Y, w: 0.09, h: b1H, fill: { color: C.navy }, line: { color: C.navy } });
+  s.addText('LEITURA EXECUTIVA', {
+    x: SAFE + 0.28, y: b1Y + 0.12, w: W - 0.4, h: 0.25,
+    fontSize: 9.5, bold: true, color: C.navy, charSpacing: 2, fontFace: 'Calibri',
+  });
+  const segTxt = segs.length ? segs.join(' · ') : ND;
+  const linha1: any[] = [
+    { text: e.Escola, options: { bold: true, color: C.navy, fontSize: 14 } },
+    { text: `  ·  ${e.Município}/${e.UF}`, options: { color: C.muted, fontSize: 12 } },
+  ];
+  s.addText(linha1, {
+    x: SAFE + 0.28, y: b1Y + 0.36, w: W - 0.4, h: 0.34, fontFace: 'Calibri', valign: 'top',
+  });
+  const linha2: any[] = [
+    { text: 'Segmentos: ', options: { color: C.muted, fontSize: 11 } },
+    { text: segTxt, options: { color: C.text, fontSize: 11, bold: segs.length > 0 } },
+    { text: '   ·   Área de influência: ', options: { color: C.muted, fontSize: 11 } },
+    { text: `${a.concorrentes.length + 1} escolas`, options: { color: C.text, fontSize: 11, bold: true } },
+    { text: ' e ', options: { color: C.muted, fontSize: 11 } },
+    { text: `${fmtInt(data.totalAlunadoArea)} alunos`, options: { color: C.text, fontSize: 11, bold: true } },
+    { text: '   ·   Market share atual: ', options: { color: C.muted, fontSize: 11 } },
+    { text: fmtPct(a.marketShare.geral), options: { color: C.tealDark, fontSize: 11, bold: true } },
+  ];
+  s.addText(linha2, {
+    x: SAFE + 0.28, y: b1Y + 0.72, w: W - 0.4, h: 0.46, fontFace: 'Calibri', valign: 'top',
+  });
 
-  s.addText('Metodologia: Censo Escolar 2024 + critérios de proximidade, faixa de mensalidade e segmentos comuns. Top 15 concorrentes por relevância competitiva.', {
-    x: PPT_M, y: 5.5, w: PPT_W - 2 * PPT_M, h: 0.5, fontSize: 10, italic: true, color: C.muted, fontFace: 'Calibri',
+  // ---------- BLOCO 2 · CENÁRIO EDUCACIONAL DO MUNICÍPIO ----------
+  const b2Y = 3.05;
+  pptChip(s, SAFE, b2Y, 'Cenário do Município');
+  s.addText('Dimensão total do mercado escolar no município de referência', {
+    x: SAFE + 2.25, y: b2Y + 0.05, w: W - 2.3, h: 0.3,
+    fontSize: 10.5, italic: true, color: C.muted, fontFace: 'Calibri', valign: 'middle',
+  });
+  // Faixa beige sutil de fundo (separa visualmente do bloco 3)
+  const muniRowY = b2Y + 0.5;
+  s.addShape('rect', { x: SAFE, y: muniRowY, w: W, h: 1.05, fill: { color: C.beige }, line: { color: C.beige } });
+  const wM = (W - 0.6) / 2;
+  pptResumoCard(s, SAFE + 0.15, muniRowY + 0.12, wM, 0.82, 'Total de Escolas', fmtInt(a.escolasMunicipio.length), C.navy, false);
+  pptResumoCard(s, SAFE + 0.15 + wM + 0.3, muniRowY + 0.12, wM, 0.82, 'Total de Alunos', fmtInt(a.escolasMunicipio.reduce((s2: number, x: any) => s2 + num(x['Alunado Total']), 0)), C.navy, false);
+
+  // ---------- BLOCO 3 · INDICADORES DA ESCOLA ANALISADA ----------
+  const b3Y = 4.85;
+  pptChip(s, SAFE, b3Y, 'Escola Analisada');
+  s.addText('Indicadores operacionais e de posicionamento competitivo', {
+    x: SAFE + 2.25, y: b3Y + 0.05, w: W - 2.3, h: 0.3,
+    fontSize: 10.5, italic: true, color: C.muted, fontFace: 'Calibri', valign: 'middle',
+  });
+  const escRowY = b3Y + 0.5;
+  // Card grande "destaque" Market Share (esq) + Raio (centro) com acento + Mensalidade (dir)
+  const wE = (W - 0.4) / 3;
+  // Market Share — destaque (lime)
+  pptResumoCard(s, SAFE, escRowY, wE, 1.15, 'Market Share', fmtPct(a.marketShare.geral), C.lime, true);
+  // Raio operacional — destaque (teal)
+  pptResumoCard(s, SAFE + wE + 0.2, escRowY, wE, 1.15, 'Raio Operacional', fmtKm(ctx.raioKm), C.teal, true);
+  // Mensalidade — neutro
+  const mensRaw = (!e.Mensalidade || e.Mensalidade === '0') ? '' : e.Mensalidade;
+  pptResumoCard(s, SAFE + 2 * (wE + 0.2), escRowY, wE, 1.15, 'Faixa de Mensalidade', mensRaw || ND, C.navy, false, !mensRaw);
+
+  // ---------- METODOLOGIA — discreta, rodapé ----------
+  s.addText('Metodologia · Censo Escolar 2024 + critérios de proximidade (CEP), faixa de mensalidade e segmentos comuns. Top 15 concorrentes por relevância competitiva.', {
+    x: SAFE, y: PPT_H - 0.62, w: W, h: 0.22,
+    fontSize: 8, italic: true, color: C.muted, fontFace: 'Calibri', valign: 'middle',
+  });
+}
+
+// Card local do Resumo: borda fina + acento superior colorido + label + valor
+// destaque=true → valor maior + faixa de fundo tealLight discreta
+function pptResumoCard(
+  s: PptxGenJS.Slide,
+  x: number, y: number, w: number, h: number,
+  label: string, value: string, accent: string,
+  destaque = false, neutro = false,
+) {
+  const fill = destaque ? C.tealLight : C.white;
+  s.addShape('rect', { x, y, w, h, fill: { color: fill }, line: { color: C.borderLight, width: 0.75 } });
+  // Acento superior
+  s.addShape('rect', { x, y, w, h: 0.06, fill: { color: accent }, line: { color: accent } });
+  // Label
+  s.addText(label.toUpperCase(), {
+    x: x + 0.18, y: y + 0.16, w: w - 0.36, h: 0.26,
+    fontSize: 9, bold: true, color: C.muted, charSpacing: 1.5, fontFace: 'Calibri',
+  });
+  // Valor
+  const vSize = destaque ? 30 : 22;
+  s.addText(value, {
+    x: x + 0.18, y: y + 0.45, w: w - 0.36, h: h - 0.55,
+    fontSize: neutro ? 12 : vSize, bold: !neutro, italic: neutro,
+    color: neutro ? C.muted : C.navy,
+    fontFace: 'Calibri', shrinkText: true, valign: 'middle',
   });
 }
 
