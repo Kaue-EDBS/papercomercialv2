@@ -1275,6 +1275,70 @@ function renderPdfPlanoAcao(page: PDFPage, font: PDFFont, bold: PDFFont, italic:
   });
 }
 
+// ----- 14. Ação Comercial e Marketing (PDF)
+function renderPdfAcaoComercial(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
+  const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
+  drawPDFHeader(d); drawPDFFooter(d);
+  drawPDFTitle(d, 'Ação Comercial & Marketing', 'Recomendações de captação, posicionamento e comunicação');
+
+  const ms = ctx.analysis.marketShare;
+  const segShares = [
+    { l: 'Educação Infantil', v: ms.ei },
+    { l: 'Fund. AI', v: ms.efi },
+    { l: 'Fund. AF', v: ms.efii },
+    { l: 'Ensino Médio', v: ms.em },
+  ].filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+  const bestSeg = segShares[0]?.l ?? 'segmento principal';
+  const weakSeg = segShares[segShares.length - 1]?.l ?? 'segmento de menor share';
+
+  const frentes = [
+    { tag: 'CAPTAÇÃO',        titulo: `Funil dedicado em ${bestSeg}`,
+      bullets: ['Meta numérica por etapa do funil.', 'CPA-alvo por canal.', 'Portas abertas e aulas-experiência.'] },
+    { tag: 'RETENÇÃO',        titulo: `Reforço em ${weakSeg} e rematrícula`,
+      bullets: ['Mapeamento de sinais de evasão.', 'Programa de fidelidade e irmãos.', 'Encontros de transição entre segmentos.'] },
+    { tag: 'POSICIONAMENTO',  titulo: 'Comunicação de valor',
+      bullets: ['Mensagem central pedagógica.',
+        data.adotamBrasil > 0 ? `${data.adotamBrasil} concorrente(s) já adota(m) Editora do Brasil.` : 'Editora do Brasil como diferencial exclusivo.',
+        'Depoimentos e provas sociais.'] },
+    { tag: 'PRESENÇA DIGITAL', titulo: 'Marca, conteúdo e dados',
+      bullets: ['Site otimizado para conversão.', 'Conteúdo orgânico mensal.', 'Dashboard de leads e conversão.'] },
+  ];
+
+  const cardW = (PDF_W - 2 * M - 16) / 2;
+  const cardH = 130;
+  const startY = PDF_H - CONTENT_TOP - 70;
+  frentes.forEach((f, i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    const x = M + col * (cardW + 16);
+    const y = startY - row * (cardH + 14) - cardH;
+    drawCard(page, x, y, cardW, cardH, null);
+    // Borda lateral teal
+    page.drawRectangle({ x, y, width: 4, height: cardH, color: TEAL });
+    // Tag
+    page.drawText(f.tag, { x: x + 14, y: y + cardH - 18, size: 8.5, font: bold, color: TEAL });
+    // Título
+    page.drawText(truncate(f.titulo, 60), { x: x + 14, y: y + cardH - 38, size: 12, font: bold, color: NAVY });
+    // Bullets
+    let by = y + cardH - 60;
+    f.bullets.forEach(b => {
+      page.drawText('•', { x: x + 14, y: by, size: 9, font: bold, color: TEAL });
+      const lines = wrapText(b, font, 9, cardW - 38);
+      lines.slice(0, 2).forEach((ln, idx) => {
+        page.drawText(ln, { x: x + 24, y: by - idx * 11, size: 9, font, color: TEXT });
+      });
+      by -= 11 * Math.min(2, lines.length) + 4;
+    });
+  });
+
+  // Princípio (rodapé acima do footer)
+  page.drawRectangle({ x: M, y: 56, width: PDF_W - 2 * M, height: 32, color: TEAL_LIGHT });
+  page.drawRectangle({ x: M, y: 56, width: 3, height: 32, color: NAVY });
+  page.drawText('PRINCÍPIO', { x: M + 12, y: 76, size: 8, font: bold, color: NAVY });
+  page.drawText('Captação, retenção, posicionamento e presença digital se reforçam — ritual mensal sustenta o resultado.', {
+    x: M + 80, y: 64, size: 9, font, color: NAVY,
+  });
+}
+
 // ----- 14. Encerramento
 function renderPdfEncerramento(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext) {
   page.drawRectangle({ x: 0, y: 0, width: PDF_W, height: PDF_H, color: BEIGE });
