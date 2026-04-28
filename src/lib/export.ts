@@ -1002,7 +1002,23 @@ function renderPdfPotencial(page: PDFPage, font: PDFFont, bold: PDFFont, italic:
   drawPDFTitle(d, 'Potencial de Consumo Educacional e Comercial', `Município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
 
   if (!data.potencial) {
-    page.drawText('Dado de potencial de consumo não disponível para este município.', { x: M, y: PDF_H / 2, size: 12, font: italic, color: MUTED });
+    // Fallback: painel proxy com indicadores socioeconômicos disponíveis
+    let y = PDF_H - CONTENT_TOP - 70;
+    page.drawRectangle({ x: M, y: y - 36, width: PDF_W - 2 * M, height: 32, color: BEIGE, borderColor: BORDER, borderWidth: 0.5 });
+    page.drawText('Pyxis Potencial de Consumo não publicado para este município.', { x: M + 14, y: y - 22, size: 10.5, font: italic, color: NAVY });
+    page.drawText('Apresentamos abaixo proxies socioeconômicos do município para sustentar a leitura comercial.', { x: M + 14, y: y - 36, size: 9, font, color: MUTED });
+    y -= 60;
+
+    if (data.d) {
+      const cardW = (PDF_W - 2 * M - 36) / 4;
+      drawKpiCard(page, font, bold, M + 0 * (cardW + 12), y - 60, cardW, 60, 'Renda Média', fmtBRL(data.rendaMedia), TEAL);
+      drawKpiCard(page, font, bold, M + 1 * (cardW + 12), y - 60, cardW, 60, 'IDH Renda', String(data.idhRenda), NAVY);
+      drawKpiCard(page, font, bold, M + 2 * (cardW + 12), y - 60, cardW, 60, 'IDH Educação', String(data.idhEduc), LIME);
+      drawKpiCard(page, font, bold, M + 3 * (cardW + 12), y - 60, cardW, 60, 'Pop. 0–19', fmtInt(data.pop0_19), TEAL);
+    }
+
+    page.drawRectangle({ x: M, y: 50, width: PDF_W - 2 * M, height: 28, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
+    page.drawText('Sem proxy direto de consumo educacional — use renda média e IDH como referência de capacidade de pagamento da região.', { x: M + 12, y: 60, size: 9.5, font, color: NAVY });
     return;
   }
 
