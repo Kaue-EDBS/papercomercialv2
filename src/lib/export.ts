@@ -1837,7 +1837,18 @@ function pptPotencial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numb
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
   pptTitle(s, 'Potencial de Consumo Educacional e Comercial', `Município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
   if (!data.potencial) {
-    s.addText('Dado de potencial de consumo não disponível para este município.', { x: PPT_M, y: 3, w: PPT_W - 2 * PPT_M, h: 0.5, fontSize: 14, italic: true, color: C.muted, align: 'center', fontFace: 'Calibri' });
+    // Fallback: painel proxy
+    s.addShape('rect', { x: PPT_M, y: 1.7, w: PPT_W - 2 * PPT_M, h: 0.7, fill: { color: C.beige }, line: { color: C.border, width: 0.5 } });
+    s.addText('Pyxis Potencial de Consumo não publicado para este município.', { x: PPT_M + 0.2, y: 1.78, w: PPT_W - 2 * PPT_M - 0.4, h: 0.3, fontSize: 12, italic: true, color: C.navy, fontFace: 'Calibri' });
+    s.addText('Apresentamos proxies socioeconômicos do município para sustentar a leitura comercial.', { x: PPT_M + 0.2, y: 2.05, w: PPT_W - 2 * PPT_M - 0.4, h: 0.3, fontSize: 10, color: C.muted, fontFace: 'Calibri' });
+    if (data.d) {
+      const cw0 = (PPT_W - 2 * PPT_M - 0.45) / 4;
+      pptKpi(s, PPT_M + 0 * (cw0 + 0.15), 2.65, cw0, 0.85, 'Renda Média', fmtBRL(data.rendaMedia), C.teal);
+      pptKpi(s, PPT_M + 1 * (cw0 + 0.15), 2.65, cw0, 0.85, 'IDH Renda', String(data.idhRenda), C.navy);
+      pptKpi(s, PPT_M + 2 * (cw0 + 0.15), 2.65, cw0, 0.85, 'IDH Educação', String(data.idhEduc), C.lime);
+      pptKpi(s, PPT_M + 3 * (cw0 + 0.15), 2.65, cw0, 0.85, 'Pop. 0–19', fmtInt(data.pop0_19), C.teal);
+    }
+    pptLeitura(s, 'Sem proxy direto de consumo educacional — use renda média e IDH como referência de capacidade de pagamento da região.', PPT_H - 1.0, 0.5, 'LEITURA COMERCIAL');
     return;
   }
   const p = data.potencial;
