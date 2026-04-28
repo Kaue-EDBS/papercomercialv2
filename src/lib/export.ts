@@ -1674,36 +1674,117 @@ function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext) {
 
 // ----- 2. Abertura
 function pptAbertura(s: PptxGenJS.Slide, ctx: ExportContext, n: number, total: number) {
+  // ============================================================
+  // ABERTURA COMERCIAL — paper executivo 16:9
+  // Hierarquia: chip > headline 32pt > intro curta 13pt >
+  // bloco "Inteligência de Dados" (4 pilares em cards) >
+  // faixa de fechamento "Nosso Compromisso".
+  // ============================================================
   pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Uma Análise Construída Para a Sua Escola', undefined, 'Abertura Comercial');
+
+  const SAFE = 0.4;
+  const W = PPT_W - 2 * SAFE;
+
+  // 1) Chip + headline
+  pptChip(s, SAFE, 0.55, 'Abertura Comercial');
+  s.addText('Uma análise construída para a sua escola.', {
+    x: SAFE, y: 1.0, w: W, h: 0.85,
+    fontSize: 32, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true,
+  });
+
+  // Filete teal sob o título (separador editorial)
+  s.addShape('rect', {
+    x: SAFE, y: 1.92, w: 0.9, h: 0.05,
+    fill: { color: C.teal }, line: { color: C.teal },
+  });
+
+  // 2) Subtítulo / intro enxuta (1 frase)
   const intro = ctx.presentationType === 'prospeccao'
-    ? `Reunimos dados públicos atualizados — Censo Escolar 2024, IBGE e estudos socioeconômicos — e cruzamos com inteligência de mercado para mapear oportunidades reais de captação, retenção e fortalecimento da marca da ${ctx.analysis.escola.Escola}.`
-    : `Esta análise consolida o cenário competitivo, demográfico e socioeconômico da área de influência da ${ctx.analysis.escola.Escola} para sustentar a conversa de renovação. Tornamos visíveis as alavancas de crescimento e os riscos a serem endereçados nos próximos ciclos.`;
-  s.addText(intro, { x: PPT_M, y: 2.05, w: PPT_W - 2 * PPT_M, h: 1.1, fontSize: 13, color: C.text, fontFace: 'Calibri' });
-
-  // Dois blocos lado a lado: card navy "Inteligência de Dados" + texto "Nosso Compromisso"
-  const colW = (PPT_W - 2 * PPT_M - 0.4) / 2;
-  // Card navy à esquerda
-  const cx = PPT_M, cy = 3.4, ch = 2.6;
-  s.addShape('roundRect', { x: cx, y: cy, w: colW, h: ch, fill: { color: C.navy }, line: { color: C.navy }, rectRadius: 0.12 } as any);
-  s.addText('Inteligência de Dados', { x: cx + 0.3, y: cy + 0.2, w: colW - 0.6, h: 0.45, fontSize: 18, bold: true, color: C.white, fontFace: 'Calibri' });
-  s.addText('Censo Escolar 2024, IBGE, Pyxis Potencial de Consumo e cruzamento próprio com a base territorial da Editora do Brasil.', {
-    x: cx + 0.3, y: cy + 0.75, w: colW - 0.6, h: 0.7, fontSize: 11, color: C.lavender, fontFace: 'Calibri', valign: 'top',
-  });
-  const bullets = ['Market share por segmento', 'Concorrência e mensalidade', 'Aderência econômica'];
-  bullets.forEach((b, i) => {
-    s.addText(`•  ${b}`, { x: cx + 0.3, y: cy + 1.55 + i * 0.32, w: colW - 0.6, h: 0.3, fontSize: 11, color: C.white, fontFace: 'Calibri' });
+    ? `Inteligência territorial aplicada à ${ctx.analysis.escola.Escola} — para mapear oportunidades reais de captação, retenção e marca.`
+    : `Cenário competitivo e socioeconômico da ${ctx.analysis.escola.Escola} consolidado para sustentar a conversa de renovação.`;
+  s.addText(intro, {
+    x: SAFE, y: 2.1, w: W, h: 0.55,
+    fontSize: 14, color: C.text, fontFace: 'Calibri', italic: true, valign: 'top',
   });
 
-  // Texto "Nosso Compromisso" à direita
-  const rx = cx + colW + 0.4;
-  s.addText('Nosso Compromisso', { x: rx, y: cy + 0.2, w: colW, h: 0.45, fontSize: 18, bold: true, color: C.navy, fontFace: 'Calibri' });
-  s.addText('Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola — fortalecendo relações e apoiando instituições que desejam crescer com consistência, relevância e valor.', {
-    x: rx, y: cy + 0.8, w: colW, h: ch - 1.0, fontSize: 12, color: C.text, fontFace: 'Calibri', valign: 'top',
+  // 3) Eyebrow do bloco analítico
+  s.addText('INTELIGÊNCIA DE DADOS', {
+    x: SAFE, y: 2.85, w: W, h: 0.28,
+    fontSize: 10, bold: true, color: C.teal, fontFace: 'Calibri', charSpacing: 3,
+  });
+  s.addText('Cruzamento de fontes públicas e proprietárias para decisão comercial.', {
+    x: SAFE, y: 3.13, w: W, h: 0.28,
+    fontSize: 11, color: C.muted, fontFace: 'Calibri',
   });
 
-  s.addText(`${ctx.analysis.escola.Escola} · INEP ${ctx.analysis.escola['Código Inep']} · Raio ${fmtKm(ctx.raioKm)} ${ctx.raioMode === 'personalizado' ? '(personalizado)' : '(padrão)'}`, {
-    x: PPT_M, y: 6.15, w: PPT_W - 2 * PPT_M, h: 0.3, fontSize: 11, italic: true, color: C.muted, fontFace: 'Calibri',
+  // 4) Quatro pilares analíticos em cards visuais
+  const pillars = [
+    { tag: '01', title: 'Concorrência',     body: 'Mapa territorial e comparativo por raio.' },
+    { tag: '02', title: 'Market Share',     body: 'Participação por segmento na área.' },
+    { tag: '03', title: 'Mensalidade',      body: 'Faixa de preço e posicionamento.' },
+    { tag: '04', title: 'Socioeconômico',   body: 'Renda, faixa etária e potencial.' },
+  ];
+  const cardY = 3.55;
+  const cardH = 1.85;
+  const gap = 0.18;
+  const cardW = (W - gap * (pillars.length - 1)) / pillars.length;
+
+  pillars.forEach((p, i) => {
+    const x = SAFE + i * (cardW + gap);
+    // Card branco com borda fina
+    s.addShape('roundRect', {
+      x, y: cardY, w: cardW, h: cardH,
+      fill: { color: C.white }, line: { color: C.border, width: 0.75 }, rectRadius: 0.08,
+    } as any);
+    // Faixa lateral superior (acento) — alterna teal/navy/lima/teal
+    const accent = i === 2 ? C.lime : (i === 1 ? C.navy : C.teal);
+    s.addShape('rect', {
+      x, y: cardY, w: cardW, h: 0.08,
+      fill: { color: accent }, line: { color: accent },
+    });
+    // Tag numerada
+    s.addText(p.tag, {
+      x: x + 0.2, y: cardY + 0.18, w: cardW - 0.4, h: 0.3,
+      fontSize: 11, bold: true, color: accent, fontFace: 'Calibri', charSpacing: 2,
+    });
+    // Título
+    s.addText(p.title, {
+      x: x + 0.2, y: cardY + 0.5, w: cardW - 0.4, h: 0.45,
+      fontSize: 16, bold: true, color: C.navy, fontFace: 'Calibri',
+    });
+    // Filete fino divisor
+    s.addShape('line', {
+      x: x + 0.2, y: cardY + 1.0, w: 0.4, h: 0,
+      line: { color: C.borderLight, width: 0.75 },
+    });
+    // Descrição curta
+    s.addText(p.body, {
+      x: x + 0.2, y: cardY + 1.1, w: cardW - 0.4, h: cardH - 1.2,
+      fontSize: 11, color: C.muted, fontFace: 'Calibri', valign: 'top',
+    });
+  });
+
+  // 5) Faixa de fechamento "Nosso Compromisso" — destaque visual forte
+  const fY = 5.65;
+  const fH = 1.15;
+  s.addShape('rect', {
+    x: SAFE, y: fY, w: W, h: fH,
+    fill: { color: C.navy }, line: { color: C.navy },
+  });
+  // Filete lima lateral esquerdo
+  s.addShape('rect', {
+    x: SAFE, y: fY, w: 0.1, h: fH,
+    fill: { color: C.lime }, line: { color: C.lime },
+  });
+  // Eyebrow lima
+  s.addText('NOSSO COMPROMISSO', {
+    x: SAFE + 0.35, y: fY + 0.18, w: W - 0.7, h: 0.25,
+    fontSize: 9.5, bold: true, color: C.lime, fontFace: 'Calibri', charSpacing: 3,
+  });
+  // Frase de fechamento — curta, impactante
+  s.addText('Mais do que dados: caminhos comerciais para escolas que querem crescer com consistência, relevância e valor.', {
+    x: SAFE + 0.35, y: fY + 0.45, w: W - 0.7, h: fH - 0.55,
+    fontSize: 14, color: C.white, fontFace: 'Calibri', italic: true, valign: 'top',
   });
 }
 
