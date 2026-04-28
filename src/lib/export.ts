@@ -434,26 +434,25 @@ function renderPdfAbertura(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
     : 'Esta análise consolida o cenário competitivo, demográfico e socioeconômico da sua área de influência para sustentar a conversa de renovação. Nosso objetivo é tornar visíveis as alavancas de crescimento e os riscos a serem endereçados nos próximos ciclos.';
   y = drawParagraph(page, font, intro, M, y, PDF_W - 2 * M, 11, TEXT, 4);
 
-  // Cards institucionais
+  // Cards institucionais (3 pilares)
   const cardW = (PDF_W - 2 * M - 24) / 3;
-  const cardY = 130;
+  const cardY = 150;
   const cards = [
     { title: 'METODOLOGIA', body: 'Censo Escolar 2024, IBGE, Pyxis Potencial de Consumo e cruzamento próprio com a base territorial da Editora do Brasil.' },
     { title: 'INTELIGÊNCIA', body: 'Concorrência, market share por segmento, mensalidade, aderência econômica, potencial de consumo e plano de ação.' },
-    { title: 'COMPROMISSO', body: 'Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola.' },
+    { title: 'PARCERIA', body: 'Mais do que dados: caminhos comerciais. A Editora do Brasil constrói parceria de longo prazo com a sua escola.' },
   ];
   cards.forEach((c, i) => {
     const x = M + i * (cardW + 12);
-    drawCard(page, x, cardY, cardW, 130, TEAL);
-    page.drawText(c.title, { x: x + 12, y: cardY + 110, size: 9, font: bold, color: TEAL });
-    drawParagraph(page, font, c.body, x + 12, cardY + 88, cardW - 24, 10, TEXT, 3);
+    drawCard(page, x, cardY, cardW, 150, TEAL);
+    page.drawText(c.title, { x: x + 12, y: cardY + 128, size: 9, font: bold, color: TEAL });
+    drawParagraph(page, font, c.body, x + 12, cardY + 102, cardW - 24, 10, TEXT, 3);
   });
 
-  // Bloco de compromisso
-  page.drawRectangle({ x: M, y: 60, width: PDF_W - 2 * M, height: 50, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  page.drawText('Compromisso da Editora do Brasil', { x: M + 14, y: 88, size: 11, font: bold, color: NAVY });
+  // Frase de fechamento (sem repetir COMPROMISSO)
+  page.drawRectangle({ x: M, y: 70, width: PDF_W - 2 * M, height: 50, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
   page.drawText('Construir caminhos, fortalecer relações e apoiar escolas que desejam crescer com consistência, relevância e valor.', {
-    x: M + 14, y: 70, size: 10, font: italic, color: TEXT,
+    x: M + 14, y: 90, size: 11, font: italic, color: NAVY,
   });
 }
 
