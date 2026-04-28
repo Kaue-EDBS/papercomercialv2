@@ -538,7 +538,6 @@ function renderPdfAbertura(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
 function renderPdfResumo(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Resumo Executivo', 'Visão geral do cenário escolar na área de influência');
 
   const e = ctx.analysis.escola;
   const a = ctx.analysis;
@@ -546,64 +545,94 @@ function renderPdfResumo(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PD
   const ND = 'Dado não disponível na base fornecida.';
   const W = PDF_W - 2 * M;
 
-  // ---------- BLOCO 1 · LEITURA EXECUTIVA (callout navy) ----------
-  const b1Top = PDF_H - CONTENT_TOP - 50;
-  const b1H = 78;
+  // ---------- TOPO · TÍTULO COMPACTO COM FILETE ----------
+  // (substitui drawPDFTitle para encaixar densamente o slide inteiro)
+  page.drawText('Resumo Executivo', { x: M, y: PDF_H - CONTENT_TOP - 12, size: 22, font: bold, color: NAVY });
+  page.drawRectangle({ x: M, y: PDF_H - CONTENT_TOP - 22, width: 36, height: 3, color: TEAL });
+  page.drawText('Visão geral do cenário escolar na área de influência', {
+    x: M, y: PDF_H - CONTENT_TOP - 38, size: 10.5, font: italic, color: MUTED,
+  });
+
+  // ---------- BLOCO 1 · LEITURA EXECUTIVA (callout robusto) ----------
+  const b1Top = PDF_H - CONTENT_TOP - 52;
+  const b1H = 100;
   const b1Y = b1Top - b1H;
-  page.drawRectangle({ x: M, y: b1Y, width: W, height: b1H, color: WHITE, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
-  page.drawRectangle({ x: M, y: b1Y, width: 5, height: b1H, color: NAVY });
-  page.drawText('LEITURA EXECUTIVA', { x: M + 14, y: b1Y + b1H - 16, size: 8.5, font: bold, color: NAVY });
-  // Linha 1: nome em navy + município muted
-  const nomeSize = 13;
-  page.drawText(truncate(e.Escola, 60), { x: M + 14, y: b1Y + b1H - 36, size: nomeSize, font: bold, color: NAVY });
-  const nomeW = bold.widthOfTextAtSize(truncate(e.Escola, 60), nomeSize);
-  page.drawText(`  ·  ${e.Município}/${e.UF}`, { x: M + 14 + nomeW, y: b1Y + b1H - 36, size: 11, font, color: MUTED });
-  // Linha 2: chips inline (label muted + valor bold)
+  // Fundo beige + borda fina + faixa navy à esquerda
+  page.drawRectangle({ x: M, y: b1Y, width: W, height: b1H, color: BEIGE, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
+  page.drawRectangle({ x: M, y: b1Y, width: 6, height: b1H, color: NAVY });
+  // Eyebrow
+  page.drawText('LEITURA EXECUTIVA', {
+    x: M + 18, y: b1Y + b1H - 16, size: 8.5, font: bold, color: TEAL_DARK,
+  });
+  // Linha 1 — nome (grande) + município (muted)
+  const nomeSize = 16;
+  const nomeStr = truncate(e.Escola, 60);
+  page.drawText(nomeStr, { x: M + 18, y: b1Y + b1H - 38, size: nomeSize, font: bold, color: NAVY });
+  const nomeW = bold.widthOfTextAtSize(nomeStr, nomeSize);
+  page.drawText(`   ·   ${e.Município}/${e.UF}`, {
+    x: M + 18 + nomeW, y: b1Y + b1H - 38, size: 12, font, color: MUTED,
+  });
+  // Linha 2 — segmentos
   const segTxt = segs.length ? segs.join(' · ') : ND;
-  const inlineY = b1Y + b1H - 56;
-  let cx = M + 14;
-  const drawPair = (label: string, val: string, valColor: RGB = TEXT, valFont: PDFFont = bold) => {
-    page.drawText(label, { x: cx, y: inlineY, size: 9.5, font, color: MUTED });
-    cx += font.widthOfTextAtSize(label, 9.5) + 2;
-    page.drawText(val, { x: cx, y: inlineY, size: 9.5, font: valFont, color: valColor });
-    cx += valFont.widthOfTextAtSize(val, 9.5) + 14;
-  };
-  drawPair('Segmentos:', segTxt, TEXT, segs.length ? bold : italic);
-  drawPair('Área:', `${a.concorrentes.length + 1} escolas · ${fmtInt(data.totalAlunadoArea)} alunos`, TEXT, bold);
-  drawPair('Market share:', fmtPct(a.marketShare.geral), TEAL_DARK, bold);
+  page.drawText('Segmentos atendidos:', { x: M + 18, y: b1Y + b1H - 60, size: 10, font, color: MUTED });
+  page.drawText(segTxt, {
+    x: M + 18 + font.widthOfTextAtSize('Segmentos atendidos:', 10) + 6,
+    y: b1Y + b1H - 60, size: 10,
+    font: segs.length ? bold : italic, color: segs.length ? TEXT : MUTED,
+  });
+  // Linha 3 — área de influência + market share (números em destaque)
+  let lx = M + 18;
+  const inlineY3 = b1Y + b1H - 80;
+  page.drawText('Área de influência:', { x: lx, y: inlineY3, size: 10, font, color: MUTED });
+  lx += font.widthOfTextAtSize('Área de influência:', 10) + 6;
+  const escTxt = `${a.concorrentes.length + 1} escolas`;
+  page.drawText(escTxt, { x: lx, y: inlineY3, size: 10, font: bold, color: NAVY });
+  lx += bold.widthOfTextAtSize(escTxt, 10) + 4;
+  page.drawText('e', { x: lx, y: inlineY3, size: 10, font, color: MUTED });
+  lx += font.widthOfTextAtSize('e', 10) + 4;
+  const aluTxt = `${fmtInt(data.totalAlunadoArea)} alunos`;
+  page.drawText(aluTxt, { x: lx, y: inlineY3, size: 10, font: bold, color: NAVY });
+  lx += bold.widthOfTextAtSize(aluTxt, 10) + 28;
+  page.drawText('Market share atual:', { x: lx, y: inlineY3, size: 10, font, color: MUTED });
+  lx += font.widthOfTextAtSize('Market share atual:', 10) + 6;
+  page.drawText(fmtPct(a.marketShare.geral), { x: lx, y: inlineY3 - 1, size: 12, font: bold, color: TEAL_DARK });
 
   // ---------- BLOCO 2 · CENÁRIO DO MUNICÍPIO ----------
   const b2Top = b1Y - 22;
-  // Chip + sub-rótulo
-  drawPdfChip(page, font, bold, M, b2Top - 18, 'CENÁRIO DO MUNICÍPIO');
+  drawPdfChip(page, font, bold, M, b2Top - 20, 'CENÁRIO DO MUNICÍPIO');
   page.drawText('Dimensão total do mercado escolar no município de referência', {
-    x: M + 158, y: b2Top - 14, size: 9, font: italic, color: MUTED,
+    x: M + 178, y: b2Top - 14, size: 9.5, font: italic, color: MUTED,
   });
-  // Faixa beige
-  const muniRowH = 66;
-  const muniRowY = b2Top - 28 - muniRowH;
-  page.drawRectangle({ x: M, y: muniRowY, width: W, height: muniRowH, color: BEIGE });
-  const muniW = (W - 36) / 2;
-  drawResumoCard(page, font, bold, italic, M + 12, muniRowY + 9, muniW, muniRowH - 18, 'Total de Escolas', fmtInt(a.escolasMunicipio.length), NAVY, false);
-  drawResumoCard(page, font, bold, italic, M + 12 + muniW + 12, muniRowY + 9, muniW, muniRowH - 18, 'Total de Alunos', fmtInt(a.escolasMunicipio.reduce((s, x) => s + num(x['Alunado Total']), 0)), NAVY, false);
+  const muniRowH = 78;
+  const muniRowY = b2Top - 30 - muniRowH;
+  const muniW = (W - 14) / 2;
+  drawResumoCard(page, font, bold, italic, M, muniRowY, muniW, muniRowH, 'Total de Escolas', fmtInt(a.escolasMunicipio.length), NAVY, false);
+  drawResumoCard(page, font, bold, italic, M + muniW + 14, muniRowY, muniW, muniRowH, 'Total de Alunos', fmtInt(a.escolasMunicipio.reduce((s, x) => s + num(x['Alunado Total']), 0)), NAVY, false);
 
-  // ---------- BLOCO 3 · INDICADORES DA ESCOLA ANALISADA ----------
+  // ---------- BLOCO 3 · ESCOLA ANALISADA ----------
   const b3Top = muniRowY - 22;
-  drawPdfChip(page, font, bold, M, b3Top - 18, 'ESCOLA ANALISADA');
-  page.drawText('Indicadores operacionais e de posicionamento competitivo', {
-    x: M + 158, y: b3Top - 14, size: 9, font: italic, color: MUTED,
+  drawPdfChip(page, font, bold, M, b3Top - 20, 'ESCOLA ANALISADA');
+  page.drawText('Indicadores operacionais e posicionamento competitivo', {
+    x: M + 178, y: b3Top - 14, size: 9.5, font: italic, color: MUTED,
   });
-  const escRowH = 88;
-  const escRowY = b3Top - 28 - escRowH;
+  const escRowH = 92;
+  const escRowY = b3Top - 30 - escRowH;
   const escW = (W - 24) / 3;
   const mensRaw = (!e.Mensalidade || e.Mensalidade === '0') ? '' : e.Mensalidade;
   drawResumoCard(page, font, bold, italic, M, escRowY, escW, escRowH, 'Market Share', fmtPct(a.marketShare.geral), LIME, true);
   drawResumoCard(page, font, bold, italic, M + escW + 12, escRowY, escW, escRowH, 'Raio Operacional', fmtKm(ctx.raioKm), TEAL, true);
   drawResumoCard(page, font, bold, italic, M + 2 * (escW + 12), escRowY, escW, escRowH, 'Faixa de Mensalidade', mensRaw || ND, NAVY, false, !mensRaw);
 
-  // ---------- METODOLOGIA — discreta no rodapé ----------
-  page.drawText('Metodologia · Censo Escolar 2024 + critérios de proximidade (CEP), faixa de mensalidade e segmentos comuns. Top 15 concorrentes por relevância competitiva.', {
-    x: M, y: 44, size: 7.5, font: italic, color: MUTED,
+  // ---------- METODOLOGIA — filete + texto mais legível ----------
+  // Filete sutil acima da metodologia, separando do rodapé do template
+  page.drawLine({
+    start: { x: M, y: 56 }, end: { x: PDF_W - M, y: 56 },
+    thickness: 0.4, color: BORDER_LIGHT,
+  });
+  page.drawText('Metodologia ·', { x: M, y: 44, size: 8.5, font: bold, color: TEAL_DARK });
+  const methX = M + bold.widthOfTextAtSize('Metodologia ·', 8.5) + 4;
+  page.drawText('Censo Escolar 2024 + critérios de proximidade (CEP), faixa de mensalidade e segmentos comuns. Top 15 concorrentes por relevância competitiva.', {
+    x: methX, y: 44, size: 8.5, font: italic, color: MUTED,
   });
 }
 
