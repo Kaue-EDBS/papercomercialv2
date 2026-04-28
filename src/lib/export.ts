@@ -1672,10 +1672,12 @@ function pptConcorrenciaMapa(s: PptxGenJS.Slide, ctx: ExportContext, data: any, 
 // ----- 6. Concorrência tabela
 function pptConcorrenciaTabela(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Concorrência — Tabela', `Top ${Math.min(15, data.concs.length)} concorrentes ordenados por relevância`);
+  const TOP_N = 8;
+  const shown = Math.min(TOP_N, data.concs.length);
+  pptTitle(s, 'Concorrência — Tabela', `Top ${shown} concorrentes ordenados por relevância competitiva`);
   const headers = ['Escola', 'Mensalidade', 'Matrículas', 'Distância', 'Segmentos', 'Ed. Brasil'];
   const rows: any[] = [headers.map(h => ({ text: h, options: { bold: true, color: C.white, fill: { color: C.navy }, fontSize: 10, fontFace: 'Calibri' } }))];
-  data.concs.slice(0, 15).forEach((c: any, idx: number) => {
+  data.concs.slice(0, TOP_N).forEach((c: any, idx: number) => {
     const dist = c.distancia !== null ? fmtKm(c.distancia) : (c.proximidadeCEP ? 'Estimado por CEP' : 'Sem coordenadas');
     const eb = (c.escola['Adota Brasil'] || '').toLowerCase() === 'sim';
     const fill = idx % 2 === 0 ? C.beige : C.white;
@@ -1694,8 +1696,16 @@ function pptConcorrenciaTabela(s: PptxGenJS.Slide, ctx: ExportContext, data: any
     rowH: 0.32, fontFace: 'Calibri',
     border: { type: 'solid', color: C.border, pt: 0.4 },
   });
-  s.addText(`${data.concs.length} concorrente(s) elegíveis · ${data.mesmaFaixa} na mesma faixa · ${data.adotamBrasil} adota(m) Editora do Brasil.`, {
-    x: PPT_M, y: PPT_H - 1.0, w: PPT_W - 2 * PPT_M, h: 0.3, fontSize: 10, italic: true, color: C.muted, fontFace: 'Calibri',
+  const restantes = Math.max(0, data.concs.length - shown);
+  const linhaResumo = `${data.concs.length} concorrente(s) elegíveis · ${data.mesmaFaixa} na mesma faixa · ${data.adotamBrasil} adota(m) Editora do Brasil.`;
+  const nota = restantes > 0
+    ? `Top ${shown} exibidos. Demais ${restantes} concorrente(s) disponíveis na ferramenta digital. Ranking por proximidade, faixa de mensalidade e segmentos comuns.`
+    : 'Ranking por proximidade, faixa de mensalidade e segmentos comuns. Tabela completa também disponível na ferramenta digital.';
+  s.addText(linhaResumo, {
+    x: PPT_M, y: PPT_H - 1.05, w: PPT_W - 2 * PPT_M, h: 0.28, fontSize: 10, color: C.text, fontFace: 'Calibri',
+  });
+  s.addText(nota, {
+    x: PPT_M, y: PPT_H - 0.78, w: PPT_W - 2 * PPT_M, h: 0.28, fontSize: 9, italic: true, color: C.muted, fontFace: 'Calibri',
   });
 }
 
