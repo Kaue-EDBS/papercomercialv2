@@ -1347,6 +1347,7 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
     (s, n) => pptPotencial(s, ctx, data, n, total),
     (s, n) => pptInsights(s, ctx, data, n, total),
     (s, n) => pptPlano(s, ctx, data, n, total),
+    (s, n) => pptAcaoComercial(s, ctx, data, n, total),
     (s) => pptEncerramento(s, ctx),
   ];
 
