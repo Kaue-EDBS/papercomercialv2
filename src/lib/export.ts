@@ -2149,6 +2149,89 @@ function pptPlano(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
   });
 }
 
+// ----- 14. Ação Comercial e Marketing
+function pptAcaoComercial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
+  pptHeader(s, ctx); pptFooter(s, ctx, n, total);
+  pptTitle(s, 'Ação Comercial & Marketing', 'Recomendações de captação, posicionamento e comunicação', 'Roteiro de execução');
+
+  const ms = ctx.analysis.marketShare;
+  const segShares = [
+    { l: 'Educação Infantil', v: ms.ei },
+    { l: 'Fund. AI', v: ms.efi },
+    { l: 'Fund. AF', v: ms.efii },
+    { l: 'Ensino Médio', v: ms.em },
+  ].filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+  const bestSeg = segShares[0]?.l ?? 'segmento principal';
+  const weakSeg = segShares[segShares.length - 1]?.l ?? 'segmento de menor share';
+
+  // 4 frentes em grid 2x2 (estilo cards com borda lateral teal)
+  const frentes = [
+    {
+      tag: 'CAPTAÇÃO',
+      titulo: `Funil dedicado em ${bestSeg}`,
+      bullets: [
+        'Meta numérica por etapa: cadastros → agendas → visitas → matrículas.',
+        'CPA-alvo definido por canal (orgânico, indicação, mídia paga).',
+        'Ofertas de portas abertas e aulas-experiência calendarizadas.',
+      ],
+    },
+    {
+      tag: 'RETENÇÃO',
+      titulo: `Reforço em ${weakSeg} e rematrícula antecipada`,
+      bullets: [
+        'Mapear sinais de evasão por turma e antecipar conversa com a família.',
+        'Programa de fidelidade e benefícios para irmãos / continuidade.',
+        'Encontros pedagógicos de transição entre segmentos.',
+      ],
+    },
+    {
+      tag: 'POSICIONAMENTO',
+      titulo: 'Comunicação de valor e diferenciais',
+      bullets: [
+        'Mensagem central: proposta pedagógica, formação docente e resultados.',
+        `${data.adotamBrasil > 0 ? `${data.adotamBrasil} concorrente(s) já adota(m) Editora do Brasil — disputar atributo.` : 'Editora do Brasil como diferencial exclusivo na praça.'}`,
+        'Depoimentos, indicadores e provas sociais em todos os pontos de contato.',
+      ],
+    },
+    {
+      tag: 'PRESENÇA DIGITAL',
+      titulo: 'Marca, conteúdo e dados',
+      bullets: [
+        'Site otimizado para conversão (formulário, WhatsApp, agendamento).',
+        'Conteúdo orgânico mensal: pedagogia, projetos, vida escolar.',
+        'Dashboard mensal de leads, custo por matrícula e taxa de conversão.',
+      ],
+    },
+  ];
+
+  const cw = (PPT_W - 2 * PPT_M - 0.3) / 2;
+  const ch = 2.0;
+  frentes.forEach((f, i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    const x = PPT_M + col * (cw + 0.3);
+    const y = 2.2 + row * (ch + 0.2);
+    // Card branco
+    s.addShape('roundRect', { x, y, w: cw, h: ch, fill: { color: C.white }, line: { color: C.border, width: 0.5 }, rectRadius: 0.05 } as any);
+    // Borda lateral teal
+    s.addShape('rect', { x, y, w: 0.07, h: ch, fill: { color: C.teal }, line: { color: C.teal } });
+    // Chip
+    pptChip(s, x + 0.25, y + 0.18, f.tag);
+    // Título
+    s.addText(f.titulo, { x: x + 0.25, y: y + 0.6, w: cw - 0.4, h: 0.45, fontSize: 13.5, bold: true, color: C.navy, fontFace: 'Calibri' });
+    // Bullets
+    s.addText(
+      f.bullets.map(b => ({ text: b, options: { bullet: { code: '25A0' }, fontSize: 10, color: C.text, paraSpaceAfter: 4 } })) as any,
+      { x: x + 0.3, y: y + 1.05, w: cw - 0.45, h: ch - 1.15, fontFace: 'Calibri', valign: 'top' }
+    );
+  });
+
+  pptLeitura(
+    s,
+    'Captação, retenção, posicionamento e presença digital se reforçam: cada frente alimenta um indicador da próxima. Ritual mensal de acompanhamento sustenta o resultado.',
+    PPT_H - 1.0, 0.5, 'PRINCÍPIO'
+  );
+}
+
 // ----- 14. Encerramento
 function pptEncerramento(s: PptxGenJS.Slide, ctx?: ExportContext) {
   // Layout split (espelha a capa): painel navy à esquerda + texto à direita em fundo branco
