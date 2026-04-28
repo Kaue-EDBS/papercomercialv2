@@ -1357,35 +1357,82 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
 }
 
 // ----- helpers PPT -----
-function pptHeader(s: PptxGenJS.Slide, ctx: ExportContext) {
-  s.addShape('rect', { x: 0, y: 0, w: PPT_W, h: PPT_HEADER, fill: { color: C.beige }, line: { color: C.beige } });
-  s.addShape('rect', { x: 0, y: 0, w: 0.06, h: PPT_HEADER, fill: { color: C.teal }, line: { color: C.teal } });
-  s.addText('EDITORA DO BRASIL', { x: 0.18, y: 0.06, w: 2.0, h: 0.3, fontSize: 10, bold: true, color: C.navy, fontFace: 'Calibri' });
-  s.addText('Diagnóstico Territorial · Análise Estratégica', { x: 2.2, y: 0.06, w: 6, h: 0.3, fontSize: 10, color: C.muted, fontFace: 'Calibri' });
-  const right = `${ctx.session?.nome ?? '—'} · ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`;
-  s.addText(right, { x: PPT_W - 5, y: 0.06, w: 4.85, h: 0.3, fontSize: 10, color: C.muted, align: 'right', fontFace: 'Calibri' });
-}
+// Padrão editorial Santa Mônica:
+// - sem header pesado; rodapé enxuto com 1 linha cinza
+// - chip lavanda em vez de "linha teal" sob o título
+// - cards lavanda discretos para KPI
+// - leitura/callout: card branco com borda ESQUERDA grossa navy
 function pptFooter(s: PptxGenJS.Slide, ctx: ExportContext, n: number, total: number) {
-  s.addShape('line', { x: PPT_M, y: PPT_H - PPT_FOOTER, w: PPT_W - 2 * PPT_M, h: 0, line: { color: C.border, width: 0.5 } });
-  const left = `${truncate(ctx.analysis.escola.Escola, 60)} · INEP ${ctx.analysis.escola['Código Inep']} · Raio ${fmtKm(ctx.raioKm)} ${ctx.raioMode === 'personalizado' ? '(personalizado)' : '(padrão)'}`;
-  s.addText(left, { x: PPT_M, y: PPT_H - 0.32, w: PPT_W - 2 * PPT_M - 1.5, h: 0.25, fontSize: 9, color: C.muted, fontFace: 'Calibri' });
-  s.addText(`${n} / ${total}`, { x: PPT_W - PPT_M - 1.5, y: PPT_H - 0.32, w: 1.5, h: 0.25, fontSize: 9, color: C.muted, align: 'right', fontFace: 'Calibri' });
+  s.addText(
+    `${truncate(ctx.analysis.escola.Escola, 60)} · INEP ${ctx.analysis.escola['Código Inep']} · Raio ${fmtKm(ctx.raioKm)} ${ctx.raioMode === 'personalizado' ? '(personalizado)' : '(padrão)'}`,
+    { x: PPT_M, y: PPT_H - 0.32, w: PPT_W - 2 * PPT_M - 0.8, h: 0.22, fontSize: 8.5, color: C.muted, italic: true, fontFace: 'Calibri' }
+  );
+  s.addText(`${n} · ${total}`, { x: PPT_W - PPT_M - 0.8, y: PPT_H - 0.32, w: 0.8, h: 0.22, fontSize: 8.5, color: C.muted, align: 'right', fontFace: 'Calibri' });
 }
-function pptTitle(s: PptxGenJS.Slide, title: string, subtitle?: string) {
-  s.addText(title, { x: PPT_M, y: 0.55, w: PPT_W - 2 * PPT_M, h: 0.55, fontSize: 26, bold: true, color: C.navy, fontFace: 'Calibri' });
-  s.addShape('rect', { x: PPT_M, y: 1.08, w: 0.55, h: 0.05, fill: { color: C.teal }, line: { color: C.teal } });
-  if (subtitle) s.addText(subtitle, { x: PPT_M, y: 1.16, w: PPT_W - 2 * PPT_M, h: 0.32, fontSize: 13, color: C.muted, fontFace: 'Calibri' });
+// Mantido por compatibilidade (não chama mais nada visual no topo)
+function pptHeader(_s: PptxGenJS.Slide, _ctx: ExportContext) { /* no-op no padrão Santa Mônica */ }
+
+// Chip "tag" lavanda no estilo Santa Mônica
+function pptChip(s: PptxGenJS.Slide, x: number, y: number, label: string) {
+  const w = Math.max(0.9, label.length * 0.085 + 0.4);
+  s.addShape('roundRect', { x, y, w, h: 0.32, fill: { color: C.lavender }, line: { color: C.lavender }, rectRadius: 0.06 } as any);
+  s.addText(label.toUpperCase(), { x, y: y + 0.04, w, h: 0.24, fontSize: 9.5, bold: true, color: C.navy, align: 'center', fontFace: 'Calibri', charSpacing: 1 });
 }
-function pptKpi(s: PptxGenJS.Slide, x: number, y: number, w: number, h: number, label: string, value: string, accent = C.teal) {
-  s.addShape('rect', { x, y, w, h, fill: { color: C.white }, line: { color: C.border, width: 0.5 } });
-  s.addShape('rect', { x, y, w, h: 0.06, fill: { color: accent }, line: { color: accent } });
-  s.addText(label.toUpperCase(), { x: x + 0.15, y: y + 0.15, w: w - 0.3, h: 0.25, fontSize: 9, color: C.muted, fontFace: 'Calibri' });
-  s.addText(value, { x: x + 0.15, y: y + h - 0.55, w: w - 0.3, h: 0.45, fontSize: 18, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true });
+
+// Título grande estilo editorial: chip + headline 32pt + parágrafo opcional
+function pptTitle(s: PptxGenJS.Slide, title: string, subtitle?: string, chip?: string) {
+  let yCursor = 0.55;
+  if (chip) { pptChip(s, PPT_M, yCursor, chip); yCursor += 0.45; }
+  s.addText(title, { x: PPT_M, y: yCursor, w: PPT_W - 2 * PPT_M, h: 0.85, fontSize: 32, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true });
+  if (subtitle) s.addText(subtitle, { x: PPT_M, y: yCursor + 0.85, w: PPT_W - 2 * PPT_M, h: 0.45, fontSize: 12, color: C.text, fontFace: 'Calibri' });
 }
+
+// KPI estilo Santa Mônica: card lavanda discreto, label cinza pequeno, valor grande navy
+function pptKpi(s: PptxGenJS.Slide, x: number, y: number, w: number, h: number, label: string, value: string, _accent = C.teal) {
+  s.addShape('roundRect', { x, y, w, h, fill: { color: C.lavender }, line: { color: C.lavender }, rectRadius: 0.08 } as any);
+  s.addText(label, { x: x + 0.18, y: y + 0.14, w: w - 0.36, h: 0.28, fontSize: 10, color: C.muted, fontFace: 'Calibri' });
+  s.addText(value, { x: x + 0.18, y: y + 0.42, w: w - 0.36, h: h - 0.5, fontSize: 22, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true, valign: 'top' });
+}
+
+// Callout de leitura: card branco com borda lateral ESQUERDA grossa navy + chip de prefixo
 function pptLeitura(s: PptxGenJS.Slide, txt: string, y = PPT_H - 1.0, h = 0.5, prefix = 'LEITURA') {
-  s.addShape('rect', { x: PPT_M, y, w: PPT_W - 2 * PPT_M, h, fill: { color: C.tealLight }, line: { color: C.teal, width: 0.5 } });
-  s.addText(prefix, { x: PPT_M + 0.15, y: y + 0.04, w: 2, h: 0.2, fontSize: 9, bold: true, color: C.teal, fontFace: 'Calibri' });
-  s.addText(txt, { x: PPT_M + 0.15, y: y + 0.22, w: PPT_W - 2 * PPT_M - 0.3, h: h - 0.24, fontSize: 11, color: C.navy, fontFace: 'Calibri', valign: 'top' });
+  const x = PPT_M;
+  const w = PPT_W - 2 * PPT_M;
+  // Borda lateral grossa
+  s.addShape('rect', { x, y, w: 0.07, h, fill: { color: C.navy }, line: { color: C.navy } });
+  // Texto: prefixo bold navy + corpo
+  s.addText(
+    [
+      { text: `${prefix.toUpperCase()}  `, options: { bold: true, color: C.navy, fontSize: 9.5, charSpacing: 1 } },
+      { text: txt, options: { color: C.text, fontSize: 11 } },
+    ] as any,
+    { x: x + 0.22, y: y + 0.03, w: w - 0.3, h: h - 0.04, fontFace: 'Calibri', valign: 'middle' }
+  );
+}
+
+// Donut "fake" via 2 elipses sobrepostas + texto central. valuePct entre 0 e 100.
+function pptDonut(s: PptxGenJS.Slide, cx: number, cy: number, r: number, valuePct: number, label: string, sub?: string) {
+  // Anel de fundo (lavanda) e arco "preenchido" simulado por um anel mais escuro coberto parcialmente.
+  // Como pptxgenjs não suporta arco parcial real, usamos chart pie nativo embebido.
+  const data = [{
+    name: 'donut',
+    labels: ['v', 'r'],
+    values: [Math.max(0, Math.min(100, valuePct)), Math.max(0, 100 - valuePct)],
+  }];
+  s.addChart((PptxGenJS as any).ChartType?.doughnut ?? 'doughnut', data, {
+    x: cx - r, y: cy - r, w: r * 2, h: r * 2,
+    chartColors: [C.navy, C.lavender],
+    showLegend: false, showTitle: false, showValue: false,
+    dataBorder: { pt: 0, color: C.white },
+    holeSize: 70,
+  } as any);
+  // Valor central
+  s.addText(`${valuePct.toFixed(valuePct >= 10 ? 1 : 1).replace('.', ',')}%`, {
+    x: cx - r, y: cy - 0.22, w: r * 2, h: 0.45, fontSize: 20, bold: true, color: C.navy, align: 'center', valign: 'middle', fontFace: 'Calibri',
+  });
+  // Label abaixo
+  s.addText(label, { x: cx - r - 0.3, y: cy + r + 0.05, w: r * 2 + 0.6, h: 0.3, fontSize: 11, bold: true, color: C.navy, align: 'center', fontFace: 'Calibri' });
+  if (sub) s.addText(sub, { x: cx - r - 0.3, y: cy + r + 0.32, w: r * 2 + 0.6, h: 0.3, fontSize: 9, color: C.muted, align: 'center', fontFace: 'Calibri' });
 }
 
 // ----- 1. Capa
