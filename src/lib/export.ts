@@ -3172,11 +3172,7 @@ function pptPotencial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numb
 // ----- 12. Insights
 function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Leituras e Implicações Comerciais', undefined, 'Insights Estratégicos');
-  s.addText(
-    'Os dados consolidados revelam oportunidades concretas e riscos a serem gerenciados. A seguir, os principais insights com suas implicações diretas para a gestão comercial da escola.',
-    { x: PPT_M, y: 2.05, w: PPT_W - 2 * PPT_M, h: 0.7, fontSize: 12, color: C.text, fontFace: 'Calibri' }
-  );
+  pptTitle(s, 'Insights e Recomendações', 'Síntese estratégica da área de influência e direcionamentos comerciais prioritários.');
   const ms = ctx.analysis.marketShare;
   const segShares = [
     { l: 'Educação Infantil', v: ms.ei },
@@ -3185,6 +3181,7 @@ function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
     { l: 'Ensino Médio', v: ms.em },
   ].filter(x => x.v > 0).sort((a, b) => b.v - a.v);
   const bestSeg = segShares[0];
+  const weakSeg = segShares[segShares.length - 1];
 
   // 4 insights principais (estilo Santa Mônica): tag + título + dado + leitura + implicação
   const insights = [
@@ -3212,30 +3209,61 @@ function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
       implic: 'Calibrar discurso comercial, estruturar bolsas estratégicas e comunicar retorno do investimento educacional.' },
   ];
 
-  // Grid 2x2 com cards estilo Santa Mônica (borda lateral navy + chip)
-  const cw = (PPT_W - 2 * PPT_M - 0.3) / 2;
-  const ch = 2.0;
-  insights.forEach((it, i) => {
-    const col = i % 2, row = Math.floor(i / 2);
-    const x = PPT_M + col * (cw + 0.3);
-    const y = 2.85 + row * (ch + 0.2);
-    // Card branco com borda fina cinza
+  // ============== FAIXA SUPERIOR — 4 INSIGHTS (grade 4×1) ==============
+  s.addText('INSIGHTS', { x: PPT_M, y: 1.65, w: 4, h: 0.25, fontSize: 10, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1 });
+  const cw = (PPT_W - 2 * PPT_M - 0.3) / 4;
+  const ch = 1.95;
+  insights.slice(0, 4).forEach((it, i) => {
+    const x = PPT_M + i * (cw + 0.1);
+    const y = 1.95;
     s.addShape('roundRect', { x, y, w: cw, h: ch, fill: { color: C.white }, line: { color: C.border, width: 0.5 }, rectRadius: 0.05 } as any);
-    // Borda esquerda grossa navy
-    s.addShape('rect', { x, y, w: 0.07, h: ch, fill: { color: C.navy }, line: { color: C.navy } });
-    // Chip
-    pptChip(s, x + 0.25, y + 0.18, it.tag);
-    // Título
-    s.addText(it.title, { x: x + 0.25, y: y + 0.6, w: cw - 0.4, h: 0.4, fontSize: 14, bold: true, color: C.navy, fontFace: 'Calibri' });
-    // Dado
+    s.addShape('rect', { x, y, w: 0.06, h: ch, fill: { color: C.navy }, line: { color: C.navy } });
+    pptChip(s, x + 0.18, y + 0.14, it.tag);
+    s.addText(it.title, { x: x + 0.18, y: y + 0.55, w: cw - 0.3, h: 0.45, fontSize: 11.5, bold: true, color: C.navy, fontFace: 'Calibri' });
     s.addText([
-      { text: 'Dado: ', options: { bold: true, fontSize: 10, color: C.navy } },
-      { text: it.dado + ' ', options: { fontSize: 10, color: C.text } },
-      { text: 'Leitura: ', options: { bold: true, fontSize: 10, color: C.navy } },
-      { text: it.leitura + ' ', options: { fontSize: 10, color: C.text } },
-      { text: 'Implicação: ', options: { bold: true, fontSize: 10, color: C.navy } },
-      { text: it.implic, options: { fontSize: 10, color: C.text } },
-    ] as any, { x: x + 0.25, y: y + 1.05, w: cw - 0.4, h: ch - 1.15, fontFace: 'Calibri', valign: 'top' });
+      { text: it.dado, options: { bold: true, fontSize: 9.5, color: C.teal } },
+    ] as any, { x: x + 0.18, y: y + 1.0, w: cw - 0.3, h: 0.4, fontFace: 'Calibri', valign: 'top' });
+    s.addText(it.leitura, { x: x + 0.18, y: y + 1.4, w: cw - 0.3, h: ch - 1.45, fontSize: 9, color: C.text, fontFace: 'Calibri', valign: 'top' });
+  });
+
+  // ============== FAIXA INFERIOR — 4 RECOMENDAÇÕES ==============
+  type Reco = { prio: string; prioColor: string; titulo: string; acao: string; objetivo: string };
+  const recos: Reco[] = [
+    { prio: data.aderencia < 15 ? 'Alta prioridade' : 'Estratégica', prioColor: data.aderencia < 15 ? C.red : C.teal,
+      titulo: 'Reforçar comunicação de valor',
+      acao: `Mensagens claras${bestSeg ? ` em ${bestSeg.l}` : ''}: pedagogia, resultados e formação.`,
+      objetivo: 'Reduzir sensibilidade a preço e proteger ticket.' },
+    { prio: 'Alta prioridade', prioColor: C.teal,
+      titulo: bestSeg ? `Captação focada em ${bestSeg.l}` : 'Captação no segmento líder',
+      acao: 'Funil dedicado com meta numérica e CPA-alvo por canal.',
+      objetivo: 'Ampliar volume e converter share em matrículas.' },
+    { prio: 'Estratégica', prioColor: C.navy,
+      titulo: 'Rematrícula antecipada',
+      acao: `Antecipar campanha${weakSeg ? `, foco em ${weakSeg.l}` : ''}; mapear sinais de evasão.`,
+      objetivo: 'Sustentar base e reduzir reposição na captação.' },
+    { prio: 'Contínua', prioColor: C.lime,
+      titulo: 'Monitoramento competitivo',
+      acao: `Trimestralmente: preço, segmentos e comunicação dos ${data.concs.length} concorrentes.`,
+      objetivo: 'Antecipar movimentos e proteger posicionamento.' },
+  ];
+  s.addText('RECOMENDAÇÕES', { x: PPT_M, y: 4.05, w: 4, h: 0.25, fontSize: 10, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1 });
+  const rcw = (PPT_W - 2 * PPT_M - 0.3) / 4;
+  const rch = 2.55;
+  const ry = 4.35;
+  recos.forEach((r, i) => {
+    const x = PPT_M + i * (rcw + 0.1);
+    s.addShape('roundRect', { x, y: ry, w: rcw, h: rch, fill: { color: C.white }, line: { color: C.border, width: 0.5 }, rectRadius: 0.05 } as any);
+    s.addShape('rect', { x, y: ry, w: 0.06, h: rch, fill: { color: r.prioColor }, line: { color: r.prioColor } });
+    s.addText(r.prio.toUpperCase(), { x: x + 0.18, y: ry + 0.14, w: rcw - 0.3, h: 0.22, fontSize: 8, bold: true, color: C.white, fill: { color: r.prioColor }, align: 'left', fontFace: 'Calibri' });
+    s.addText(r.titulo, { x: x + 0.18, y: ry + 0.45, w: rcw - 0.3, h: 0.5, fontSize: 11.5, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top' });
+    s.addText([
+      { text: 'Ação: ', options: { bold: true, fontSize: 9.5, color: C.navy } },
+      { text: r.acao, options: { fontSize: 9.5, color: C.text } },
+    ] as any, { x: x + 0.18, y: ry + 0.95, w: rcw - 0.3, h: 0.85, fontFace: 'Calibri', valign: 'top' });
+    s.addText([
+      { text: 'Objetivo: ', options: { bold: true, fontSize: 9.5, color: C.muted, italic: true } },
+      { text: r.objetivo, options: { fontSize: 9.5, color: C.muted, italic: true } },
+    ] as any, { x: x + 0.18, y: ry + rch - 0.7, w: rcw - 0.3, h: 0.65, fontFace: 'Calibri', valign: 'top' });
   });
 }
 
