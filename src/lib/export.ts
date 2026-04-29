@@ -2166,65 +2166,159 @@ function pptPanorama(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
     { x: lx + 0.18, y: cardY + 0.36, w: cw - 0.36, h: cardH - 0.42, fontFace: 'Calibri', valign: 'middle', shrinkText: true } as any,
   );
 
-  // ===== Bloco principal: gráfico (esquerda, maior) + tabela (direita) =====
-  const blockY = 2.95;
-  const blockH = 3.55;          // ocupa até ~6.5 (deixa leitura no rodapé)
-  const chartW = 8.2;           // gráfico mais amplo
-  const tableX = PPT_M + chartW + 0.2;
-  const tableW = PPT_W - PPT_M - tableX;
-
-  // Gráfico nativo PPT — maior e respirando
-  const chartData = [{
-    name: 'Alunos',
-    labels: data.segPanorama.map((x: any) => x.sigla),
-    values: data.segPanorama.map((x: any) => x.alunos),
-  }];
-  s.addChart(pptxgenChartType('bar'), chartData, {
-    x: PPT_M, y: blockY, w: chartW, h: blockH,
-    showTitle: true, title: 'Distribuição do Mercado por Segmento',
-    titleFontFace: 'Calibri', titleFontSize: 12, titleColor: C.navy,
-    chartColors: [C.teal, C.navy, C.lime, C.tealDark],
-    showValue: true, valAxisHidden: false,
-    catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 11, catAxisLabelColor: C.navy,
-    barDir: 'col', dataLabelFontSize: 10, dataLabelColor: C.navy, dataLabelFontBold: true,
-    showLegend: false, valAxisLabelFontSize: 9, valAxisLabelColor: C.muted,
-    barGapWidthPct: 60,
-  });
-
-  // ----- Tabela lateral (header + linhas em zebra, líder destacado)
-  s.addText('SEGMENTOS', { x: tableX, y: blockY, w: tableW, h: 0.28, fontSize: 10.5, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1 });
-
-  const rowsHeader = [
-    [
-      { text: 'Segmento', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'left', valign: 'middle' } },
-      { text: 'Alunos',   options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', valign: 'middle' } },
-      { text: '%',        options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', valign: 'middle' } },
-    ],
-    ...data.segPanorama.map((seg: any, i: number) => {
-      const isLider = i === 0;
-      const rowFill = isLider ? C.tealLight : (i % 2 === 1 ? C.borderLight : C.white);
-      const pctTxt = data.totalAlunos > 0 ? fmtPct(seg.alunos / data.totalAlunos * 100, 0) : '—';
-      return [
-        { text: `${seg.sigla} · ${seg.nome}`, options: { fontSize: 10.5, color: C.navy, bold: isLider, fill: { color: rowFill }, valign: 'middle' } },
-        { text: fmtInt(seg.alunos), options: { fontSize: 10.5, color: C.text, align: 'right', fill: { color: rowFill }, valign: 'middle' } },
-        { text: pctTxt, options: { fontSize: 10.5, color: isLider ? C.navy : C.text, bold: isLider, align: 'right', fill: { color: rowFill }, valign: 'middle' } },
-      ];
-    }),
+  // ===== 2 tabelas analíticas empilhadas =====
+  const totEsc = data.a.concorrentes.length + 1;
+  const todas = [data.e, ...data.concs.map((c: any) => c.escola)];
+  const segDefs = [
+    { sigla: 'EI',   nome: 'Educação Infantil',          field: 'qt_mat_educacao_infantil' },
+    { sigla: 'EFI',  nome: 'Ens. Fund. — Anos Iniciais', field: 'qt_mat_ensino_fundamental_anos_iniciais' },
+    { sigla: 'EFII', nome: 'Ens. Fund. — Anos Finais',   field: 'qt_mat_ensino_fundamental_anos_finais' },
+    { sigla: 'EM',   nome: 'Ensino Médio',               field: 'qt_mat_ensino_medio' },
   ];
-  s.addTable(rowsHeader, {
-    x: tableX, y: blockY + 0.32, w: tableW,
-    colW: [tableW - 1.55, 0.9, 0.65],
-    rowH: 0.42,
-    fontFace: 'Calibri',
-    border: { type: 'solid', color: C.borderLight, pt: 0.5 },
+  const cobertura = segDefs.map(sg => {
+    const escolas = todas.filter((x: any) => num(x[sg.field]) > 0).length;
+    return { ...sg, escolas, pct: totEsc > 0 ? (escolas / totEsc) * 100 : 0 };
+  });
+  const cobertOrd = [...cobertura].sort((a, b) => b.escolas - a.escolas);
+  const maxCob = cobertOrd[0]?.escolas ?? 0;
+  const empateCob = cobertura.filter(c => c.escolas === maxCob).length > 1;
+
+  const tableX = PPT_M;
+  const tableW = PPT_W - 2 * PPT_M;
+  const t1Y = 2.95;
+  const tableH = 1.75;
+  const t2Y = t1Y + tableH + 0.18;
+
+  pptAnalyticTable(s, {
+    x: tableX, y: t1Y, w: tableW, h: tableH,
+    title: 'Cobertura por Segmento',
+    subtitle: 'Quantas escolas ofertam cada nível de ensino na região',
+    headers: ['Segmento', 'Escolas que ofertam', '% das escolas'],
+    rows: cobertOrd.map((c, i) => ({
+      seg: c.nome,
+      val: `${c.escolas} de ${totEsc}`,
+      pctTxt: fmtPct(c.pct, 1),
+      pctNum: c.pct,
+      tag: i === 0 && !empateCob ? 'Maior cobertura' : null,
+      isLeader: i === 0 && !empateCob,
+    })),
   });
 
-  // ===== Leitura estratégica — integrada como fechamento do bloco =====
-  pptLeitura(
-    s,
-    `${lider?.nome ?? '—'} lidera com ${fmtPct(liderPct, 0)} do mercado · ${menor?.nome ?? '—'}: ${fmtPct(menorPct, 0)} — ${menor?.alunos === 0 ? 'ausência de oferta' : 'oportunidade de diferenciação'}.`,
-    6.62, 0.5, 'LEITURA ESTRATÉGICA',
-  );
+  pptAnalyticTable(s, {
+    x: tableX, y: t2Y, w: tableW, h: tableH,
+    title: 'Volume de Alunos por Segmento',
+    subtitle: 'Distribuição da demanda total entre os níveis de ensino',
+    headers: ['Segmento', 'Alunos', '%'],
+    rows: data.segPanorama.map((seg: any, i: number) => ({
+      seg: seg.nome,
+      val: fmtInt(seg.alunos),
+      pctTxt: data.totalAlunos > 0 ? fmtPct(seg.alunos / data.totalAlunos * 100, 1) : '—',
+      pctNum: data.totalAlunos > 0 ? seg.alunos / data.totalAlunos * 100 : 0,
+      tag: i === 0 ? 'Líder' : null,
+      isLeader: i === 0,
+    })),
+    totalRow: { label: 'Total', val: fmtInt(data.totalAlunos), pctTxt: '100%' },
+  });
+
+  // ===== Leitura estratégica — fechamento do slide =====
+  const cobLider = cobertOrd[0];
+  const cobTxt = empateCob
+    ? 'A cobertura é ampla e equilibrada entre os segmentos, com oferta presente em toda a área analisada.'
+    : `A cobertura é mais ampla em ${cobLider?.nome ?? '—'} (${cobLider?.escolas} de ${totEsc} escolas).`;
+  const leitura = `${cobTxt} Em volume, ${lider?.nome ?? '—'} lidera com ${fmtPct(liderPct, 1)}, ${menor?.alunos === 0 ? `enquanto ${menor?.nome} não registra oferta — possível oportunidade de posicionamento.` : `enquanto ${menor?.nome} concentra ${fmtPct(menorPct, 1)} — potencial espaço de diferenciação.`}`;
+  pptLeitura(s, leitura, PPT_H - 0.95, 0.55, 'LEITURA ESTRATÉGICA');
+}
+
+// Tabela analítica reutilizável para o slide Panorama (PPT)
+function pptAnalyticTable(s: PptxGenJS.Slide, o: {
+  x: number; y: number; w: number; h: number;
+  title: string; subtitle: string;
+  headers: [string, string, string];
+  rows: Array<{ seg: string; val: string; pctTxt: string; pctNum: number; tag: string | null; isLeader: boolean }>;
+  totalRow?: { label: string; val: string; pctTxt: string };
+}) {
+  // Título e subtítulo
+  s.addText(o.title, {
+    x: o.x, y: o.y, w: o.w, h: 0.28,
+    fontSize: 12, bold: true, color: C.navy, fontFace: 'Calibri',
+  });
+  s.addText(o.subtitle, {
+    x: o.x, y: o.y + 0.26, w: o.w, h: 0.22,
+    fontSize: 9, italic: true, color: C.muted, fontFace: 'Calibri',
+  });
+
+  // Layout colunas: barra ocupa última coluna
+  const colSegW = o.w * 0.42;
+  const colValW = o.w * 0.18;
+  const colPctW = o.w * 0.12;
+  const colBarW = o.w - colSegW - colValW - colPctW;
+  const tableTop = o.y + 0.54;
+  const headH = 0.26;
+  const rowsCount = o.rows.length + (o.totalRow ? 1 : 0);
+  const bodyH = o.h - 0.54 - headH - 0.04;
+  const rowH = Math.max(0.26, Math.min(0.36, bodyH / rowsCount));
+
+  // Header
+  s.addShape('rect', { x: o.x, y: tableTop, w: o.w, h: headH, fill: { color: C.beige }, line: { color: C.beige } });
+  s.addText(o.headers[0].toUpperCase(), { x: o.x + 0.08, y: tableTop, w: colSegW, h: headH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', charSpacing: 1 });
+  s.addText(o.headers[1].toUpperCase(), { x: o.x + colSegW, y: tableTop, w: colValW, h: headH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', align: 'right', charSpacing: 1 });
+  s.addText(o.headers[2].toUpperCase(), { x: o.x + colSegW + colValW, y: tableTop, w: colPctW, h: headH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', align: 'right', charSpacing: 1 });
+
+  // Linhas
+  o.rows.forEach((r, i) => {
+    const ry = tableTop + headH + i * rowH;
+    if (i % 2 === 0) {
+      s.addShape('rect', { x: o.x, y: ry, w: o.w, h: rowH, fill: { color: C.borderLight }, line: { color: C.borderLight } });
+    }
+    if (r.isLeader) {
+      s.addShape('rect', { x: o.x, y: ry, w: 0.05, h: rowH, fill: { color: C.lime }, line: { color: C.lime } });
+    }
+    s.addText(r.seg, {
+      x: o.x + 0.08, y: ry, w: colSegW - 0.08, h: rowH,
+      fontSize: 10.5, bold: r.isLeader, color: C.navy, fontFace: 'Calibri', valign: 'middle',
+    });
+    if (r.tag) {
+      // Tag pequena à direita do nome
+      const tagW = 1.05;
+      const tagX = o.x + colSegW - tagW - 0.06;
+      s.addShape('roundRect', { x: tagX, y: ry + rowH / 2 - 0.12, w: tagW, h: 0.24, fill: { color: C.tealLight }, line: { color: C.tealLight }, rectRadius: 0.04 } as any);
+      s.addText(r.tag, { x: tagX, y: ry + rowH / 2 - 0.12, w: tagW, h: 0.24, fontSize: 8, bold: true, color: C.navy, fontFace: 'Calibri', align: 'center', valign: 'middle' });
+    }
+    s.addText(r.val, {
+      x: o.x + colSegW, y: ry, w: colValW - 0.06, h: rowH,
+      fontSize: 10.5, color: C.text, fontFace: 'Calibri', valign: 'middle', align: 'right',
+    });
+    s.addText(r.pctTxt, {
+      x: o.x + colSegW + colValW, y: ry, w: colPctW - 0.06, h: rowH,
+      fontSize: 10.5, bold: r.isLeader, color: r.isLeader ? C.navy : C.text, fontFace: 'Calibri', valign: 'middle', align: 'right',
+    });
+    // Barra
+    const barX = o.x + colSegW + colValW + colPctW + 0.06;
+    const barFullW = colBarW - 0.12;
+    const barH = 0.10;
+    const by = ry + rowH / 2 - barH / 2;
+    s.addShape('rect', { x: barX, y: by, w: barFullW, h: barH, fill: { color: C.borderLight }, line: { color: C.borderLight } });
+    const fillW = Math.max(0.04, Math.min(barFullW, (r.pctNum / 100) * barFullW));
+    s.addShape('rect', { x: barX, y: by, w: fillW, h: barH, fill: { color: r.isLeader ? C.lime : C.teal }, line: { color: r.isLeader ? C.lime : C.teal } });
+  });
+
+  if (o.totalRow) {
+    const ry = tableTop + headH + o.rows.length * rowH;
+    // Linha de separação superior
+    s.addShape('line', { x: o.x, y: ry, w: o.w, h: 0, line: { color: C.navy, width: 1.2 } });
+    s.addText(o.totalRow.label, {
+      x: o.x + 0.08, y: ry, w: colSegW - 0.08, h: rowH,
+      fontSize: 11, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'middle',
+    });
+    s.addText(o.totalRow.val, {
+      x: o.x + colSegW, y: ry, w: colValW - 0.06, h: rowH,
+      fontSize: 11, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'middle', align: 'right',
+    });
+    s.addText(o.totalRow.pctTxt, {
+      x: o.x + colSegW + colValW, y: ry, w: colPctW - 0.06, h: rowH,
+      fontSize: 11, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'middle', align: 'right',
+    });
+  }
 }
 
 // helper para chart enum
