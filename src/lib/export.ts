@@ -666,102 +666,130 @@ function drawResumoCard(
 function renderPdfPanorama(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Panorama Educacional da Região', `${data.a.concorrentes.length + 1} escolas · ${fmtInt(data.totalAlunos)} alunos · raio ${fmtKm(ctx.raioKm)}`);
 
-  const lider = data.segPanorama[0];
-  const liderPct = data.totalAlunos > 0 ? (lider?.alunos ?? 0) / data.totalAlunos * 100 : 0;
+  const a = ctx.analysis;
+  const W = PDF_W - 2 * M;
 
-  // Cards principais — líder em destaque (lime)
-  const cardW = (PDF_W - 2 * M - 36) / 4;
-  const cardY = PDF_H - CONTENT_TOP - 110;
-  drawKpiCard(page, font, bold, M + 0 * (cardW + 12), cardY, cardW, 58, 'Escolas',         String(data.a.concorrentes.length + 1), TEAL);
-  drawKpiCard(page, font, bold, M + 1 * (cardW + 12), cardY, cardW, 58, 'Total de Alunos', fmtInt(data.totalAlunos), NAVY);
-  drawKpiCard(page, font, bold, M + 2 * (cardW + 12), cardY, cardW, 58, 'Média/Escola',    fmtInt(Math.round(data.totalAlunos / Math.max(1, data.a.concorrentes.length + 1))), TEAL_DARK);
-  drawKpiCard(page, font, bold, M + 3 * (cardW + 12), cardY, cardW, 58, 'Segmento Líder',  `${lider?.sigla ?? '—'} · ${fmtPct(liderPct, 0)}`, LIME);
+  // ---------- TOPO · TÍTULO COMPACTO COM FILETE (mesmo padrão do Resumo Executivo) ----------
+  page.drawText('Panorama Educacional da Região', { x: M, y: PDF_H - CONTENT_TOP - 12, size: 22, font: bold, color: NAVY });
+  page.drawRectangle({ x: M, y: PDF_H - CONTENT_TOP - 22, width: 36, height: 3, color: TEAL });
+  const subTopo = `${a.concorrentes.length + 1} escolas  ·  ${fmtInt(data.totalAlunos)} alunos  ·  raio ${fmtKm(ctx.raioKm)}`;
+  page.drawText(subTopo, {
+    x: M, y: PDF_H - CONTENT_TOP - 38, size: 10.5, font: italic, color: MUTED,
+  });
 
-  // ===== Composição: gráfico (2/3) + tabela resumo (1/3) =====
+  // ---------- CARDS SUPERIORES (mesmo padrão do Resumo Executivo) ----------
   const segOrd = [...data.segPanorama] as Array<{ sigla: string; nome: string; alunos: number }>;
-  const blockTop = cardY - 28;          // topo da área principal
-  const blockBottom = 70;               // respiro inferior
+  const lider = segOrd[0];
+  const liderPct = data.totalAlunos > 0 ? (lider?.alunos ?? 0) / data.totalAlunos * 100 : 0;
+  const nEscolas = a.concorrentes.length + 1;
+  const mediaEsc = Math.round(data.totalAlunos / Math.max(1, nEscolas));
+
+  const cardsTop = PDF_H - CONTENT_TOP - 52;
+  const cardH = 78;
+  const cardY = cardsTop - cardH;
+  const cardW = (W - 36) / 4;
+  drawResumoCard(page, font, bold, italic, M + 0 * (cardW + 12), cardY, cardW, cardH, 'Escolas',         String(nEscolas),               NAVY, false);
+  drawResumoCard(page, font, bold, italic, M + 1 * (cardW + 12), cardY, cardW, cardH, 'Total de Alunos', fmtInt(data.totalAlunos),       NAVY, false);
+  drawResumoCard(page, font, bold, italic, M + 2 * (cardW + 12), cardY, cardW, cardH, 'Média/Escola',    fmtInt(mediaEsc),               NAVY, false);
+  drawResumoCard(page, font, bold, italic, M + 3 * (cardW + 12), cardY, cardW, cardH, 'Segmento Líder',  `${lider?.sigla ?? '—'} · ${fmtPct(liderPct, 0)}`, LIME, true);
+
+  // ===== Composição: gráfico (esq) + tabela cobertura (dir) =====
+  const todas = [a.escola, ...a.concorrentes.map((c: any) => c.escola)];
+  const offerCount = (key: string) => todas.filter(esc => num(esc[key]) > 0).length;
+  const segKey: Record<string, string> = {
+    EI:   'qt_mat_educacao_infantil',
+    EFI:  'qt_mat_ensino_fundamental_anos_iniciais',
+    EFII: 'qt_mat_ensino_fundamental_anos_finais',
+    EM:   'qt_mat_ensino_medio',
+  };
+  const totEsc = todas.length;
+  const cobertura = segOrd.map(seg => ({
+    sigla: seg.sigla,
+    nome: seg.nome,
+    escolas: offerCount(segKey[seg.sigla]),
+  }));
+  const cobertOrd = [...cobertura].sort((x, y) => y.escolas - x.escolas);
+  const liderCob = cobertOrd[0];
+
+  const blockTop = cardY - 28;
+  const blockBottom = 70;
   const blockH = blockTop - blockBottom;
-  const gapX = 18;
-  const chartW = Math.round((PDF_W - 2 * M - gapX) * 0.62);
+  const gapX = 22;
+  const chartW = Math.round((W - gapX) * 0.58);
   const tableX = M + chartW + gapX;
   const tableW = PDF_W - M - tableX;
 
-  // ----- Gráfico de barras horizontais (esquerda) -----
-  page.drawText('DISTRIBUIÇÃO DE ALUNOS POR SEGMENTO', { x: M, y: blockTop - 4, size: 9, font: bold, color: NAVY });
-  const chartTop = blockTop - 22;
-  const chartBottom = blockBottom + 14;
+  // ----- Bloco Gráfico (esquerda) -----
+  page.drawText('Volume de alunos por segmento', { x: M, y: blockTop - 4, size: 12, font: bold, color: NAVY });
+  page.drawText('Distribuição do total de alunos entre os níveis de ensino', { x: M, y: blockTop - 20, size: 9.5, font: italic, color: MUTED });
+
+  const chartTop = blockTop - 38;
+  const chartBottom = blockBottom + 8;
   const chartH = chartTop - chartBottom;
-  const labelW = 110;
+  const labelW = 130;
   const valueW = 70;
   const trackX = M + labelW;
   const trackW = chartW - labelW - valueW;
   const maxAl = Math.max(...segOrd.map(s => s.alunos), 1);
-  const rowGap = 14;
-  const barH = Math.max(16, Math.min(28, (chartH - rowGap * (segOrd.length - 1)) / segOrd.length));
+  const liderSigla = lider?.sigla;
+  const rowSlot = chartH / segOrd.length;
+  const barH = Math.max(14, Math.min(24, rowSlot * 0.55));
   segOrd.forEach((seg, i) => {
-    const ry = chartTop - barH - i * (barH + rowGap);
-    const isLeader = i === 0;
-    // label
-    page.drawText(truncate(seg.nome, 22), {
-      x: M, y: ry + barH / 2 - 4, size: 9.5, font: isLeader ? bold : font, color: NAVY,
+    const slotY = chartTop - (i + 1) * rowSlot + (rowSlot - barH) / 2;
+    const isLeader = seg.sigla === liderSigla;
+    page.drawText(truncate(seg.nome, 26), {
+      x: M, y: slotY + barH / 2 - 4, size: 9.5, font: isLeader ? bold : font, color: NAVY,
     });
-    // trilho
-    page.drawRectangle({ x: trackX, y: ry, width: trackW, height: barH, color: BORDER_LIGHT });
-    // barra
+    page.drawRectangle({ x: trackX, y: slotY, width: trackW, height: barH, color: BORDER_LIGHT });
     const w = Math.max(2, (seg.alunos / maxAl) * trackW);
-    page.drawRectangle({ x: trackX, y: ry, width: w, height: barH, color: isLeader ? TEAL : NAVY });
-    // acento de líder
+    page.drawRectangle({ x: trackX, y: slotY, width: w, height: barH, color: isLeader ? TEAL : NAVY });
     if (isLeader) {
-      page.drawRectangle({ x: trackX, y: ry, width: 3, height: barH, color: LIME });
+      page.drawRectangle({ x: trackX, y: slotY, width: 3, height: barH, color: LIME });
     }
-    // valor
-    const vTxt = fmtInt(seg.alunos);
-    page.drawText(vTxt, {
-      x: trackX + trackW + 8, y: ry + barH / 2 - 4, size: 9.5, font: bold, color: NAVY,
+    page.drawText(fmtInt(seg.alunos), {
+      x: trackX + trackW + 8, y: slotY + barH / 2 - 4, size: 9.5, font: bold, color: NAVY,
     });
   });
 
-  // ----- Tabela resumo (direita) -----
-  page.drawText('RESUMO POR SEGMENTO', { x: tableX, y: blockTop - 4, size: 9, font: bold, color: NAVY });
-  const tHeadY = blockTop - 22;
-  const tHeadH = 16;
-  const colSeg = tableX + 8;
-  const colAl  = tableX + Math.round(tableW * 0.50);
-  const colPct = tableX + Math.round(tableW * 0.78);
+  // ----- Bloco Tabela: Cobertura por Segmento (direita) -----
+  page.drawText('Cobertura por segmento', { x: tableX, y: blockTop - 4, size: 12, font: bold, color: NAVY });
+  page.drawText('Quantidade de escolas que ofertam cada nível de ensino', { x: tableX, y: blockTop - 20, size: 9.5, font: italic, color: MUTED });
+
+  const tHeadY = blockTop - 50;
+  const tHeadH = 18;
+  const colSeg = tableX + 10;
+  const colEsc = tableX + Math.round(tableW * 0.46);
+  const colPct = tableX + Math.round(tableW * 0.72);
   page.drawRectangle({ x: tableX, y: tHeadY, width: tableW, height: tHeadH, color: BEIGE });
-  page.drawText('SEGMENTO', { x: colSeg, y: tHeadY + 4, size: 7.5, font: bold, color: MUTED });
-  page.drawText('ALUNOS',   { x: colAl,  y: tHeadY + 4, size: 7.5, font: bold, color: MUTED });
-  page.drawText('%',        { x: colPct, y: tHeadY + 4, size: 7.5, font: bold, color: MUTED });
+  page.drawText('SEGMENTO', { x: colSeg, y: tHeadY + 5, size: 7.5, font: bold, color: MUTED });
+  page.drawText('ESCOLAS',  { x: colEsc, y: tHeadY + 5, size: 7.5, font: bold, color: MUTED });
+  page.drawText('%',        { x: colPct, y: tHeadY + 5, size: 7.5, font: bold, color: MUTED });
 
   const tBodyTop = tHeadY;
-  const tBodyBottom = blockBottom + 14;
-  const tRowsCount = segOrd.length + 1; // + total
-  const tRowH = Math.max(20, Math.min(30, (tBodyTop - tBodyBottom) / tRowsCount));
+  const tBodyBottom = blockBottom + 8;
+  const tRowH = Math.max(22, Math.min(34, (tBodyTop - tBodyBottom) / cobertOrd.length));
+  const empateCob = cobertOrd.length > 1 && cobertOrd[0].escolas === cobertOrd[1].escolas;
 
-  segOrd.forEach((seg, i) => {
+  cobertOrd.forEach((seg, i) => {
     const ry = tHeadY - (i + 1) * tRowH;
-    const isLeader = i === 0;
+    const isLeader = i === 0 && !empateCob;
     if (i % 2 === 0) page.drawRectangle({ x: tableX, y: ry, width: tableW, height: tRowH, color: BORDER_LIGHT });
     if (isLeader) page.drawRectangle({ x: tableX, y: ry, width: 3, height: tRowH, color: LIME });
     const ty = ry + tRowH / 2 - 4;
-    page.drawText(truncate(seg.sigla, 6), { x: colSeg, y: ty, size: 9.5, font: isLeader ? bold : font, color: NAVY });
-    page.drawText(fmtInt(seg.alunos), { x: colAl, y: ty, size: 9.5, font: isLeader ? bold : font, color: TEXT });
-    const pNum = data.totalAlunos > 0 ? (seg.alunos / data.totalAlunos) * 100 : 0;
-    page.drawText(fmtPct(pNum, 1), { x: colPct, y: ty, size: 9.5, font: isLeader ? bold : font, color: isLeader ? NAVY : TEXT });
+    page.drawText(truncate(seg.nome, 22), { x: colSeg, y: ty, size: 9.5, font: isLeader ? bold : font, color: NAVY });
+    page.drawText(`${seg.escolas} de ${totEsc}`, { x: colEsc, y: ty, size: 9.5, font: isLeader ? bold : font, color: TEXT });
+    const pCob = totEsc > 0 ? (seg.escolas / totEsc) * 100 : 0;
+    page.drawText(fmtPct(pCob, 0), { x: colPct, y: ty, size: 9.5, font: isLeader ? bold : font, color: isLeader ? NAVY : TEXT });
+    // mini barra horizontal discreta no fim da linha
+    const barTrackX = colPct + 30;
+    const barTrackW = (tableX + tableW - 8) - barTrackX;
+    if (barTrackW > 20) {
+      const mbY = ry + tRowH / 2 - 2;
+      page.drawRectangle({ x: barTrackX, y: mbY, width: barTrackW, height: 4, color: BORDER_LIGHT });
+      page.drawRectangle({ x: barTrackX, y: mbY, width: Math.max(2, (pCob / 100) * barTrackW), height: 4, color: isLeader ? LIME : TEAL });
+    }
   });
-
-  // Linha de total — peso visual maior
-  {
-    const ry = tHeadY - (segOrd.length + 1) * tRowH;
-    page.drawLine({ start: { x: tableX, y: ry + tRowH }, end: { x: tableX + tableW, y: ry + tRowH }, thickness: 1.2, color: NAVY });
-    const ty = ry + tRowH / 2 - 4;
-    page.drawText('Total', { x: colSeg, y: ty, size: 10, font: bold, color: NAVY });
-    page.drawText(fmtInt(data.totalAlunos), { x: colAl, y: ty, size: 10, font: bold, color: NAVY });
-    page.drawText('100%', { x: colPct, y: ty, size: 10, font: bold, color: NAVY });
-  }
 }
 
 // ----- 5. Concorrência — mapa e régua (mapa estático SVG)
