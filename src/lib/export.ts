@@ -2734,14 +2734,7 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
     border: { type: 'solid', color: C.borderLight, pt: 0.4 },
   });
 
-  // Nota se houver mais concorrentes além dos exibidos
-  const restantesNaoExibidos = Math.max(0, restantes.length - restShown.length);
-  if (restantesNaoExibidos > 0) {
-    s.addText(`A análise completa considera ${totalConc} concorrentes elegíveis · ${4 + restShown.length} exibidos por legibilidade.`, {
-      x: SAFE, y: PPT_H - 0.78, w: W, h: 0.24,
-      fontSize: 9, italic: true, color: C.muted, fontFace: 'Calibri',
-    });
-  }
+  // (Nota de truncamento removida a pedido — manter slide limpo.)
 }
 
 // ----- 6. Market Share — slide único (unifica geral + por segmento)
