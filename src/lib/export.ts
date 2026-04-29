@@ -427,10 +427,8 @@ const SLIDE_TITLES = [
   'Concorrência',
   'Market Share',
   'Faixa de Mensalidade',
-  'Perfil socioeconômico e aderência econômica',
-  'Potencial de consumo educacional e comercial',
-  'Insights estratégicos',
-  'Plano de ação comercial e marketing',
+  'Perfil Socioeconômico',
+  'Insights e Recomendações',
   'Ação comercial e marketing',
   'Encerramento',
 ];
