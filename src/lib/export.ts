@@ -1891,9 +1891,7 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
     { render: (s, n) => pptMarketShare(s, ctx, data, n, total) },
     { render: (s, n) => pptMensalidade(s, ctx, data, n, total) },
     { render: (s, n) => pptSocio(s, ctx, data, n, total) },
-    { render: (s, n) => pptPotencial(s, ctx, data, n, total) },
     { render: (s, n) => pptInsights(s, ctx, data, n, total) },
-    { render: (s, n) => pptPlano(s, ctx, data, n, total) },
     { render: (s, n) => pptAcaoComercial(s, ctx, data, n, total) },
     { render: (s) => pptEncerramento(s, ctx) },
   ];
