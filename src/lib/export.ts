@@ -1087,13 +1087,7 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
   const tableHActual = headerH + rowH * Math.max(totalRows, 1);
   page.drawRectangle({ x: M, y: headerY - tableHActual, width: W, height: tableHActual, borderColor: BORDER, borderWidth: 0.4, color: WHITE, opacity: 0 });
 
-  // Nota de truncamento
-  const restantesNaoExibidos = Math.max(0, restantes.length - restShown.length);
-  if (restantesNaoExibidos > 0) {
-    page.drawText(`A análise completa considera ${totalConc} concorrentes elegíveis · ${4 + restShown.length} exibidos por legibilidade.`, {
-      x: M, y: headerY - tableHActual - 12, size: 8.5, font: italic, color: MUTED,
-    });
-  }
+  // (Nota de truncamento removida a pedido — manter slide limpo.)
 }
 
 // helper local — quebra texto em até maxLines linhas, com elipse na última
@@ -1449,7 +1443,7 @@ function renderPdfSocioeconomico(page: PDFPage, font: PDFFont, bold: PDFFont, it
   page.drawText('DISTRIBUIÇÃO ETÁRIA · MUNICÍPIO (2025)', { x: M, y: blockTop - 12, size: 9, font: bold, color: NAVY });
   const faixasEt = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
   const popData = faixasEt.map(f => ({
-    label: f,
+    label: `${f} anos`,
     value: parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'),
     color: TEAL,
   }));
@@ -2740,14 +2734,7 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
     border: { type: 'solid', color: C.borderLight, pt: 0.4 },
   });
 
-  // Nota se houver mais concorrentes além dos exibidos
-  const restantesNaoExibidos = Math.max(0, restantes.length - restShown.length);
-  if (restantesNaoExibidos > 0) {
-    s.addText(`A análise completa considera ${totalConc} concorrentes elegíveis · ${4 + restShown.length} exibidos por legibilidade.`, {
-      x: SAFE, y: PPT_H - 0.78, w: W, h: 0.24,
-      fontSize: 9, italic: true, color: C.muted, fontFace: 'Calibri',
-    });
-  }
+  // (Nota de truncamento removida a pedido — manter slide limpo.)
 }
 
 // ----- 6. Market Share — slide único (unifica geral + por segmento)
@@ -3077,11 +3064,14 @@ function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
   });
   const faixasEt = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
   const valsEt = faixasEt.map(f => parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'));
-  s.addChart(pptxgenChartType('bar'), [{ name: 'População', labels: faixasEt, values: valsEt }], {
+  const faixasLabels = faixasEt.map(f => `${f} anos`);
+  s.addChart(pptxgenChartType('bar'), [{ name: 'População', labels: faixasLabels, values: valsEt }], {
     x: PPT_M, y: blockY + 0.32, w: leftW, h: blockH - 0.4,
     barDir: 'col', chartColors: [C.teal],
     showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy,
     catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 10, valAxisLabelFontSize: 9,
+    catGridLine: { style: 'none' }, valGridLine: { style: 'none' },
+    showValAxisTitle: false, valAxisHidden: true,
     showLegend: false, showTitle: false,
   });
 
