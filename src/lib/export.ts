@@ -792,107 +792,125 @@ function renderPdfPanorama(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
   });
 }
 
-// ----- 5. Concorrência — mapa e régua (mapa estático SVG)
+// ----- 5. Concorrência — mapa e régua (mapa estático)
+// Padrão visual alinhado ao "Resumo Executivo" e "Panorama Educacional":
+// título compacto + filete teal + subtítulo italic, 4 cards-resumo e mapa
+// estático abaixo com legenda discreta e bloco curto de apoio.
 function renderPdfConcorrenciaMapa(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Concorrência — Mapa e Régua', `Raio ${fmtKm(ctx.raioKm)} · ${ctx.raioMode === 'personalizado' ? 'Personalizado' : 'Padrão'} · ${data.concs.length} concorrentes`);
 
-  // Mapa estático: área 540×320 à esquerda, painel lateral à direita.
-  const mapX = M, mapY = 80, mapW = 540, mapH = 320;
-  page.drawRectangle({ x: mapX, y: mapY, width: mapW, height: mapH, color: BEIGE, borderColor: BORDER, borderWidth: 0.5 });
-
+  const W = PDF_W - 2 * M;
   const e = data.e;
+  const totalConc = data.concs.length;
+  const comCoord = data.concs.filter((c: any) => !isNaN(parseFloat(String(c.escola.Latitude))) && !isNaN(parseFloat(String(c.escola.Longitude)))).length;
+  const semCoord = totalConc - comCoord;
+  const totalEleg = totalConc + 1;
+
+  // ---------- TOPO · TÍTULO COMPACTO COM FILETE ----------
+  page.drawText('Mapa de Concorrência Escolar', {
+    x: M, y: PDF_H - CONTENT_TOP - 12, size: 22, font: bold, color: NAVY,
+  });
+  page.drawRectangle({ x: M, y: PDF_H - CONTENT_TOP - 22, width: 36, height: 3, color: TEAL });
+  page.drawText('Visualização geográfica da escola analisada e dos concorrentes elegíveis dentro do raio operacional.', {
+    x: M, y: PDF_H - CONTENT_TOP - 38, size: 10.5, font: italic, color: MUTED,
+  });
+
+  // ---------- CARDS-RESUMO (mesmo padrão do Resumo Executivo) ----------
+  const cardsTop = PDF_H - CONTENT_TOP - 52;
+  const cardH = 78;
+  const cardY = cardsTop - cardH;
+  const cardW = (W - 36) / 4;
+  drawResumoCard(page, font, bold, italic, M + 0 * (cardW + 12), cardY, cardW, cardH, 'Raio Operacional',          fmtKm(ctx.raioKm),  TEAL, true);
+  drawResumoCard(page, font, bold, italic, M + 1 * (cardW + 12), cardY, cardW, cardH, 'Concorrentes c/ Coords',    String(comCoord),   NAVY, false);
+  drawResumoCard(page, font, bold, italic, M + 2 * (cardW + 12), cardY, cardW, cardH, 'Estimados por CEP',         String(semCoord),   NAVY, false);
+  drawResumoCard(page, font, bold, italic, M + 3 * (cardW + 12), cardY, cardW, cardH, 'Total Elegível',            String(totalEleg),  LIME, true);
+
+  // ---------- MAPA ESTÁTICO ----------
+  const apoioH = 32;
+  const apoioY = 56;
+  const mapTop = cardY - 22;
+  const mapBottom = apoioY + apoioH + 16;
+  const mapH = mapTop - mapBottom;
+  const mapY = mapBottom;
+  const mapX = M;
+  const mapW = W;
+  page.drawRectangle({ x: mapX, y: mapY, width: mapW, height: mapH, color: BEIGE, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
+
   const lat = parseFloat(String(e.Latitude));
   const lng = parseFloat(String(e.Longitude));
   if (!isNaN(lat) && !isNaN(lng)) {
-    // Pega concorrentes com coordenadas
     const points = data.concs
       .map((c: any) => ({
         lat: parseFloat(String(c.escola.Latitude)),
         lng: parseFloat(String(c.escola.Longitude)),
-        dist: c.distancia,
-        nome: c.escola.Escola,
       }))
       .filter((p: any) => !isNaN(p.lat) && !isNaN(p.lng));
 
-    // Bounding box centrada na escola, com escala = 2× raio operacional
+    const r = ctx.raioKm * 1.4;
     const kmPerDegLat = 111;
     const kmPerDegLng = 111 * Math.cos(lat * Math.PI / 180);
-    const r = ctx.raioKm * 1.4; // pequena folga
     const dLat = r / kmPerDegLat;
     const dLng = r / kmPerDegLng;
     const minLat = lat - dLat, maxLat = lat + dLat;
     const minLng = lng - dLng, maxLng = lng + dLng;
 
-    const proj = (la: number, lo: number) => {
-      const px = mapX + ((lo - minLng) / (maxLng - minLng)) * mapW;
-      const py = mapY + ((la - minLat) / (maxLat - minLat)) * mapH;
-      return { x: px, y: py };
-    };
+    // Mantém aspecto correto: usa o menor lado para o raio
+    const proj = (la: number, lo: number) => ({
+      x: mapX + ((lo - minLng) / (maxLng - minLng)) * mapW,
+      y: mapY + ((la - minLat) / (maxLat - minLat)) * mapH,
+    });
 
-    // Grid leve
+    // Grid bem leve (apoio cartográfico neutro)
+    for (let i = 1; i < 5; i++) {
+      page.drawLine({ start: { x: mapX + (mapW / 5) * i, y: mapY }, end: { x: mapX + (mapW / 5) * i, y: mapY + mapH }, thickness: 0.25, color: BORDER_LIGHT });
+    }
     for (let i = 1; i < 4; i++) {
-      page.drawLine({ start: { x: mapX + (mapW / 4) * i, y: mapY }, end: { x: mapX + (mapW / 4) * i, y: mapY + mapH }, thickness: 0.3, color: BORDER_LIGHT });
-      page.drawLine({ start: { x: mapX, y: mapY + (mapH / 4) * i }, end: { x: mapX + mapW, y: mapY + (mapH / 4) * i }, thickness: 0.3, color: BORDER_LIGHT });
+      page.drawLine({ start: { x: mapX, y: mapY + (mapH / 4) * i }, end: { x: mapX + mapW, y: mapY + (mapH / 4) * i }, thickness: 0.25, color: BORDER_LIGHT });
     }
 
-    // Círculo do raio (centro = escola)
+    // Halo discreto do raio operacional
     const center = proj(lat, lng);
-    const radiusPx = (ctx.raioKm / r) * (mapW / 2);
-    page.drawCircle({ x: center.x, y: center.y, size: radiusPx, color: TEAL, opacity: 0.08, borderColor: TEAL, borderWidth: 0.8 });
+    const radiusPx = Math.min(mapW, mapH) * 0.5 * (ctx.raioKm / r);
+    page.drawCircle({ x: center.x, y: center.y, size: radiusPx, color: TEAL, opacity: 0.06, borderColor: TEAL, borderWidth: 0.7, borderOpacity: 0.55 });
 
-    // Concorrentes
+    // Concorrentes (azul institucional, menores)
     points.forEach((p: any) => {
       const { x, y } = proj(p.lat, p.lng);
       if (x < mapX || x > mapX + mapW || y < mapY || y > mapY + mapH) return;
-      page.drawCircle({ x, y, size: 4, color: NAVY, borderColor: WHITE, borderWidth: 1 });
+      page.drawCircle({ x, y, size: 3.5, color: NAVY, borderColor: WHITE, borderWidth: 1 });
     });
 
-    // Escola analisada (por cima)
-    page.drawCircle({ x: center.x, y: center.y, size: 7, color: TEAL, borderColor: WHITE, borderWidth: 1.5 });
+    // Escola analisada (teal, maior, em destaque)
+    page.drawCircle({ x: center.x, y: center.y, size: 7, color: TEAL, borderColor: WHITE, borderWidth: 1.8 });
   } else {
     page.drawText('Coordenadas da escola não disponíveis para renderização do mapa.', {
       x: mapX + 18, y: mapY + mapH / 2, size: 11, font: italic, color: MUTED,
     });
   }
 
-  // Painel lateral
-  const px = mapX + mapW + 18;
-  const pw = PDF_W - M - px;
-  let py = mapY + mapH;
-  const drawPanel = (titleTxt: string, items: [string, string][]) => {
-    py -= 14;
-    page.drawText(titleTxt.toUpperCase(), { x: px, y: py, size: 9, font: bold, color: TEAL });
-    py -= 10;
-    items.forEach(([k, v]) => {
-      page.drawText(k, { x: px, y: py - 8, size: 8.5, font, color: MUTED });
-      const w = bold.widthOfTextAtSize(v, 9);
-      page.drawText(v, { x: px + pw - w, y: py - 8, size: 9, font: bold, color: NAVY });
-      page.drawLine({ start: { x: px, y: py - 14 }, end: { x: px + pw, y: py - 14 }, thickness: 0.3, color: BORDER_LIGHT });
-      py -= 18;
-    });
-    py -= 6;
+  // Legenda discreta (canto inferior do mapa)
+  const legY = mapY + 10;
+  let legX = mapX + 14;
+  const drawLegendItem = (color: RGB, label: string, dotSize: number) => {
+    page.drawCircle({ x: legX + dotSize, y: legY + 3, size: dotSize, color, borderColor: WHITE, borderWidth: 0.8 });
+    page.drawText(label, { x: legX + dotSize * 2 + 6, y: legY, size: 8.5, font, color: MUTED });
+    legX += dotSize * 2 + 6 + font.widthOfTextAtSize(label, 8.5) + 18;
   };
+  // Fundo branco translúcido para leitura
+  page.drawRectangle({ x: mapX + 8, y: mapY + 6, width: mapW - 16, height: 16, color: WHITE, opacity: 0.85 });
+  drawLegendItem(TEAL, 'Escola analisada', 4);
+  drawLegendItem(NAVY, 'Concorrentes com coordenadas', 3);
+  if (semCoord > 0) {
+    page.drawText(`+ ${semCoord} concorrente(s) estimado(s) por CEP`, { x: legX, y: legY, size: 8.5, font: italic, color: MUTED });
+  }
 
-  const comCoord = data.concs.filter((c: any) => !isNaN(parseFloat(String(c.escola.Latitude))) && !isNaN(parseFloat(String(c.escola.Longitude)))).length;
-  drawPanel('Régua', [
-    ['Raio operacional', fmtKm(ctx.raioKm)],
-    ['Modo', ctx.raioMode === 'personalizado' ? 'Personalizado' : 'Padrão'],
-  ]);
-  drawPanel('Cobertura', [
-    ['Plotados', `${comCoord} / ${data.concs.length}`],
-    ['Estimados por CEP', String(data.concs.length - comCoord)],
-  ]);
-  drawPanel('Legenda', [
-    ['● Escola analisada', ''],
-    ['● Concorrentes', ''],
-  ]);
-
-  // Leitura
-  page.drawRectangle({ x: M, y: 50, width: PDF_W - 2 * M, height: 28, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  page.drawText(`Área de influência: ${data.concs.length} concorrente(s) elegível(is) · ${data.mesmaFaixa} na mesma faixa de mensalidade · ${data.adotamBrasil} adota(m) Editora do Brasil.`, {
-    x: M + 12, y: 60, size: 9.5, font, color: NAVY,
+  // ---------- BLOCO DE APOIO (curto, discreto) ----------
+  page.drawRectangle({ x: M, y: apoioY, width: W, height: apoioH, color: TEAL_LIGHT, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
+  page.drawRectangle({ x: M, y: apoioY, width: 4, height: apoioH, color: TEAL });
+  page.drawText('CONTEXTO GEOGRÁFICO', { x: M + 14, y: apoioY + apoioH - 12, size: 8.5, font: bold, color: TEAL_DARK });
+  page.drawText('O mapa exibe os concorrentes com coordenadas válidas dentro do raio final definido. Escolas sem coordenadas permanecem consideradas na análise quando elegíveis por proximidade estimada.', {
+    x: M + 14, y: apoioY + 8, size: 9, font, color: NAVY,
   });
 }
 
