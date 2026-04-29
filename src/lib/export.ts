@@ -456,9 +456,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
     { render: (p, n) => renderPdfMarketShare(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfMensalidade(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfSocioeconomico(p, font, bold, italic, ctx, data, n, total) },
-    { render: (p, n) => renderPdfPotencial(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfInsights(p, font, bold, italic, ctx, data, n, total) },
-    { render: (p, n) => renderPdfPlanoAcao(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfAcaoComercial(p, font, bold, italic, ctx, data, n, total) },
     { render: (p) => renderPdfEncerramento(p, font, bold, italic, ctx) },
   ];
