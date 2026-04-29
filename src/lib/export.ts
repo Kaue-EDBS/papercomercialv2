@@ -682,78 +682,89 @@ function renderPdfPanorama(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
   drawKpiCard(page, font, bold, M + 2 * (cardW + 12), cardY, cardW, 58, 'Média/Escola',    fmtInt(Math.round(data.totalAlunos / Math.max(1, data.a.concorrentes.length + 1))), TEAL_DARK);
   drawKpiCard(page, font, bold, M + 3 * (cardW + 12), cardY, cardW, 58, 'Segmento Líder',  `${lider?.sigla ?? '—'} · ${fmtPct(liderPct, 0)}`, LIME);
 
-  // ===== 2 tabelas analíticas empilhadas =====
-  // Cobertura por segmento (oferta) e Volume de alunos (demanda).
-  const totEsc = data.a.concorrentes.length + 1;
-  const todas = [data.e, ...data.concs.map((c: any) => c.escola)];
-  const segDefs = [
-    { sigla: 'EI',   nome: 'Educação Infantil',          field: 'qt_mat_educacao_infantil' },
-    { sigla: 'EFI',  nome: 'Ens. Fund. — Anos Iniciais', field: 'qt_mat_ensino_fundamental_anos_iniciais' },
-    { sigla: 'EFII', nome: 'Ens. Fund. — Anos Finais',   field: 'qt_mat_ensino_fundamental_anos_finais' },
-    { sigla: 'EM',   nome: 'Ensino Médio',               field: 'qt_mat_ensino_medio' },
-  ];
-  const cobertura = segDefs.map(sg => {
-    const escolas = todas.filter((x: any) => num(x[sg.field]) > 0).length;
-    return { ...sg, escolas, pct: totEsc > 0 ? (escolas / totEsc) * 100 : 0 };
-  });
-  const cobertOrd = [...cobertura].sort((a, b) => b.escolas - a.escolas);
-  const maxCob = cobertOrd[0]?.escolas ?? 0;
-  const empateCob = cobertura.filter(c => c.escolas === maxCob).length > 1;
+  // ===== Composição: gráfico (2/3) + tabela resumo (1/3) =====
+  const segOrd = [...data.segPanorama] as Array<{ sigla: string; nome: string; alunos: number }>;
+  const blockTop = cardY - 28;          // topo da área principal
+  const blockBottom = 70;               // respiro inferior
+  const blockH = blockTop - blockBottom;
+  const gapX = 18;
+  const chartW = Math.round((PDF_W - 2 * M - gapX) * 0.62);
+  const tableX = M + chartW + gapX;
+  const tableW = PDF_W - M - tableX;
 
-  // Layout: duas tabelas no espaço entre cards e leitura
-  const blockTop = cardY - 22;
-  const leituraH = 56;
-  const leituraY = 64;
-  const leituraTop = leituraY + leituraH;
-  const gap = 16;
-  const totalH = blockTop - leituraTop - gap;
-  const t1H = Math.floor(totalH / 2);
-  const t2H = totalH - t1H - gap;
-  const t1Top = blockTop;
-  const t2Top = t1Top - t1H - gap;
-  const tableW = PDF_W - 2 * M;
-
-  drawPdfAnalyticTable(page, font, bold, italic, {
-    x: M, top: t1Top, w: tableW, h: t1H,
-    title: 'Cobertura por Segmento',
-    subtitle: 'Quantas escolas ofertam cada nível de ensino na região',
-    headers: ['Segmento', 'Escolas que ofertam', '% das escolas', ''],
-    rows: cobertOrd.map((s, i) => ({
-      seg: s.nome,
-      val: `${s.escolas} de ${totEsc}`,
-      pctTxt: fmtPct(s.pct, 1),
-      pctNum: s.pct,
-      barColor: NAVY,
-      tag: i === 0 ? (empateCob ? null : 'Maior cobertura') : null,
-    })),
-  });
-
-  drawPdfAnalyticTable(page, font, bold, italic, {
-    x: M, top: t2Top, w: tableW, h: t2H,
-    title: 'Volume de Alunos por Segmento',
-    subtitle: 'Distribuição da demanda total entre os níveis de ensino',
-    headers: ['Segmento', 'Alunos', '%', ''],
-    rows: data.segPanorama.map((s: any, i: number) => ({
-      seg: s.nome,
-      val: fmtInt(s.alunos),
-      pctTxt: data.totalAlunos > 0 ? fmtPct(s.alunos / data.totalAlunos * 100, 1) : '—',
-      pctNum: data.totalAlunos > 0 ? s.alunos / data.totalAlunos * 100 : 0,
-      barColor: colors[i],
-      tag: i === 0 ? 'Líder' : null,
-    })),
-    totalRow: { label: 'Total', val: fmtInt(data.totalAlunos), pctTxt: '100%' },
+  // ----- Gráfico de barras horizontais (esquerda) -----
+  page.drawText('DISTRIBUIÇÃO DE ALUNOS POR SEGMENTO', { x: M, y: blockTop - 4, size: 9, font: bold, color: NAVY });
+  const chartTop = blockTop - 22;
+  const chartBottom = blockBottom + 14;
+  const chartH = chartTop - chartBottom;
+  const labelW = 110;
+  const valueW = 70;
+  const trackX = M + labelW;
+  const trackW = chartW - labelW - valueW;
+  const maxAl = Math.max(...segOrd.map(s => s.alunos), 1);
+  const rowGap = 14;
+  const barH = Math.max(16, Math.min(28, (chartH - rowGap * (segOrd.length - 1)) / segOrd.length));
+  segOrd.forEach((seg, i) => {
+    const ry = chartTop - barH - i * (barH + rowGap);
+    const isLeader = i === 0;
+    // label
+    page.drawText(truncate(seg.nome, 22), {
+      x: M, y: ry + barH / 2 - 4, size: 9.5, font: isLeader ? bold : font, color: NAVY,
+    });
+    // trilho
+    page.drawRectangle({ x: trackX, y: ry, width: trackW, height: barH, color: BORDER_LIGHT });
+    // barra
+    const w = Math.max(2, (seg.alunos / maxAl) * trackW);
+    page.drawRectangle({ x: trackX, y: ry, width: w, height: barH, color: isLeader ? TEAL : NAVY });
+    // acento de líder
+    if (isLeader) {
+      page.drawRectangle({ x: trackX, y: ry, width: 3, height: barH, color: LIME });
+    }
+    // valor
+    const vTxt = fmtInt(seg.alunos);
+    page.drawText(vTxt, {
+      x: trackX + trackW + 8, y: ry + barH / 2 - 4, size: 9.5, font: bold, color: NAVY,
+    });
   });
 
-  // Leitura estratégica
-  const cobLider = cobertOrd[0];
-  const cobTxt = empateCob
-    ? 'A cobertura é ampla e equilibrada entre os segmentos, com oferta presente em toda a área analisada.'
-    : `A cobertura é mais ampla em ${cobLider?.nome ?? '—'} (${cobLider?.escolas} de ${totEsc} escolas).`;
-  const leitura = `${cobTxt} Em volume, ${lider?.nome ?? '—'} lidera com ${fmtPct(liderPct, 1)}, ${menor?.alunos === 0 ? `enquanto ${menor?.nome} não registra oferta — possível oportunidade de posicionamento.` : `enquanto ${menor?.nome} concentra ${fmtPct(menorPct, 1)} — potencial espaço de diferenciação.`}`;
-  page.drawRectangle({ x: M, y: leituraY, width: PDF_W - 2 * M, height: leituraH, color: TEAL_LIGHT });
-  page.drawRectangle({ x: M, y: leituraY, width: 3, height: leituraH, color: NAVY });
-  page.drawText('LEITURA ESTRATÉGICA', { x: M + 14, y: leituraY + leituraH - 16, size: 8.5, font: bold, color: NAVY });
-  drawParagraph(page, font, leitura, M + 14, leituraY + leituraH - 30, PDF_W - 2 * M - 28, 9.5, TEXT, 2);
+  // ----- Tabela resumo (direita) -----
+  page.drawText('RESUMO POR SEGMENTO', { x: tableX, y: blockTop - 4, size: 9, font: bold, color: NAVY });
+  const tHeadY = blockTop - 22;
+  const tHeadH = 16;
+  const colSeg = tableX + 8;
+  const colAl  = tableX + Math.round(tableW * 0.50);
+  const colPct = tableX + Math.round(tableW * 0.78);
+  page.drawRectangle({ x: tableX, y: tHeadY, width: tableW, height: tHeadH, color: BEIGE });
+  page.drawText('SEGMENTO', { x: colSeg, y: tHeadY + 4, size: 7.5, font: bold, color: MUTED });
+  page.drawText('ALUNOS',   { x: colAl,  y: tHeadY + 4, size: 7.5, font: bold, color: MUTED });
+  page.drawText('%',        { x: colPct, y: tHeadY + 4, size: 7.5, font: bold, color: MUTED });
+
+  const tBodyTop = tHeadY;
+  const tBodyBottom = blockBottom + 14;
+  const tRowsCount = segOrd.length + 1; // + total
+  const tRowH = Math.max(20, Math.min(30, (tBodyTop - tBodyBottom) / tRowsCount));
+
+  segOrd.forEach((seg, i) => {
+    const ry = tHeadY - (i + 1) * tRowH;
+    const isLeader = i === 0;
+    if (i % 2 === 0) page.drawRectangle({ x: tableX, y: ry, width: tableW, height: tRowH, color: BORDER_LIGHT });
+    if (isLeader) page.drawRectangle({ x: tableX, y: ry, width: 3, height: tRowH, color: LIME });
+    const ty = ry + tRowH / 2 - 4;
+    page.drawText(truncate(seg.sigla, 6), { x: colSeg, y: ty, size: 9.5, font: isLeader ? bold : font, color: NAVY });
+    page.drawText(fmtInt(seg.alunos), { x: colAl, y: ty, size: 9.5, font: isLeader ? bold : font, color: TEXT });
+    const pNum = data.totalAlunos > 0 ? (seg.alunos / data.totalAlunos) * 100 : 0;
+    page.drawText(fmtPct(pNum, 1), { x: colPct, y: ty, size: 9.5, font: isLeader ? bold : font, color: isLeader ? NAVY : TEXT });
+  });
+
+  // Linha de total — peso visual maior
+  {
+    const ry = tHeadY - (segOrd.length + 1) * tRowH;
+    page.drawLine({ start: { x: tableX, y: ry + tRowH }, end: { x: tableX + tableW, y: ry + tRowH }, thickness: 1.2, color: NAVY });
+    const ty = ry + tRowH / 2 - 4;
+    page.drawText('Total', { x: colSeg, y: ty, size: 10, font: bold, color: NAVY });
+    page.drawText(fmtInt(data.totalAlunos), { x: colAl, y: ty, size: 10, font: bold, color: NAVY });
+    page.drawText('100%', { x: colPct, y: ty, size: 10, font: bold, color: NAVY });
+  }
 }
 
 // Tabela analítica reutilizável (cobertura + volume) — mesmo padrão visual
