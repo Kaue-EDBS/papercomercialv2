@@ -858,13 +858,42 @@ function renderPdfConcorrenciaMapa(page: PDFPage, font: PDFFont, bold: PDFFont, 
 
   const lat = parseFloat(String(e.Latitude));
   const lng = parseFloat(String(e.Longitude));
-  if (!isNaN(lat) && !isNaN(lng)) {
-    const points = data.concs
-      .map((c: any) => ({
-        lat: parseFloat(String(c.escola.Latitude)),
-        lng: parseFloat(String(c.escola.Longitude)),
-      }))
-      .filter((p: any) => !isNaN(p.lat) && !isNaN(p.lng));
+  const escolaHasCoords = !isNaN(lat) && !isNaN(lng);
+  const allPoints = data.concs
+    .map((c: any) => ({
+      lat: parseFloat(String(c.escola.Latitude)),
+      lng: parseFloat(String(c.escola.Longitude)),
+    }))
+    .filter((p: any) => !isNaN(p.lat) && !isNaN(p.lng));
+
+  if (escolaHasCoords || allPoints.length > 0) {
+    // Determina a bbox: se a escola tem coordenadas, centra nela com base no
+    // raio operacional. Caso contrário, ajusta a bbox aos concorrentes
+    // disponíveis (com pequena folga).
+    let minLat: number, maxLat: number, minLng: number, maxLng: number;
+    let centerLat: number, centerLng: number;
+    if (escolaHasCoords) {
+      const r = ctx.raioKm * 1.4;
+      const kmPerDegLat = 111;
+      const kmPerDegLng = 111 * Math.cos(lat * Math.PI / 180);
+      const dLat = r / kmPerDegLat;
+      const dLng = r / kmPerDegLng;
+      minLat = lat - dLat; maxLat = lat + dLat;
+      minLng = lng - dLng; maxLng = lng + dLng;
+      centerLat = lat; centerLng = lng;
+    } else {
+      const lats = allPoints.map((p: any) => p.lat);
+      const lngs = allPoints.map((p: any) => p.lng);
+      const minLa = Math.min(...lats), maxLa = Math.max(...lats);
+      const minLo = Math.min(...lngs), maxLo = Math.max(...lngs);
+      const padLa = Math.max(0.01, (maxLa - minLa) * 0.25);
+      const padLo = Math.max(0.01, (maxLo - minLo) * 0.25);
+      minLat = minLa - padLa; maxLat = maxLa + padLa;
+      minLng = minLo - padLo; maxLng = maxLo + padLo;
+      centerLat = (minLat + maxLat) / 2;
+      centerLng = (minLng + maxLng) / 2;
+    }
+    const points = allPoints;
 
     const r = ctx.raioKm * 1.4;
     const kmPerDegLat = 111;
@@ -888,10 +917,13 @@ function renderPdfConcorrenciaMapa(page: PDFPage, font: PDFFont, bold: PDFFont, 
       page.drawLine({ start: { x: mapX, y: mapY + (mapH / 4) * i }, end: { x: mapX + mapW, y: mapY + (mapH / 4) * i }, thickness: 0.25, color: BORDER_LIGHT });
     }
 
-    // Halo discreto do raio operacional
-    const center = proj(lat, lng);
-    const radiusPx = Math.min(mapW, mapH) * 0.5 * (ctx.raioKm / r);
-    page.drawCircle({ x: center.x, y: center.y, size: radiusPx, color: TEAL, opacity: 0.06, borderColor: TEAL, borderWidth: 0.7 });
+    // Halo discreto do raio operacional (apenas quando a escola tem coords)
+    const center = proj(centerLat, centerLng);
+    if (escolaHasCoords) {
+      const r = ctx.raioKm * 1.4;
+      const radiusPx = Math.min(mapW, mapH) * 0.5 * (ctx.raioKm / r);
+      page.drawCircle({ x: center.x, y: center.y, size: radiusPx, color: TEAL, opacity: 0.06, borderColor: TEAL, borderWidth: 0.7 });
+    }
 
     // Concorrentes (azul institucional, menores)
     points.forEach((p: any) => {
@@ -900,12 +932,10 @@ function renderPdfConcorrenciaMapa(page: PDFPage, font: PDFFont, bold: PDFFont, 
       page.drawCircle({ x, y, size: 3.5, color: NAVY, borderColor: WHITE, borderWidth: 1 });
     });
 
-    // Escola analisada (teal, maior, em destaque)
-    page.drawCircle({ x: center.x, y: center.y, size: 7, color: TEAL, borderColor: WHITE, borderWidth: 1.8 });
-  } else {
-    page.drawText('Coordenadas da escola não disponíveis para renderização do mapa.', {
-      x: mapX + 18, y: mapY + mapH / 2, size: 11, font: italic, color: MUTED,
-    });
+    // Escola analisada (teal, maior, em destaque) — apenas quando há coords
+    if (escolaHasCoords) {
+      page.drawCircle({ x: center.x, y: center.y, size: 7, color: TEAL, borderColor: WHITE, borderWidth: 1.8 });
+    }
   }
 
   // Legenda discreta (canto inferior do mapa)
