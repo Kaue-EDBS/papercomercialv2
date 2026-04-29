@@ -123,11 +123,16 @@ export default function PageEncerramento({ analysis, presentationType, session, 
           <p className="text-sm text-muted-foreground mb-5">
             Escolha o formato. O arquivo será baixado direto no seu computador.
           </p>
-          {!canExport && (
+          {!analysis || !presentationType ? (
             <p className="text-sm rounded-lg p-3 mb-4" style={{ background: 'hsl(var(--beige))', color: 'hsl(var(--navy))' }}>
               A exportação fica disponível depois que você concluir a análise da escola.
             </p>
-          )}
+          ) : dataLoading ? (
+            <p className="text-sm rounded-lg p-3 mb-4 inline-flex items-center gap-2" style={{ background: 'hsl(var(--beige))', color: 'hsl(var(--navy))' }}>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Carregando dados de aderência econômica e potencial de consumo…
+            </p>
+          ) : null}
           <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => handleExport('pdf')}
