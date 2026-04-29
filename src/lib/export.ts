@@ -1422,83 +1422,97 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
 function renderPdfSocioeconomico(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Perfil Socioeconômico', `Leitura demográfica e de potencial de consumo do município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}.`);
+  drawPDFTitle(d, 'Perfil Socioeconômico e Aderência Econômica', `Leitura demográfica, econômica e de aderência ao ticket da população de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}.`);
 
   if (!data.d) {
     page.drawText('Dado não disponível na base fornecida.', { x: M, y: PDF_H / 2, size: 12, font: italic, color: MUTED });
     return;
   }
 
-  // KPIs
-  const cardW = (PDF_W - 2 * M - 48) / 5;
+  // ----- 3 KPIs grandes (Renda Média / IDH Renda / IDH Educação) -----
+  const cardW3 = (PDF_W - 2 * M - 24) / 3;
+  const cardH3 = 72;
   const cardY = PDF_H - CONTENT_TOP - 130;
-  const aderTone = data.aderenteCls.tone === 'teal' ? TEAL : data.aderenteCls.tone === 'lime' ? LIME : NAVY;
-  drawKpiCard(page, font, bold, M + 0 * (cardW + 12), cardY, cardW, 60, 'Renda Média', fmtBRL(data.rendaMedia), TEAL);
-  drawKpiCard(page, font, bold, M + 1 * (cardW + 12), cardY, cardW, 60, 'IDH Educação', String(data.idhEduc), NAVY);
-  drawKpiCard(page, font, bold, M + 2 * (cardW + 12), cardY, cardW, 60, 'IDH Renda', String(data.idhRenda), LIME);
-  drawKpiCard(page, font, bold, M + 3 * (cardW + 12), cardY, cardW, 60, 'Pop. 0–19', fmtInt(data.pop0_19), TEAL);
-  drawKpiCard(page, font, bold, M + 4 * (cardW + 12), cardY, cardW, 60, 'Aderência ao ticket', data.matrix ? `${data.aderencia.toFixed(0)}%` : 'N/D', aderTone);
+  drawKpiCard(page, font, bold, M + 0 * (cardW3 + 12), cardY, cardW3, cardH3, 'Renda Média', fmtBRL(data.rendaMedia), TEAL, 26);
+  drawKpiCard(page, font, bold, M + 1 * (cardW3 + 12), cardY, cardW3, cardH3, 'IDH Renda', String(data.idhRenda), NAVY, 26);
+  drawKpiCard(page, font, bold, M + 2 * (cardW3 + 12), cardY, cardW3, cardH3, 'IDH Educação', String(data.idhEduc), LIME, 26);
 
-  // Matriz Renda × Faixa Etária (heatmap)
+  // ----- Bloco esquerdo: distribuição etária / Bloco direito: heatmap -----
+  const blockTop = cardY - 16;
+  const blockBottom = 70;
+  const blockH = blockTop - blockBottom;
+  const leftW = (PDF_W - 2 * M - 18) * 0.42;
+  const rightW = (PDF_W - 2 * M - 18) - leftW;
+  const rightX = M + leftW + 18;
+
+  // ESQUERDA — distribuição etária
+  page.drawText('DISTRIBUIÇÃO ETÁRIA · MUNICÍPIO (2025)', { x: M, y: blockTop - 12, size: 9, font: bold, color: NAVY, characterSpacing: 1 });
+  const faixasEt = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
+  const popData = faixasEt.map(f => ({
+    label: f,
+    value: parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'),
+    color: TEAL,
+  }));
+  drawVBars(page, font, M + 16, blockBottom + 24, leftW - 24, blockH - 50, popData, undefined, fmtInt);
+
+  // DIREITA — heatmap Renda × Faixa Etária
+  page.drawText('RENDA × FAIXA ETÁRIA · MUNICÍPIO', { x: rightX, y: blockTop - 12, size: 9, font: bold, color: NAVY, characterSpacing: 1 });
   if (data.matrix) {
-    page.drawText('RENDA × FAIXA ETÁRIA · MUNICÍPIO', { x: M, y: cardY - 26, size: 10, font: bold, color: NAVY });
-    const tblY = cardY - 46;
-    const colW = [60, 110, 110, 110, 110];
-    const headers = ['Classe', '0 a 4', '5 a 14', '15 a 19', 'Total'];
-    let cx = M;
+    const headers = ['Classe', '0–4', '5–14', '15–19', 'Total'];
+    const colWeights = [0.20, 0.20, 0.20, 0.20, 0.20];
+    const colW = colWeights.map(w => rightW * w);
+    const tblHeadY = blockTop - 28;
+    let cx = rightX;
     headers.forEach((h, i) => {
-      page.drawText(h, { x: cx + 6, y: tblY, size: 9, font: bold, color: MUTED });
+      const align = i === 0 ? 0 : colW[i] - 6 - font.widthOfTextAtSize(h, 8);
+      page.drawText(h, { x: cx + (i === 0 ? 4 : align), y: tblHeadY, size: 8, font: bold, color: MUTED });
       cx += colW[i];
     });
     const allCells: number[] = [];
     data.matrix.forEach((r: any) => { allCells.push(r.ate4, r.de5a14, r.de15a19); });
     const maxCell = Math.max(...allCells, 1);
-    let ry = tblY - 16;
     const aderSet = new Set(data.faixasAderentes);
+    const rowsCount = data.matrix.length;
+    const availH = (tblHeadY - 6) - (blockBottom + 6);
+    const rowH = Math.min(18, Math.max(12, availH / rowsCount));
+    let ry = tblHeadY - rowH;
     data.matrix.forEach((r: any) => {
       const isAder = aderSet.has(r.faixa);
-      cx = M;
-      // classe
-      page.drawText((isAder ? '● ' : '  ') + r.faixa, { x: cx + 6, y: ry + 4, size: 9, font: isAder ? bold : font, color: isAder ? TEAL : NAVY });
+      if (isAder) {
+        page.drawRectangle({ x: rightX, y: ry, width: rightW, height: rowH, color: TEAL_LIGHT });
+      }
+      cx = rightX;
+      page.drawText((isAder ? '● ' : '  ') + r.faixa, { x: cx + 4, y: ry + rowH / 2 - 3, size: 8.5, font: isAder ? bold : font, color: isAder ? TEAL : NAVY });
       cx += colW[0];
       [r.ate4, r.de5a14, r.de15a19].forEach((v, i) => {
         const intensity = v / maxCell;
         const fill = rgb(0.93 - intensity * 0.55, 0.96 - intensity * 0.4, 0.96 - intensity * 0.4);
-        page.drawRectangle({ x: cx + 4, y: ry, width: colW[i + 1] - 8, height: 16, color: fill, borderColor: BORDER_LIGHT, borderWidth: 0.3 });
+        page.drawRectangle({ x: cx + 2, y: ry + 1, width: colW[i + 1] - 4, height: rowH - 2, color: fill, borderColor: BORDER_LIGHT, borderWidth: 0.3 });
         const tt = fmtInt(v);
-        const tw = font.widthOfTextAtSize(tt, 9);
-        page.drawText(tt, { x: cx + colW[i + 1] - 8 - tw, y: ry + 4, size: 9, font, color: NAVY });
+        const tw = font.widthOfTextAtSize(tt, 8);
+        page.drawText(tt, { x: cx + colW[i + 1] - 6 - tw, y: ry + rowH / 2 - 3, size: 8, font, color: NAVY });
         cx += colW[i + 1];
       });
       const tot = r.ate4 + r.de5a14 + r.de15a19;
       const tt = fmtInt(tot);
-      const tw = bold.widthOfTextAtSize(tt, 9);
-      page.drawText(tt, { x: cx + colW[4] - 8 - tw, y: ry + 4, size: 9, font: bold, color: NAVY });
-      ry -= 22;
+      const tw = bold.widthOfTextAtSize(tt, 8);
+      page.drawText(tt, { x: cx + colW[4] - 6 - tw, y: ry + rowH / 2 - 3, size: 8, font: bold, color: NAVY });
+      ry -= rowH;
     });
-    page.drawText('● Faixas com poder de compra aderente ao ticket atual da escola.', { x: M, y: ry, size: 8, font: italic, color: MUTED });
+    page.drawText('● Faixas aderentes ao ticket atual da escola.', { x: rightX, y: blockBottom + 2, size: 7.5, font: italic, color: MUTED });
   } else {
-    // Fallback: pirâmide etária 0–19 a partir da demográfica
-    page.drawText('DISTRIBUIÇÃO ETÁRIA 0–19 · MUNICÍPIO', { x: M, y: cardY - 26, size: 10, font: bold, color: NAVY });
-    const faixas = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
-    const popData = faixas.map((f) => ({
-      label: f,
-      value: parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'),
-      color: TEAL,
-    }));
-    drawVBars(page, font, M + 30, cardY - 200, PDF_W - 2 * M - 60, 150, popData, undefined, fmtInt);
-    page.drawText('Faixa etária com filhos em idade escolar — base de mercado potencial para captação no município.', { x: M, y: cardY - 220, size: 8.5, font: italic, color: MUTED });
+    page.drawText('Matriz de renda não disponível para este município.', { x: rightX, y: blockTop - 32, size: 9, font: italic, color: MUTED });
   }
 
-  // Leitura comercial
+  // ----- Leitura curta -----
   const aderencia = data.aderencia;
   let leitura: string;
   if (aderencia >= 30) leitura = 'Base sólida de famílias com poder de compra alinhado — espaço para reforçar valor agregado e diferenciais pedagógicos.';
   else if (aderencia >= 15) leitura = 'Existe nicho relevante — comunique custo-benefício e proposta de valor para reduzir sensibilidade a preço.';
-  else leitura = 'Base aderente limitada — atenção à elasticidade de preço e necessidade de comunicar fortemente o retorno do investimento educacional.';
-  page.drawRectangle({ x: M, y: 50, width: PDF_W - 2 * M, height: 32, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  page.drawText(`LEITURA COMERCIAL · ${data.aderenteCls.label.toUpperCase()} (${aderencia.toFixed(0)}%)`, { x: M + 12, y: 70, size: 9, font: bold, color: TEAL });
-  drawParagraph(page, font, leitura, M + 12, 58, PDF_W - 2 * M - 24, 9.5, NAVY, 2);
+  else leitura = 'Base aderente limitada — atenção à elasticidade de preço e à necessidade de comunicar retorno do investimento educacional.';
+  page.drawRectangle({ x: M, y: 36, width: PDF_W - 2 * M, height: 26, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
+  page.drawText(`LEITURA · ${data.aderenteCls.label.toUpperCase()} (${aderencia.toFixed(0)}%)`, { x: M + 10, y: 50, size: 8.5, font: bold, color: TEAL, characterSpacing: 1 });
+  drawParagraph(page, font, leitura, M + 10, 40, PDF_W - 2 * M - 20, 9, NAVY, 1);
 }
 
 // ----- 11. Potencial de Consumo
