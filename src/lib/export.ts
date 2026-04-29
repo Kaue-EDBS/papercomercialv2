@@ -343,8 +343,7 @@ const SLIDE_TITLES = [
   'Abertura comercial',
   'Resumo Executivo',
   'Panorama educacional da região',
-  'Concorrência — mapa e régua',
-  'Concorrência — tabela',
+  'Concorrência — visão geral e tabela',
   'Market share geral',
   'Market share por segmento',
   'Mensalidade e posicionamento competitivo',
@@ -356,20 +355,7 @@ const SLIDE_TITLES = [
   'Encerramento',
 ];
 
-// Verifica se existe ao menos 1 ponto com coordenadas válidas (escola analisada
-// ou concorrente). Se não houver nenhum, o slide do mapa é totalmente omitido
-// da exportação — nunca renderizamos um mapa vazio.
-function hasMapPoints(ctx: ExportContext): boolean {
-  const e = ctx.analysis.escola;
-  const eLat = parseFloat(String(e.Latitude));
-  const eLng = parseFloat(String(e.Longitude));
-  if (!isNaN(eLat) && !isNaN(eLng)) return true;
-  return ctx.analysis.concorrentes.some(c => {
-    const la = parseFloat(String(c.escola.Latitude));
-    const lo = parseFloat(String(c.escola.Longitude));
-    return !isNaN(la) && !isNaN(lo);
-  });
-}
+// Slide 5 unificado de concorrência — sem mapa. Sempre renderizado.
 
 // ============================================================
 // PDF — RENDERER COMPLETO (14 slides)
