@@ -91,6 +91,7 @@ export interface ExportContext {
   raioMode: 'padrao' | 'personalizado';
   rendaData?: any[]; // opcional — para socioeconômico/aderência
   potencialData?: Record<string, any> | null; // opcional — para potencial de consumo
+  essenciaisInep?: string[]; // INEPs de concorrentes escolhidos manualmente pelo consultor (Etapa 2)
 }
 
 // ============================================================
