@@ -10,9 +10,10 @@ interface Props {
   session?: ConsultorSession | null;
   raioKm?: number;
   raioMode?: 'padrao' | 'personalizado';
+  essenciaisInep?: string[];
 }
 
-export default function PageEncerramento({ analysis, presentationType, session, raioKm, raioMode }: Props = {}) {
+export default function PageEncerramento({ analysis, presentationType, session, raioKm, raioMode, essenciaisInep }: Props = {}) {
   const [busy, setBusy] = useState<'pdf' | 'pptx' | null>(null);
 
   const canExport = !!(analysis && presentationType);
@@ -27,6 +28,7 @@ export default function PageEncerramento({ analysis, presentationType, session, 
         session: session ?? null,
         raioKm: raioKm ?? analysis.raioOperacional,
         raioMode: raioMode ?? 'padrao',
+        essenciaisInep: essenciaisInep ?? [],
       };
       const blob = kind === 'pdf' ? await exportPDF(ctx) : await exportPPTX(ctx);
       downloadBlob(blob, buildFilename(ctx, kind));
