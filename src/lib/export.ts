@@ -344,7 +344,7 @@ const SLIDE_TITLES = [
   'Abertura comercial',
   'Resumo Executivo',
   'Panorama educacional da região',
-  'Concorrência — visão geral e tabela',
+  'Concorrência',
   'Market share geral',
   'Market share por segmento',
   'Mensalidade e posicionamento competitivo',
