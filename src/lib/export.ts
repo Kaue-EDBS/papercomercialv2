@@ -2563,17 +2563,10 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
   const restantesNaoExibidos = Math.max(0, restantes.length - restShown.length);
   if (restantesNaoExibidos > 0) {
     s.addText(`A análise completa considera ${totalConc} concorrentes elegíveis · ${4 + restShown.length} exibidos por legibilidade.`, {
-      x: SAFE, y: PPT_H - 1.32, w: W, h: 0.24,
+      x: SAFE, y: PPT_H - 0.78, w: W, h: 0.24,
       fontSize: 9, italic: true, color: C.muted, fontFace: 'Calibri',
     });
   }
-
-  // ---------- BLOCO DE APOIO METODOLÓGICO ----------
-  pptLeitura(
-    s,
-    'Concorrentes priorizados por origem de seleção, proximidade geográfica, segmentos em comum, tipo de adoção e faixa de mensalidade.',
-    PPT_H - 0.95, 0.42, 'METODOLOGIA',
-  );
 }
 
 // ----- 6. Market Share — slide único (unifica geral + por segmento)
