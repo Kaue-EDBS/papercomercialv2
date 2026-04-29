@@ -1087,13 +1087,7 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
   const tableHActual = headerH + rowH * Math.max(totalRows, 1);
   page.drawRectangle({ x: M, y: headerY - tableHActual, width: W, height: tableHActual, borderColor: BORDER, borderWidth: 0.4, color: WHITE, opacity: 0 });
 
-  // Nota de truncamento
-  const restantesNaoExibidos = Math.max(0, restantes.length - restShown.length);
-  if (restantesNaoExibidos > 0) {
-    page.drawText(`A análise completa considera ${totalConc} concorrentes elegíveis · ${4 + restShown.length} exibidos por legibilidade.`, {
-      x: M, y: headerY - tableHActual - 12, size: 8.5, font: italic, color: MUTED,
-    });
-  }
+  // (Nota de truncamento removida a pedido — manter slide limpo.)
 }
 
 // helper local — quebra texto em até maxLines linhas, com elipse na última
