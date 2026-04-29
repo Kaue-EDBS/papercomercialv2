@@ -1443,7 +1443,7 @@ function renderPdfSocioeconomico(page: PDFPage, font: PDFFont, bold: PDFFont, it
   page.drawText('DISTRIBUIÇÃO ETÁRIA · MUNICÍPIO (2025)', { x: M, y: blockTop - 12, size: 9, font: bold, color: NAVY });
   const faixasEt = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
   const popData = faixasEt.map(f => ({
-    label: f,
+    label: `${f} anos`,
     value: parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'),
     color: TEAL,
   }));
