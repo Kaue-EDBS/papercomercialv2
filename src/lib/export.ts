@@ -1977,10 +1977,10 @@ function pptTitle(s: PptxGenJS.Slide, title: string, subtitle?: string, chip?: s
 }
 
 // KPI estilo Santa Mônica: card lavanda discreto, label cinza pequeno, valor grande navy
-function pptKpi(s: PptxGenJS.Slide, x: number, y: number, w: number, h: number, label: string, value: string, _accent = C.teal) {
+function pptKpi(s: PptxGenJS.Slide, x: number, y: number, w: number, h: number, label: string, value: string, _accent = C.teal, valueFontSize = 22) {
   s.addShape('roundRect', { x, y, w, h, fill: { color: C.lavender }, line: { color: C.lavender }, rectRadius: 0.08 } as any);
   s.addText(label, { x: x + 0.18, y: y + 0.14, w: w - 0.36, h: 0.28, fontSize: 10, color: C.muted, fontFace: 'Calibri' });
-  s.addText(value, { x: x + 0.18, y: y + 0.42, w: w - 0.36, h: h - 0.5, fontSize: 22, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true, valign: 'top' });
+  s.addText(value, { x: x + 0.18, y: y + 0.42, w: w - 0.36, h: h - 0.5, fontSize: valueFontSize, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true, valign: 'top' });
 }
 
 // Callout de leitura: card branco com borda lateral ESQUERDA grossa navy + chip de prefixo
