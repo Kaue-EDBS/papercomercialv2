@@ -382,6 +382,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
   const italic = await pdf.embedFont(StandardFonts.HelveticaOblique);
   const data = buildPageData(ctx);
   const includeMapa = hasMapPoints(ctx);
+  const total = SLIDE_TITLES.length - (includeMapa ? 0 : 1);
 
   const slideRenderersAll: Array<{ render: (page: PDFPage, n: number) => void; key?: string }> = [
     { render: (p) => renderPdfCapa(p, font, bold, italic, ctx) },
@@ -403,28 +404,6 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
   const slideRenderers = slideRenderersAll
     .filter(r => includeMapa || r.key !== 'mapa')
     .map(r => r.render);
-  const total = slideRenderers.length;
-
-  // referências antigas (mantidas como comentário) — substituídas pela lista dinâmica acima
-  // legacy renderer list:
-  const _legacy: Array<(page: PDFPage, n: number) => void> = [
-    (p) => renderPdfCapa(p, font, bold, italic, ctx),
-    (p, n) => renderPdfAbertura(p, font, bold, italic, ctx, n, total),
-    (p, n) => renderPdfResumo(p, font, bold, italic, ctx, data, n, total),
-    (p, n) => renderPdfPanorama(p, font, bold, italic, ctx, data, n, total),
-    (p, n) => renderPdfConcorrenciaMapa(p, font, bold, italic, ctx, data, n, total),
-    (p, n) => renderPdfConcorrenciaTabela(p, font, bold, italic, ctx, data, n, total),
-    (p, n) => renderPdfMarketShareGeral(p, font, bold, italic, ctx, data, n, total),
-    (p, n) => renderPdfMarketShareSegmentos(p, font, bold, italic, ctx, data, n, total),
-    (p, n) => renderPdfMensalidade(p, font, bold, italic, ctx, data, n, total),
-    (p, n) => renderPdfSocioeconomico(p, font, bold, italic, ctx, data, n, total),
-    (p, n) => renderPdfPotencial(p, font, bold, italic, ctx, data, n, total),
-    (p, n) => renderPdfInsights(p, font, bold, italic, ctx, data, n, total),
-    (p, n) => renderPdfPlanoAcao(p, font, bold, italic, ctx, data, n, total),
-    (p, n) => renderPdfAcaoComercial(p, font, bold, italic, ctx, data, n, total),
-    (p) => renderPdfEncerramento(p, font, bold, italic, ctx),
-  ];
-  void _legacy;
 
   slideRenderers.forEach((render, i) => {
     const page = pdf.addPage([PDF_W, PDF_H]);
