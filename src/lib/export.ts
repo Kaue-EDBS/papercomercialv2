@@ -2327,180 +2327,155 @@ function pptxgenChartType(t: 'bar' | 'pie'): any {
   return ((PptxGenJS as any).ChartType ?? { bar: 'bar', pie: 'pie' })[t];
 }
 
-// ----- 5. Concorrência mapa
+// ----- 5. Concorrência — visão geral e tabela (slide unificado, sem mapa)
 // Padrão visual alinhado ao "Resumo Executivo" e "Panorama Educacional":
-// título compacto + filete teal, 4 cards-resumo, mapa estático abaixo,
-// legenda discreta e bloco curto de apoio.
-function pptConcorrenciaMapa(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
+// título compacto + filete teal, linha-resumo, 4 cards-resumo, tabela
+// analítica com escola em análise fixa no topo e bloco curto de apoio.
+function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
 
   const SAFE = 0.4;
   const W = PPT_W - 2 * SAFE;
   const e = data.e;
-  const totalConc = data.concs.length;
-  const comCoord = data.concs.filter((c: any) => !isNaN(parseFloat(String(c.escola.Latitude))) && !isNaN(parseFloat(String(c.escola.Longitude)))).length;
-  const semCoord = totalConc - comCoord;
-  const totalEleg = totalConc + 1;
+  const concsAll = data.concs as any[];
+  const totalConc = concsAll.length;
+  const estCEP = concsAll.filter((c: any) => c.distancia === null && c.proximidadeCEP).length;
+  const proximos = concsAll.filter((c: any) => c.distancia !== null).sort((a: any, b: any) => a.distancia - b.distancia).slice(0, 3).length;
+  const proximosLabel = proximos > 0 ? String(proximos) : '—';
 
-  // ---------- TOPO · TÍTULO COMPACTO COM FILETE (mesmo padrão do Resumo Executivo) ----------
-  s.addText('Mapa de Concorrência Escolar', {
+  // ---------- TOPO · TÍTULO COMPACTO COM FILETE ----------
+  s.addText('Concorrência — Visão Geral e Tabela', {
     x: SAFE, y: 0.42, w: W, h: 0.7,
     fontSize: 30, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top',
   });
   s.addShape('rect', { x: SAFE, y: 1.08, w: 0.5, h: 0.05, fill: { color: C.teal }, line: { color: C.teal } });
-  s.addText('Visualização geográfica da escola analisada e dos concorrentes elegíveis dentro do raio operacional.', {
+  s.addText('Concorrentes elegíveis selecionados para comparação com a escola analisada dentro da área de influência.', {
     x: SAFE, y: 1.18, w: W, h: 0.32,
     fontSize: 11.5, color: C.muted, fontFace: 'Calibri', italic: true, valign: 'top',
   });
 
-  // ---------- CARDS-RESUMO (mesmo padrão do Resumo Executivo / Panorama) ----------
-  const cardsY = 1.70;
-  const cardH = 1.05;
-  const cw = (W - 0.6) / 4;
-  pptResumoCard(s, SAFE + 0 * (cw + 0.2), cardsY, cw, cardH, 'Raio Operacional',       fmtKm(ctx.raioKm),  C.teal, true);
-  pptResumoCard(s, SAFE + 1 * (cw + 0.2), cardsY, cw, cardH, 'Concorrentes c/ Coords', String(comCoord),   C.navy, false);
-  pptResumoCard(s, SAFE + 2 * (cw + 0.2), cardsY, cw, cardH, 'Estimados por CEP',      String(semCoord),   C.navy, false);
-  pptResumoCard(s, SAFE + 3 * (cw + 0.2), cardsY, cw, cardH, 'Total Elegível',         String(totalEleg),  C.lime, true);
-
-  // ---------- MAPA ESTÁTICO ----------
-  const mx = SAFE;
-  const my = 2.95;
-  const mw = W;
-  const mh = 3.55;
-  s.addShape('rect', { x: mx, y: my, w: mw, h: mh, fill: { color: C.beige }, line: { color: C.borderLight, width: 0.5 } });
-
-  const lat = parseFloat(String(e.Latitude));
-  const lng = parseFloat(String(e.Longitude));
-  const escolaHasCoords = !isNaN(lat) && !isNaN(lng);
-  const points = data.concs.map((c: any) => ({
-    lat: parseFloat(String(c.escola.Latitude)),
-    lng: parseFloat(String(c.escola.Longitude)),
-  })).filter((p: any) => !isNaN(p.lat) && !isNaN(p.lng));
-
-  if (escolaHasCoords || points.length > 0) {
-    let minLng: number, maxLng: number, minLat: number, maxLat: number;
-    let centerLat: number, centerLng: number;
-    if (escolaHasCoords) {
-      const r = ctx.raioKm * 1.4;
-      const dLat = r / 111;
-      const dLng = r / (111 * Math.cos(lat * Math.PI / 180));
-      minLat = lat - dLat; maxLat = lat + dLat;
-      minLng = lng - dLng; maxLng = lng + dLng;
-      centerLat = lat; centerLng = lng;
-    } else {
-      const lats = points.map((p: any) => p.lat);
-      const lngs = points.map((p: any) => p.lng);
-      const minLa = Math.min(...lats), maxLa = Math.max(...lats);
-      const minLo = Math.min(...lngs), maxLo = Math.max(...lngs);
-      const padLa = Math.max(0.01, (maxLa - minLa) * 0.25);
-      const padLo = Math.max(0.01, (maxLo - minLo) * 0.25);
-      minLat = minLa - padLa; maxLat = maxLa + padLa;
-      minLng = minLo - padLo; maxLng = maxLo + padLo;
-      centerLat = (minLat + maxLat) / 2;
-      centerLng = (minLng + maxLng) / 2;
-    }
-    const proj = (la: number, lo: number) => ({
-      x: mx + ((lo - minLng) / (maxLng - minLng)) * mw,
-      y: my + (1 - (la - minLat) / (maxLat - minLat)) * mh,
-    });
-
-    // Grid neutro e leve
-    for (let i = 1; i < 5; i++) {
-      s.addShape('line', { x: mx + (mw / 5) * i, y: my, w: 0, h: mh, line: { color: C.borderLight, width: 0.4 } });
-    }
-    for (let i = 1; i < 4; i++) {
-      s.addShape('line', { x: mx, y: my + (mh / 4) * i, w: mw, h: 0, line: { color: C.borderLight, width: 0.4 } });
-    }
-    // Halo do raio operacional (apenas quando a escola tem coords)
-    const center = proj(centerLat, centerLng);
-    if (escolaHasCoords) {
-      const r = ctx.raioKm * 1.4;
-      const radiusIn = (ctx.raioKm / r) * (Math.min(mw, mh) / 2);
-      s.addShape('ellipse', {
-        x: center.x - radiusIn, y: center.y - radiusIn, w: radiusIn * 2, h: radiusIn * 2,
-        fill: { color: C.teal, transparency: 92 }, line: { color: C.teal, width: 0.8 },
-      });
-    }
-    // Concorrentes (navy, menores)
-    points.forEach((p: any) => {
-      const { x, y } = proj(p.lat, p.lng);
-      if (x < mx || x > mx + mw || y < my || y > my + mh) return;
-      s.addShape('ellipse', { x: x - 0.05, y: y - 0.05, w: 0.10, h: 0.10, fill: { color: C.navy }, line: { color: C.white, width: 1 } });
-    });
-    // Escola analisada (teal, maior) — apenas quando há coords
-    if (escolaHasCoords) {
-      s.addShape('ellipse', { x: center.x - 0.1, y: center.y - 0.1, w: 0.20, h: 0.20, fill: { color: C.teal }, line: { color: C.white, width: 1.5 } });
-    }
-  }
-
-  // Legenda discreta sobre o mapa (faixa branca translúcida no topo)
-  const legY = my + 0.10;
-  s.addShape('rect', { x: mx + 0.12, y: legY, w: mw - 0.24, h: 0.26, fill: { color: C.white, transparency: 15 }, line: { color: C.white } });
-  const legendaTxt: any[] = [
-  ];
-  if (escolaHasCoords) {
-    legendaTxt.push({ text: '●  ', options: { color: C.teal, fontSize: 11, bold: true } });
-    legendaTxt.push({ text: 'Escola analisada', options: { color: C.navy, fontSize: 9.5 } });
-    legendaTxt.push({ text: '     ●  ', options: { color: C.navy, fontSize: 11, bold: true } });
-    legendaTxt.push({ text: 'Concorrentes com coordenadas', options: { color: C.navy, fontSize: 9.5 } });
-  } else {
-    legendaTxt.push({ text: '●  ', options: { color: C.navy, fontSize: 11, bold: true } });
-    legendaTxt.push({ text: 'Concorrentes com coordenadas', options: { color: C.navy, fontSize: 9.5 } });
-    legendaTxt.push({ text: '     Escola analisada sem coordenadas na base', options: { color: C.muted, fontSize: 9, italic: true } });
-  }
-  if (semCoord > 0) {
-    legendaTxt.push({ text: `     + ${semCoord} estimado(s) por CEP`, options: { color: C.muted, fontSize: 9.5, italic: true } });
-  }
-  s.addText(legendaTxt, {
-    x: mx + 0.22, y: legY, w: mw - 0.4, h: 0.26,
-    fontFace: 'Calibri', valign: 'middle',
+  // ---------- LINHA-RESUMO ----------
+  s.addText(`Raio ${fmtKm(ctx.raioKm)} · padrão · ${totalConc} concorrente(s) elegíveis`, {
+    x: SAFE, y: 1.55, w: W, h: 0.26,
+    fontSize: 10, color: C.muted, fontFace: 'Calibri', valign: 'top',
   });
 
-  // ---------- BLOCO DE APOIO (curto, discreto) ----------
-  const apoioTxt = escolaHasCoords
-    ? 'O mapa exibe os concorrentes com coordenadas válidas dentro do raio final definido. Escolas sem coordenadas permanecem consideradas na análise quando elegíveis por proximidade estimada.'
-    : 'A escola analisada não possui coordenadas na base. O mapa exibe apenas os concorrentes georreferenciados disponíveis; demais escolas seguem consideradas na análise quando elegíveis por proximidade estimada.';
-  pptLeitura(s, apoioTxt, PPT_H - 0.95, 0.42, 'CONTEXTO GEOGRÁFICO');
-}
+  // ---------- CARDS-RESUMO ----------
+  const cardsY = 1.85;
+  const cardH = 0.95;
+  const cw = (W - 0.6) / 4;
+  pptResumoCard(s, SAFE + 0 * (cw + 0.2), cardsY, cw, cardH, 'Concorrentes Elegíveis', String(totalConc),       C.teal, true);
+  pptResumoCard(s, SAFE + 1 * (cw + 0.2), cardsY, cw, cardH, 'Mesma Faixa de Mensal.', String(data.mesmaFaixa),  C.navy, false);
+  pptResumoCard(s, SAFE + 2 * (cw + 0.2), cardsY, cw, cardH, 'Mais Próximos (Top 3)',  proximosLabel,            C.navy, false);
+  pptResumoCard(s, SAFE + 3 * (cw + 0.2), cardsY, cw, cardH, 'Estimados por CEP',      String(estCEP),           C.lime, true);
 
-// ----- 6. Concorrência tabela
-function pptConcorrenciaTabela(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
-  pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  const TOP_N = 8;
-  const shown = Math.min(TOP_N, data.concs.length);
-  pptTitle(s, 'Concorrência — Tabela', `Top ${shown} concorrentes ordenados por relevância competitiva`);
-  const headers = ['Escola', 'Mensalidade', 'Matrículas', 'Distância', 'Segmentos', 'Ed. Brasil'];
-  const rows: any[] = [headers.map(h => ({ text: h, options: { bold: true, color: C.white, fill: { color: C.navy }, fontSize: 10, fontFace: 'Calibri' } }))];
-  data.concs.slice(0, TOP_N).forEach((c: any, idx: number) => {
-    const dist = c.distancia !== null ? fmtKm(c.distancia) : (c.proximidadeCEP ? 'Estimado por CEP' : 'Sem coordenadas');
-    const eb = (c.escola['Adota Brasil'] || '').toLowerCase() === 'sim';
-    const fill = idx % 2 === 0 ? C.beige : C.white;
+  // ---------- TABELA ANALÍTICA ----------
+  const TOP_N = 10;
+  const concsShown = concsAll.slice(0, TOP_N);
+  const restantes = Math.max(0, totalConc - concsShown.length);
+
+  const segChip = (seg: string): { text: string; opts: any } => {
+    const colorMap: Record<string, { bg: string; fg: string }> = {
+      EI:   { bg: C.segEI,   fg: C.white },
+      EFI:  { bg: C.segEFI,  fg: C.white },
+      EFII: { bg: C.segEFII, fg: C.navy  },
+      EM:   { bg: C.segEM,   fg: C.white },
+    };
+    const c = colorMap[seg] ?? { bg: C.navy, fg: C.white };
+    return { text: ` ${seg} `, opts: { fontSize: 8.5, bold: true, color: c.fg, fill: { color: c.bg }, fontFace: 'Calibri' } };
+  };
+
+  const headers = ['Escola', 'Matrículas', 'Distância / Proximidade', 'Segmentos', 'Mensalidade'];
+  const headerRow = headers.map((h, i) => ({
+    text: h,
+    options: {
+      bold: true, color: C.white, fill: { color: C.navy },
+      fontSize: 10, fontFace: 'Calibri',
+      align: i === 1 ? 'right' : 'left',
+      valign: 'middle',
+    },
+  }));
+  const rows: any[] = [headerRow];
+
+  // Linha 0 — escola em análise (destacada)
+  {
+    const segs = getSegmentos(e);
+    const mensRaw = (e.Mensalidade || '').trim();
+    const mensTxt = (!mensRaw || mensRaw === '0') ? 'Dado não disponível' : mensRaw;
+    const fill = C.tealLight;
+    const segCells: any[] = [];
+    segs.forEach((seg, i) => {
+      if (i > 0) segCells.push({ text: ' ', options: { fontSize: 8.5, fill: { color: fill }, fontFace: 'Calibri' } });
+      const ch = segChip(seg);
+      segCells.push({ text: ch.text, options: { ...ch.opts } });
+    });
+    if (segs.length === 0) segCells.push({ text: '—', options: { fontSize: 9.5, color: C.muted, fill: { color: fill }, fontFace: 'Calibri' } });
+
     rows.push([
-      { text: c.escola.Escola, options: { fontSize: 9.5, color: C.navy, bold: true, fill: { color: fill }, fontFace: 'Calibri' } },
-      { text: c.escola.Mensalidade && c.escola.Mensalidade !== '0' ? c.escola.Mensalidade : '—', options: { fontSize: 9.5, color: C.text, fill: { color: fill }, fontFace: 'Calibri' } },
-      { text: fmtInt(num(c.escola['Alunado Total'])), options: { fontSize: 9.5, color: C.text, align: 'right', fill: { color: fill }, fontFace: 'Calibri' } },
-      { text: dist, options: { fontSize: 9.5, color: c.distancia !== null ? C.text : (c.proximidadeCEP ? C.muted : C.red), fill: { color: fill }, fontFace: 'Calibri' } },
-      { text: c.segmentosComum.join(' · ') || '—', options: { fontSize: 9.5, color: C.text, fill: { color: fill }, fontFace: 'Calibri' } },
-      { text: eb ? '✓' : '—', options: { fontSize: 10, bold: true, color: eb ? C.teal : C.muted, align: 'center', fill: { color: fill }, fontFace: 'Calibri' } },
+      {
+        text: [
+          { text: e.Escola, options: { bold: true, color: C.navy, fontSize: 10, fontFace: 'Calibri' } },
+          { text: '   ', options: { fontSize: 10 } },
+          { text: ' Em análise ', options: { bold: true, fontSize: 8, color: C.white, fill: { color: C.teal }, fontFace: 'Calibri' } },
+        ],
+        options: { fill: { color: fill }, valign: 'middle' },
+      },
+      { text: fmtInt(num(e['Alunado Total'])), options: { fontSize: 10, bold: true, color: C.navy, align: 'right', valign: 'middle', fill: { color: fill }, fontFace: 'Calibri' } },
+      { text: '—', options: { fontSize: 10, color: C.muted, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri' } },
+      { text: segCells, options: { fill: { color: fill }, valign: 'middle' } },
+      { text: mensTxt, options: { fontSize: 10, bold: true, color: C.navy, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri', italic: !mensRaw || mensRaw === '0' } },
+    ]);
+  }
+
+  concsShown.forEach((c: any, idx: number) => {
+    const fill = idx % 2 === 0 ? C.white : C.beige;
+    const segs = getSegmentos(c.escola);
+    const dist = c.distancia !== null
+      ? { text: fmtKm(c.distancia), color: C.text }
+      : c.proximidadeCEP
+        ? { text: 'Estimado por CEP', color: C.muted }
+        : { text: 'Sem coordenadas', color: C.muted };
+    const mensRaw = (c.escola.Mensalidade || '').trim();
+    const mensIsND = !mensRaw || mensRaw === '0';
+    const mensTxt = mensIsND ? 'Dado não disponível' : mensRaw;
+    const segCells: any[] = [];
+    segs.forEach((seg, i) => {
+      if (i > 0) segCells.push({ text: ' ', options: { fontSize: 8.5, fill: { color: fill }, fontFace: 'Calibri' } });
+      const ch = segChip(seg);
+      segCells.push({ text: ch.text, options: { ...ch.opts } });
+    });
+    if (segs.length === 0) segCells.push({ text: '—', options: { fontSize: 9.5, color: C.muted, fill: { color: fill }, fontFace: 'Calibri' } });
+
+    rows.push([
+      { text: c.escola.Escola, options: { fontSize: 9.5, bold: true, color: C.navy, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri' } },
+      { text: fmtInt(num(c.escola['Alunado Total'])), options: { fontSize: 9.5, color: C.text, align: 'right', valign: 'middle', fill: { color: fill }, fontFace: 'Calibri' } },
+      { text: dist.text, options: { fontSize: 9.5, color: dist.color, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri', italic: c.distancia === null } },
+      { text: segCells, options: { fill: { color: fill }, valign: 'middle' } },
+      { text: mensTxt, options: { fontSize: 9.5, color: mensIsND ? C.muted : C.text, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri', italic: mensIsND } },
     ]);
   });
+
   s.addTable(rows, {
-    x: PPT_M, y: 1.7, w: PPT_W - 2 * PPT_M,
-    colW: [4.2, 1.8, 1.3, 1.6, 2.0, 1.4].map(v => v * (PPT_W - 2 * PPT_M) / 12.3),
+    x: SAFE, y: 2.95, w: W,
+    colW: [W * 0.40, W * 0.12, W * 0.16, W * 0.16, W * 0.16],
     rowH: 0.32, fontFace: 'Calibri',
-    border: { type: 'solid', color: C.border, pt: 0.4 },
+    border: { type: 'solid', color: C.borderLight, pt: 0.4 },
   });
-  const restantes = Math.max(0, data.concs.length - shown);
-  const linhaResumo = `${data.concs.length} concorrente(s) elegíveis · ${data.mesmaFaixa} na mesma faixa · ${data.adotamBrasil} adota(m) Editora do Brasil.`;
-  const nota = restantes > 0
-    ? `Top ${shown} exibidos. Demais ${restantes} concorrente(s) disponíveis na ferramenta digital. Ranking por proximidade, faixa de mensalidade e segmentos comuns.`
-    : 'Ranking por proximidade, faixa de mensalidade e segmentos comuns. Tabela completa também disponível na ferramenta digital.';
-  s.addText(linhaResumo, {
-    x: PPT_M, y: PPT_H - 1.05, w: PPT_W - 2 * PPT_M, h: 0.28, fontSize: 10, color: C.text, fontFace: 'Calibri',
-  });
-  s.addText(nota, {
-    x: PPT_M, y: PPT_H - 0.78, w: PPT_W - 2 * PPT_M, h: 0.28, fontSize: 9, italic: true, color: C.muted, fontFace: 'Calibri',
-  });
+
+  // Nota se houver mais concorrentes além dos exibidos
+  if (restantes > 0) {
+    s.addText(`A análise completa considera ${totalConc} concorrentes elegíveis · ${concsShown.length} exibidos por legibilidade.`, {
+      x: SAFE, y: PPT_H - 1.32, w: W, h: 0.24,
+      fontSize: 9, italic: true, color: C.muted, fontFace: 'Calibri',
+    });
+  }
+
+  // ---------- BLOCO DE APOIO METODOLÓGICO ----------
+  pptLeitura(
+    s,
+    'Concorrentes selecionados com base em proximidade geográfica, segmentos em comum, faixa de mensalidade e critérios operacionais definidos na análise.',
+    PPT_H - 0.95, 0.42, 'METODOLOGIA',
+  );
 }
 
 // ----- 7. MS Geral
