@@ -426,7 +426,7 @@ const SLIDE_TITLES = [
   'Panorama educacional da região',
   'Concorrência',
   'Market Share',
-  'Mensalidade e posicionamento competitivo',
+  'Faixa de Mensalidade',
   'Perfil socioeconômico e aderência econômica',
   'Potencial de consumo educacional e comercial',
   'Insights estratégicos',
