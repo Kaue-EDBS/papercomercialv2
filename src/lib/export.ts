@@ -3064,11 +3064,14 @@ function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
   });
   const faixasEt = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
   const valsEt = faixasEt.map(f => parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'));
-  s.addChart(pptxgenChartType('bar'), [{ name: 'População', labels: faixasEt, values: valsEt }], {
+  const faixasLabels = faixasEt.map(f => `${f} anos`);
+  s.addChart(pptxgenChartType('bar'), [{ name: 'População', labels: faixasLabels, values: valsEt }], {
     x: PPT_M, y: blockY + 0.32, w: leftW, h: blockH - 0.4,
     barDir: 'col', chartColors: [C.teal],
     showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy,
     catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 10, valAxisLabelFontSize: 9,
+    catGridLine: { style: 'none' }, valGridLine: { style: 'none' },
+    showValAxisTitle: false, valAxisHidden: true,
     showLegend: false, showTitle: false,
   });
 
