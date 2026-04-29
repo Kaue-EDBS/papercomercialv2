@@ -2439,14 +2439,11 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
   const cw = (W - 3 * gap) / 4;
 
   const segChipText = (seg: string) => {
-    const colorMap: Record<string, { bg: string; fg: string }> = {
-      EI:   { bg: C.segEI,   fg: C.white },
-      EFI:  { bg: C.segEFI,  fg: C.white },
-      EFII: { bg: C.segEFII, fg: C.navy  },
-      EM:   { bg: C.segEM,   fg: C.white },
+    // Padronizado: mesmo tratamento p/ EI, EFI, EFII e EM
+    return {
+      text: ` ${seg} `,
+      options: { fontSize: 8, bold: true, color: C.navy, fill: { color: C.tealLight }, fontFace: 'Calibri' },
     };
-    const c = colorMap[seg] ?? { bg: C.navy, fg: C.white };
-    return { text: ` ${seg} `, options: { fontSize: 8, bold: true, color: c.fg, fill: { color: c.bg }, fontFace: 'Calibri' } };
   };
 
   const drawMini = (cx: number, c: any | null) => {
