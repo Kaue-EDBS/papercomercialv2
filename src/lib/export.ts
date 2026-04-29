@@ -958,7 +958,7 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
     // Tipo de adoção (linha de base)
     const tipo = tipoAdocaoOf(c.escola);
     const tipoND = tipoAdocaoIsND(c.escola);
-    let tipoTxt = tipo;
+    let tipoTxt = `Tipo de adoção: ${tipo}`;
     let tipoSize = 8;
     const tipoMaxW = cardW - 18;
     while (font.widthOfTextAtSize(tipoTxt, tipoSize) > tipoMaxW && tipoSize > 7) tipoSize -= 0.5;
