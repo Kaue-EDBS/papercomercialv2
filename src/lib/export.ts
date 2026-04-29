@@ -2880,9 +2880,9 @@ function pptMensalidade(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: nu
   const gap = 0.2;
   const cw = (W - 3 * gap) / 4;
   pptKpi(s, SAFE + 0 * (cw + gap), cardsY, cw, cardH, 'Faixa da escola', escFaixaLabel, C.teal);
-  pptKpi(s, SAFE + 1 * (cw + gap), cardsY, cw, cardH, 'Na mesma faixa', String(data.mesmaFaixa), C.teal);
-  pptKpi(s, SAFE + 2 * (cw + gap), cardsY, cw, cardH, 'Acima da faixa', String(data.acima), C.navy);
-  pptKpi(s, SAFE + 3 * (cw + gap), cardsY, cw, cardH, 'Abaixo da faixa', String(data.abaixo), C.lime);
+  pptKpi(s, SAFE + 1 * (cw + gap), cardsY, cw, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), C.teal);
+  pptKpi(s, SAFE + 2 * (cw + gap), cardsY, cw, cardH, 'Concorrentes acima da faixa', String(data.acima), C.navy);
+  pptKpi(s, SAFE + 3 * (cw + gap), cardsY, cw, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), C.lime);
 
   // ---------- BLOCO A · TABELA + BLOCO B · DISTRIBUIÇÃO ----------
   const contentY = cardsY + cardH + 0.2;
@@ -2954,10 +2954,11 @@ function pptMensalidade(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: nu
   const distItems = FAIXAS.map(f => {
     const tot = (e.Mensalidade === f ? 1 : 0) + concs.filter((c: any) => c.escola.Mensalidade === f).length;
     return { label: FAIXA_LABEL[f] || f, total: tot, hasTarget: e.Mensalidade === f };
-  });
+  }).filter(x => x.total > 0);
   const maxTot = Math.max(...distItems.map(x => x.total), 1);
   const distAreaY = contentY + 0.32;
-  const distRowH = 0.42;
+  const availH = (PPT_H - 1.0) - distAreaY;
+  const distRowH = distItems.length > 0 ? Math.min(0.6, Math.max(0.42, availH / distItems.length)) : 0.42;
   distItems.forEach((d2, i) => {
     const rY = distAreaY + i * distRowH;
     s.addText(
