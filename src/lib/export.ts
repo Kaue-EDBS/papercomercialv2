@@ -2108,55 +2108,93 @@ function pptResumoCard(
 // ----- 4. Panorama
 function pptPanorama(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Panorama Educacional da Região', `${data.a.concorrentes.length + 1} escolas · ${fmtInt(data.totalAlunos)} alunos · raio ${fmtKm(ctx.raioKm)}`);
-  const lider = data.segPanorama[0];
+
+  const SAFE = 0.4;
+  const W = PPT_W - 2 * SAFE;
+  const a = ctx.analysis;
+
+  // ---------- TOPO · TÍTULO COMPACTO COM FILETE (mesmo padrão do Resumo Executivo) ----------
+  s.addText('Panorama Educacional da Região', {
+    x: SAFE, y: 0.42, w: W, h: 0.7,
+    fontSize: 30, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top',
+  });
+  s.addShape('rect', { x: SAFE, y: 1.08, w: 0.5, h: 0.05, fill: { color: C.teal }, line: { color: C.teal } });
+  s.addText(`${a.concorrentes.length + 1} escolas  ·  ${fmtInt(data.totalAlunos)} alunos  ·  raio ${fmtKm(ctx.raioKm)}`, {
+    x: SAFE, y: 1.18, w: W, h: 0.32,
+    fontSize: 11.5, color: C.muted, fontFace: 'Calibri', italic: true, valign: 'top',
+  });
+
+  // ---------- CARDS SUPERIORES (mesmo padrão visual do Resumo Executivo) ----------
+  const segOrd = data.segPanorama as Array<{ sigla: string; nome: string; alunos: number }>;
+  const lider = segOrd[0];
   const liderPct = data.totalAlunos > 0 ? (lider?.alunos ?? 0) / data.totalAlunos * 100 : 0;
+  const nEscolas = a.concorrentes.length + 1;
+  const mediaEsc = Math.round(data.totalAlunos / Math.max(1, nEscolas));
 
-  // ===== Cards principais — destaque do líder em lime =====
-  const cw = (PPT_W - 2 * PPT_M - 0.45) / 4;
-  const cardY = 1.85, cardH = 0.85;
-  pptKpi(s, PPT_M + 0 * (cw + 0.15), cardY, cw, cardH, 'Escolas', String(data.a.concorrentes.length + 1), C.teal);
-  pptKpi(s, PPT_M + 1 * (cw + 0.15), cardY, cw, cardH, 'Total de Alunos', fmtInt(data.totalAlunos), C.navy);
-  pptKpi(s, PPT_M + 2 * (cw + 0.15), cardY, cw, cardH, 'Média/Escola', fmtInt(Math.round(data.totalAlunos / Math.max(1, data.a.concorrentes.length + 1))), C.tealDark);
-
-  // Card "Segmento Líder" com destaque (fundo lime claro, faixa lime esquerda)
-  const lx = PPT_M + 3 * (cw + 0.15);
-  s.addShape('roundRect', { x: lx, y: cardY, w: cw, h: cardH, fill: { color: C.tealLight }, line: { color: C.lime, width: 1.25 }, rectRadius: 0.08 } as any);
-  s.addShape('rect', { x: lx, y: cardY, w: 0.07, h: cardH, fill: { color: C.lime }, line: { color: C.lime } });
-  s.addText('SEGMENTO LÍDER', { x: lx + 0.18, y: cardY + 0.10, w: cw - 0.36, h: 0.26, fontSize: 9, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1 });
+  const cardsY = 1.70;
+  const cardH = 1.10;
+  const cw = (W - 0.6) / 4;
+  pptResumoCard(s, SAFE + 0 * (cw + 0.2), cardsY, cw, cardH, 'Escolas',         String(nEscolas),         C.navy, false);
+  pptResumoCard(s, SAFE + 1 * (cw + 0.2), cardsY, cw, cardH, 'Total de Alunos', fmtInt(data.totalAlunos), C.navy, false);
+  pptResumoCard(s, SAFE + 2 * (cw + 0.2), cardsY, cw, cardH, 'Média/Escola',    fmtInt(mediaEsc),         C.navy, false);
+  // Segmento Líder — leve destaque (lime)
+  const lx = SAFE + 3 * (cw + 0.2);
+  s.addShape('rect', { x: lx, y: cardsY, w: cw, h: cardH, fill: { color: C.tealLight }, line: { color: C.borderLight, width: 0.75 } });
+  s.addShape('rect', { x: lx, y: cardsY, w: 0.07, h: cardH, fill: { color: C.lime }, line: { color: C.lime } });
+  s.addText('SEGMENTO LÍDER', {
+    x: lx + 0.28, y: cardsY + 0.18, w: cw - 0.46, h: 0.28,
+    fontSize: 9.5, bold: true, color: C.muted, charSpacing: 2, fontFace: 'Calibri', valign: 'top',
+  });
   s.addText(
     [
-      { text: lider?.sigla ?? '—', options: { bold: true, color: C.navy, fontSize: 24 } },
+      { text: lider?.sigla ?? '—', options: { bold: true, color: C.navy, fontSize: 28 } },
       { text: `   ${fmtPct(liderPct, 0)}`, options: { color: C.tealDark, fontSize: 14, bold: true } },
     ] as any,
-    { x: lx + 0.18, y: cardY + 0.36, w: cw - 0.36, h: cardH - 0.42, fontFace: 'Calibri', valign: 'middle', shrinkText: true } as any,
+    { x: lx + 0.28, y: cardsY + 0.5, w: cw - 0.46, h: cardH - 0.6, fontFace: 'Calibri', valign: 'middle', shrinkText: true } as any,
   );
 
-  // ===== Composição: gráfico (≈2/3) + tabela resumo (≈1/3) =====
-  const segOrd = data.segPanorama as Array<{ sigla: string; nome: string; alunos: number }>;
+  // ---------- COBERTURA DE OFERTA (cálculo) ----------
+  const todas = [a.escola, ...a.concorrentes.map((c: any) => c.escola)];
+  const totEsc = todas.length;
+  const segKey: Record<string, string> = {
+    EI:   'qt_mat_educacao_infantil',
+    EFI:  'qt_mat_ensino_fundamental_anos_iniciais',
+    EFII: 'qt_mat_ensino_fundamental_anos_finais',
+    EM:   'qt_mat_ensino_medio',
+  };
+  const cobertura = segOrd.map(seg => ({
+    sigla: seg.sigla,
+    nome: seg.nome,
+    escolas: todas.filter(esc => num(esc[segKey[seg.sigla]]) > 0).length,
+  }));
+  const cobertOrd = [...cobertura].sort((x, y) => y.escolas - x.escolas);
+  const empateCob = cobertOrd.length > 1 && cobertOrd[0].escolas === cobertOrd[1].escolas;
 
-  const blockY = 3.0;
-  const blockH = PPT_H - blockY - 0.55; // respiro inferior, sem leitura
-  const gapX = 0.25;
-  const totalW = PPT_W - 2 * PPT_M;
-  const chartW = totalW * 0.62;
-  const tableX = PPT_M + chartW + gapX;
-  const tableW = totalW - chartW - gapX;
+  // ===== Composição: gráfico (esq) + tabela cobertura (dir) =====
+  const blockY = 3.05;
+  const blockH = PPT_H - blockY - 0.6;
+  const gapX = 0.3;
+  const chartW = (W - gapX) * 0.58;
+  const tableX = SAFE + chartW + gapX;
+  const tableW = W - chartW - gapX;
 
-  // ----- Gráfico de barras horizontais -----
-  // Destaque sutil do líder via cor diferente (TEAL) vs demais (NAVY).
-  const liderSigla = segOrd[0]?.sigla;
+  // ----- Gráfico de barras horizontais (esquerda) -----
+  const liderSigla = lider?.sigla;
   const chartLabels = segOrd.map(seg => seg.nome);
   const chartValues = segOrd.map(seg => seg.alunos);
   const chartData = [{ name: 'Alunos', labels: chartLabels, values: chartValues }];
   const barColorsArr = segOrd.map(seg => seg.sigla === liderSigla ? C.teal : C.navy);
 
-  s.addText('Distribuição de alunos por segmento', {
-    x: PPT_M, y: blockY, w: chartW, h: 0.3,
+  s.addText('Volume de alunos por segmento', {
+    x: SAFE, y: blockY, w: chartW, h: 0.3,
     fontSize: 12, bold: true, color: C.navy, fontFace: 'Calibri',
   });
+  s.addText('Distribuição do total de alunos entre os níveis de ensino', {
+    x: SAFE, y: blockY + 0.28, w: chartW, h: 0.26,
+    fontSize: 10, italic: true, color: C.muted, fontFace: 'Calibri',
+  });
   s.addChart(pptxgenChartType('bar'), chartData, {
-    x: PPT_M, y: blockY + 0.34, w: chartW, h: blockH - 0.34,
+    x: SAFE, y: blockY + 0.6, w: chartW, h: blockH - 0.6,
     barDir: 'bar',
     chartColors: barColorsArr,
     chartColorsOpacity: 100,
@@ -2178,30 +2216,35 @@ function pptPanorama(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
     barGapWidthPct: 60,
   } as any);
 
-  // ----- Tabela resumo -----
-  s.addText('Resumo por Segmento', {
+  // ----- Tabela: Cobertura por segmento (direita) -----
+  s.addText('Cobertura por segmento', {
     x: tableX, y: blockY, w: tableW, h: 0.3,
     fontSize: 12, bold: true, color: C.navy, fontFace: 'Calibri',
   });
-  const tHeadY = blockY + 0.34;
-  const tHeadH = 0.28;
+  s.addText('Quantidade de escolas que ofertam cada nível de ensino', {
+    x: tableX, y: blockY + 0.28, w: tableW, h: 0.26,
+    fontSize: 10, italic: true, color: C.muted, fontFace: 'Calibri',
+  });
+
+  const tHeadY = blockY + 0.6;
+  const tHeadH = 0.3;
   const tBodyTop = tHeadY + tHeadH;
   const tBodyBottom = blockY + blockH;
-  const tRowsCount = segOrd.length + 1; // + total
-  const tRowH = Math.max(0.30, Math.min(0.46, (tBodyBottom - tBodyTop) / tRowsCount));
+  const tRowH = Math.max(0.34, Math.min(0.5, (tBodyBottom - tBodyTop) / cobertOrd.length));
 
   // Header
-  const colSegW = tableW * 0.42;
-  const colAlW  = tableW * 0.30;
-  const colPctW = tableW - colSegW - colAlW;
+  const colSegW = tableW * 0.40;
+  const colEscW = tableW * 0.26;
+  const colPctW = tableW * 0.14;
+  const colBarW = tableW - colSegW - colEscW - colPctW;
   s.addShape('rect', { x: tableX, y: tHeadY, w: tableW, h: tHeadH, fill: { color: C.beige }, line: { color: C.beige } });
-  s.addText('SEGMENTO', { x: tableX + 0.08, y: tHeadY, w: colSegW, h: tHeadH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', charSpacing: 1 });
-  s.addText('ALUNOS',   { x: tableX + colSegW, y: tHeadY, w: colAlW - 0.06,  h: tHeadH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', align: 'right', charSpacing: 1 });
-  s.addText('%',        { x: tableX + colSegW + colAlW, y: tHeadY, w: colPctW - 0.06, h: tHeadH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', align: 'right', charSpacing: 1 });
+  s.addText('SEGMENTO', { x: tableX + 0.1, y: tHeadY, w: colSegW, h: tHeadH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', charSpacing: 1 });
+  s.addText('ESCOLAS',  { x: tableX + colSegW, y: tHeadY, w: colEscW, h: tHeadH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', align: 'right', charSpacing: 1 });
+  s.addText('%',        { x: tableX + colSegW + colEscW, y: tHeadY, w: colPctW - 0.06, h: tHeadH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', align: 'right', charSpacing: 1 });
 
-  segOrd.forEach((seg, i) => {
+  cobertOrd.forEach((seg, i) => {
     const ry = tBodyTop + i * tRowH;
-    const isLeader = i === 0;
+    const isLeader = i === 0 && !empateCob;
     if (i % 2 === 0) {
       s.addShape('rect', { x: tableX, y: ry, w: tableW, h: tRowH, fill: { color: C.borderLight }, line: { color: C.borderLight } });
     }
@@ -2209,37 +2252,27 @@ function pptPanorama(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
       s.addShape('rect', { x: tableX, y: ry, w: 0.05, h: tRowH, fill: { color: C.lime }, line: { color: C.lime } });
     }
     s.addText(seg.nome, {
-      x: tableX + 0.08, y: ry, w: colSegW - 0.08, h: tRowH,
+      x: tableX + 0.1, y: ry, w: colSegW - 0.1, h: tRowH,
       fontSize: 10.5, bold: isLeader, color: C.navy, fontFace: 'Calibri', valign: 'middle',
     });
-    s.addText(fmtInt(seg.alunos), {
-      x: tableX + colSegW, y: ry, w: colAlW - 0.06, h: tRowH,
+    s.addText(`${seg.escolas} de ${totEsc}`, {
+      x: tableX + colSegW, y: ry, w: colEscW - 0.06, h: tRowH,
       fontSize: 10.5, bold: isLeader, color: C.text, fontFace: 'Calibri', valign: 'middle', align: 'right',
     });
-    const pNum = data.totalAlunos > 0 ? (seg.alunos / data.totalAlunos) * 100 : 0;
-    s.addText(fmtPct(pNum, 1), {
-      x: tableX + colSegW + colAlW, y: ry, w: colPctW - 0.06, h: tRowH,
+    const pCob = totEsc > 0 ? (seg.escolas / totEsc) * 100 : 0;
+    s.addText(fmtPct(pCob, 0), {
+      x: tableX + colSegW + colEscW, y: ry, w: colPctW - 0.06, h: tRowH,
       fontSize: 10.5, bold: isLeader, color: isLeader ? C.navy : C.text, fontFace: 'Calibri', valign: 'middle', align: 'right',
     });
+    // mini barra horizontal discreta
+    const barX = tableX + colSegW + colEscW + colPctW + 0.04;
+    const barW = colBarW - 0.12;
+    const barY = ry + tRowH / 2 - 0.04;
+    if (barW > 0.3) {
+      s.addShape('rect', { x: barX, y: barY, w: barW, h: 0.08, fill: { color: C.borderLight }, line: { color: C.borderLight } });
+      s.addShape('rect', { x: barX, y: barY, w: Math.max(0.04, (pCob / 100) * barW), h: 0.08, fill: { color: isLeader ? C.lime : C.teal }, line: { color: isLeader ? C.lime : C.teal } });
+    }
   });
-
-  // Linha de total — peso visual maior
-  {
-    const ry = tBodyTop + segOrd.length * tRowH;
-    s.addShape('line', { x: tableX, y: ry, w: tableW, h: 0, line: { color: C.navy, width: 1.2 } });
-    s.addText('Total', {
-      x: tableX + 0.08, y: ry, w: colSegW - 0.08, h: tRowH,
-      fontSize: 11, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'middle',
-    });
-    s.addText(fmtInt(data.totalAlunos), {
-      x: tableX + colSegW, y: ry, w: colAlW - 0.06, h: tRowH,
-      fontSize: 11, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'middle', align: 'right',
-    });
-    s.addText('100%', {
-      x: tableX + colSegW + colAlW, y: ry, w: colPctW - 0.06, h: tRowH,
-      fontSize: 11, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'middle', align: 'right',
-    });
-  }
 }
 
 // helper para chart enum
