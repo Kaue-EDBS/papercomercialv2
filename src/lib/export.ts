@@ -2617,7 +2617,7 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
   // ---------- BLOCO DE APOIO METODOLÓGICO ----------
   pptLeitura(
     s,
-    'Concorrentes selecionados com base em proximidade geográfica, segmentos em comum, tipo de adoção, faixa de mensalidade e critérios operacionais definidos na análise.',
+    'Concorrentes priorizados por origem de seleção, proximidade geográfica, segmentos em comum, tipo de adoção e faixa de mensalidade.',
     PPT_H - 0.95, 0.42, 'METODOLOGIA',
   );
 }
