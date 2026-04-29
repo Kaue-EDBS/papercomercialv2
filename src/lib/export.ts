@@ -1244,9 +1244,10 @@ function renderPdfMarketShare(page: PDFPage, font: PDFFont, bold: PDFFont, itali
 function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Mensalidade · Posicionamento Competitivo', 'Faixa da escola e do grupo concorrencial');
 
+  const W = PDF_W - 2 * M;
   const e = ctx.analysis.escola;
+  const concs = data.concs as any[];
   const FAIXAS = ['até 399', '400 a 799', '800 a 1.399', '1.400 a 2.399', 'acima de R$ 2.400'];
   const FAIXA_LABEL: Record<string, string> = {
     'até 399': 'Até R$ 399',
@@ -1255,38 +1256,168 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
     '1.400 a 2.399': 'R$ 1.400 a R$ 2.399',
     'acima de R$ 2.400': 'Acima de R$ 2.400',
   };
-  const dist = FAIXAS.map(f => {
-    const tot = (e.Mensalidade === f ? 1 : 0) + data.concs.filter((c: any) => c.escola.Mensalidade === f).length;
+  const escIdx = getMensalidadeFaixa(e.Mensalidade);
+  const escFaixaLabel = (e.Mensalidade && e.Mensalidade !== '0' && escIdx > 0)
+    ? (FAIXA_LABEL[e.Mensalidade] || e.Mensalidade)
+    : 'Dado não disponível';
+
+  // ---------- TÍTULO COMPACTO + FILETE ----------
+  page.drawText('Faixa de Mensalidade', {
+    x: M, y: PDF_H - CONTENT_TOP - 12, size: 22, font: bold, color: NAVY,
+  });
+  page.drawRectangle({ x: M, y: PDF_H - CONTENT_TOP - 22, width: 36, height: 3, color: TEAL });
+  page.drawText('Posicionamento da escola analisada em relação ao grupo competitivo da área de influência.', {
+    x: M, y: PDF_H - CONTENT_TOP - 38, size: 10.5, font: italic, color: MUTED,
+  });
+
+  // ---------- LINHA-RESUMO ----------
+  const linhaY = PDF_H - CONTENT_TOP - 54;
+  const linha = `Faixa da escola: ${escFaixaLabel} · ${concs.length} concorrente(s) exibidos · ${data.mesmaFaixa} na mesma faixa`;
+  page.drawText(linha, { x: M, y: linhaY, size: 9.5, font, color: MUTED });
+
+  // ---------- 4 MINI CARDS ----------
+  const cardsTop = linhaY - 12;
+  const cardH = 60;
+  const cardY = cardsTop - cardH;
+  const gap = 12;
+  const cardW = (W - 3 * gap) / 4;
+  drawKpiCard(page, font, bold, M + 0 * (cardW + gap), cardY, cardW, cardH, 'Faixa da escola', escFaixaLabel, TEAL);
+  drawKpiCard(page, font, bold, M + 1 * (cardW + gap), cardY, cardW, cardH, 'Na mesma faixa', String(data.mesmaFaixa), TEAL);
+  drawKpiCard(page, font, bold, M + 2 * (cardW + gap), cardY, cardW, cardH, 'Acima da faixa', String(data.acima), NAVY);
+  drawKpiCard(page, font, bold, M + 3 * (cardW + gap), cardY, cardW, cardH, 'Abaixo da faixa', String(data.abaixo), LIME);
+
+  // ---------- BLOCO A · TABELA · BLOCO B · DISTRIBUIÇÃO ----------
+  const contentTop = cardY - 18;
+  const contentBottom = 56;
+  const contentH = contentTop - contentBottom;
+  const tableW = W * 0.62;
+  const distW = W - tableW - 16;
+  const distX = M + tableW + 16;
+
+  // Cabeçalho da tabela
+  const headerH = 22;
+  const tCols = [
+    { w: tableW * 0.50, label: 'Escola' },
+    { w: tableW * 0.26, label: 'Faixa' },
+    { w: tableW * 0.24, label: 'Relação' },
+  ];
+  page.drawRectangle({ x: M, y: contentTop - headerH, width: tableW, height: headerH, color: NAVY });
+  let hx = M;
+  tCols.forEach(c => {
+    page.drawText(c.label, { x: hx + 8, y: contentTop - 15, size: 9.5, font: bold, color: WHITE });
+    hx += c.w;
+  });
+
+  // Monta linhas: escola analisada primeiro, depois concorrentes
+  type Row = { nome: string; faixa: string; faixaIdx: number; isTarget: boolean };
+  const allRows: Row[] = [
+    { nome: e.Escola, faixa: e.Mensalidade, faixaIdx: escIdx, isTarget: true },
+    ...concs.map((c: any) => ({
+      nome: c.escola.Escola,
+      faixa: c.escola.Mensalidade,
+      faixaIdx: getMensalidadeFaixa(c.escola.Mensalidade),
+      isTarget: false,
+    })),
+  ];
+
+  const MAX_ROWS = 11;
+  const rowsShown = allRows.slice(0, MAX_ROWS);
+  const rowH = Math.min(22, Math.max(16, (contentH - headerH - 12) / Math.max(rowsShown.length, 1)));
+
+  const relLabel = (r: Row): { txt: string; muted: boolean } => {
+    if (r.isTarget) return { txt: 'Em análise', muted: false };
+    if (r.faixaIdx <= 0) return { txt: 'Dado não disponível', muted: true };
+    if (escIdx <= 0) return { txt: '—', muted: true };
+    if (r.faixaIdx === escIdx) return { txt: 'Mesma faixa', muted: false };
+    if (r.faixaIdx > escIdx) return { txt: 'Acima', muted: false };
+    return { txt: 'Abaixo', muted: false };
+  };
+
+  rowsShown.forEach((r, i) => {
+    const rY = contentTop - headerH - rowH * (i + 1);
+    if (r.isTarget) {
+      page.drawRectangle({ x: M, y: rY, width: tableW, height: rowH, color: TEAL_LIGHT });
+      page.drawRectangle({ x: M, y: rY, width: 3, height: rowH, color: TEAL });
+    } else if (i % 2 === 1) {
+      page.drawRectangle({ x: M, y: rY, width: tableW, height: rowH, color: BEIGE });
+    }
+    let xc = M;
+    // Escola + badge
+    {
+      const colW = tCols[0].w;
+      let size = 9.5;
+      let t = r.nome;
+      const reservedBadge = r.isTarget ? 60 : 0;
+      const maxW = colW - 16 - reservedBadge;
+      while (bold.widthOfTextAtSize(t, size) > maxW && size > 8) size -= 0.5;
+      if (bold.widthOfTextAtSize(t, size) > maxW) {
+        while (t.length > 4 && bold.widthOfTextAtSize(t + '…', size) > maxW) t = t.slice(0, -1);
+        t += '…';
+      }
+      page.drawText(t, { x: xc + 10, y: rY + rowH / 2 - 4, size, font: bold, color: NAVY });
+      if (r.isTarget) {
+        const badgeW = 56;
+        const bX = xc + colW - badgeW - 6;
+        const bY = rY + (rowH - 12) / 2;
+        page.drawRectangle({ x: bX, y: bY, width: badgeW, height: 12, color: TEAL });
+        page.drawText('Em análise', { x: bX + 5, y: bY + 3, size: 7, font: bold, color: WHITE });
+      }
+    }
+    xc += tCols[0].w;
+    // Faixa
+    {
+      const fLabel = (r.faixa && r.faixa !== '0' && r.faixaIdx > 0) ? (FAIXA_LABEL[r.faixa] || r.faixa) : 'Dado não disponível';
+      let size = 9; let t = fLabel;
+      const maxW = tCols[1].w - 12;
+      while (font.widthOfTextAtSize(t, size) > maxW && size > 7.5) size -= 0.5;
+      if (font.widthOfTextAtSize(t, size) > maxW) {
+        while (t.length > 4 && font.widthOfTextAtSize(t + '…', size) > maxW) t = t.slice(0, -1);
+        t += '…';
+      }
+      const isND = !(r.faixa && r.faixa !== '0' && r.faixaIdx > 0);
+      page.drawText(t, { x: xc + 8, y: rY + rowH / 2 - 4, size, font: isND ? italic : font, color: isND ? MUTED : TEXT });
+    }
+    xc += tCols[1].w;
+    // Relação
+    {
+      const rel = relLabel(r);
+      page.drawText(rel.txt, { x: xc + 8, y: rY + rowH / 2 - 4, size: 9, font: rel.muted ? italic : bold, color: rel.muted ? MUTED : (r.isTarget ? TEAL : NAVY) });
+    }
+    page.drawLine({ start: { x: M, y: rY }, end: { x: M + tableW, y: rY }, thickness: 0.3, color: BORDER_LIGHT });
+  });
+
+  if (allRows.length > MAX_ROWS) {
+    page.drawText(`Exibidos ${MAX_ROWS} de ${allRows.length} no total — listagem priorizada por proximidade.`, {
+      x: M, y: contentBottom - 4, size: 8.5, font: italic, color: MUTED,
+    });
+  }
+
+  // ---------- BLOCO B · DISTRIBUIÇÃO ----------
+  page.drawText('DISTRIBUIÇÃO POR FAIXA', { x: distX, y: contentTop - 12, size: 9, font: bold, color: NAVY });
+  const distItems = FAIXAS.map(f => {
+    const tot = (e.Mensalidade === f ? 1 : 0) + concs.filter((c: any) => c.escola.Mensalidade === f).length;
     return { faixa: f, label: FAIXA_LABEL[f], total: tot, hasTarget: e.Mensalidade === f };
   });
-
-  // KPIs
-  const cardW = (PDF_W - 2 * M - 48) / 5;
-  const cardY = PDF_H - CONTENT_TOP - 130;
-  const escFaixaLabel = (e.Mensalidade && e.Mensalidade !== '0') ? FAIXA_LABEL[e.Mensalidade] || e.Mensalidade : 'Dado não disponível';
-  drawKpiCard(page, font, bold, M + 0 * (cardW + 12), cardY, cardW, 60, 'Faixa da Escola', escFaixaLabel, TEAL);
-  drawKpiCard(page, font, bold, M + 1 * (cardW + 12), cardY, cardW, 60, 'Mesma Faixa', String(data.mesmaFaixa), TEAL);
-  drawKpiCard(page, font, bold, M + 2 * (cardW + 12), cardY, cardW, 60, 'Acima', String(data.acima), NAVY);
-  drawKpiCard(page, font, bold, M + 3 * (cardW + 12), cardY, cardW, 60, 'Abaixo', String(data.abaixo), LIME);
-  drawKpiCard(page, font, bold, M + 4 * (cardW + 12), cardY, cardW, 60, 'Concorrentes', String(data.concs.length), NAVY);
-
-  // Distribuição por faixa — gráfico horizontal
-  page.drawText('DISTRIBUIÇÃO DE ESCOLAS POR FAIXA', { x: M, y: cardY - 26, size: 10, font: bold, color: NAVY });
-  let y = cardY - 50;
-  const max = Math.max(...dist.map(d2 => d2.total), 1);
-  dist.forEach(d2 => {
-    const color = d2.hasTarget ? TEAL : NAVY;
-    drawHBar(page, font, M, y, PDF_W - 2 * M, 16, (d2.hasTarget ? '★ ' : '') + d2.label, (d2.total / max) * 100, color, `${d2.total} escola(s)`, 200);
-    y -= 24;
+  const maxTot = Math.max(...distItems.map(x => x.total), 1);
+  const distAreaTop = contentTop - 24;
+  const distAreaBottom = contentBottom + 6;
+  const distAreaH = distAreaTop - distAreaBottom;
+  const distRowH = Math.min(28, distAreaH / distItems.length);
+  distItems.forEach((d2, i) => {
+    const rY = distAreaTop - distRowH * (i + 1);
+    const labelY = rY + distRowH - 11;
+    const barY = rY + 4;
+    const barH = 8;
+    const barFullW = distW - 4;
+    page.drawText((d2.hasTarget ? '★ ' : '') + d2.label, { x: distX, y: labelY, size: 8, font: d2.hasTarget ? bold : font, color: d2.hasTarget ? TEAL : NAVY });
+    const totW = font.widthOfTextAtSize(`${d2.total}`, 8);
+    page.drawText(`${d2.total}`, { x: distX + distW - totW, y: labelY, size: 8, font: bold, color: NAVY });
+    page.drawRectangle({ x: distX, y: barY, width: barFullW, height: barH, color: BORDER_LIGHT });
+    const fillW = (d2.total / maxTot) * barFullW;
+    if (fillW > 0) {
+      page.drawRectangle({ x: distX, y: barY, width: fillW, height: barH, color: d2.hasTarget ? TEAL : NAVY });
+    }
   });
-
-  // Leitura
-  let leitura: string;
-  if (data.acima > data.abaixo + data.mesmaFaixa) leitura = 'Concorrência majoritariamente em faixas superiores — espaço para reposicionamento de valor.';
-  else if (data.abaixo > data.acima + data.mesmaFaixa) leitura = 'Concorrência em faixas inferiores — sustentar premium pedagógico e diferenciais.';
-  else leitura = 'Posicionamento alinhado ao grupo concorrencial — disputa direta por valor e diferenciação.';
-  page.drawRectangle({ x: M, y: 50, width: PDF_W - 2 * M, height: 28, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  page.drawText(leitura, { x: M + 12, y: 60, size: 9.5, font, color: NAVY });
 }
 
 // ----- 10. Socioeconômico
