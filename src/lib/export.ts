@@ -872,7 +872,7 @@ function renderPdfConcorrenciaMapa(page: PDFPage, font: PDFFont, bold: PDFFont, 
     // Halo discreto do raio operacional
     const center = proj(lat, lng);
     const radiusPx = Math.min(mapW, mapH) * 0.5 * (ctx.raioKm / r);
-    page.drawCircle({ x: center.x, y: center.y, size: radiusPx, color: TEAL, opacity: 0.06, borderColor: TEAL, borderWidth: 0.7, borderOpacity: 0.55 });
+    page.drawCircle({ x: center.x, y: center.y, size: radiusPx, color: TEAL, opacity: 0.06, borderColor: TEAL, borderWidth: 0.7 });
 
     // Concorrentes (azul institucional, menores)
     points.forEach((p: any) => {
