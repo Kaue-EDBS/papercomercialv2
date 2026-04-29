@@ -11,7 +11,7 @@ import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage, RGB } from 'pdf-lib'
 import PptxGenJS from 'pptxgenjs';
 import { AnalysisResult, PresentationType, ConsultorSession } from './types';
 import {
-  num, formatPercent, formatNumber, parseBrNumber, getMensalidadeFaixa,
+  num, formatPercent, formatNumber, parseBrNumber, getMensalidadeFaixa, getSegmentos,
 } from './analysis';
 import {
   findRendaByIBGE, buildMatrix, calcAderenciaEconomica, classificarAderencia,
