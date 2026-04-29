@@ -934,20 +934,17 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
     yy -= 13;
     // Segmentos como chips compactos
     const segs = getSegmentos(c.escola);
-    const segColors: Record<string, RGB> = {
-      EI: rgb(0.18, 0.64, 0.61),
-      EFI: rgb(0.078, 0.149, 0.282),
-      EFII: rgb(0.71, 0.851, 0.392),
-      EM: rgb(0.039, 0.40, 0.392),
-    };
+    // Chip padronizado (mesmo tratamento p/ todos os segmentos):
+    // fundo teal-light suave + borda + texto navy escuro.
+    const chipFill = rgb(0.871, 0.953, 0.953); // tealLight (DEF3F3)
+    const chipBorder = rgb(0.624, 0.812, 0.800); // lavenderDark / tealLight darker
     let chipX = cx + 10;
     const chipY = yy - 11;
     segs.forEach(seg => {
-      const cc = segColors[seg] ?? NAVY;
       const cw = bold.widthOfTextAtSize(seg, 7) + 8;
       if (chipX + cw > cx + cardW - 8) return;
-      page.drawRectangle({ x: chipX, y: chipY, width: cw, height: 11, color: cc });
-      page.drawText(seg, { x: chipX + 4, y: chipY + 3, size: 7, font: bold, color: seg === 'EFII' ? NAVY : WHITE });
+      page.drawRectangle({ x: chipX, y: chipY, width: cw, height: 11, color: chipFill, borderColor: chipBorder, borderWidth: 0.4 });
+      page.drawText(seg, { x: chipX + 4, y: chipY + 3, size: 7, font: bold, color: NAVY });
       chipX += cw + 3;
     });
     if (segs.length === 0) {
