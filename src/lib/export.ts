@@ -204,11 +204,11 @@ function drawCard(page: PDFPage, x: number, y: number, w: number, h: number, acc
   if (accentTop) page.drawRectangle({ x, y: y + h - 3, width: w, height: 3, color: accentTop });
 }
 
-function drawKpiCard(page: PDFPage, font: PDFFont, bold: PDFFont, x: number, y: number, w: number, h: number, label: string, value: string, accent: RGB = TEAL) {
+function drawKpiCard(page: PDFPage, font: PDFFont, bold: PDFFont, x: number, y: number, w: number, h: number, label: string, value: string, accent: RGB = TEAL, valueStartSize = 22) {
   drawCard(page, x, y, w, h, accent);
   page.drawText(label.toUpperCase(), { x: x + 12, y: y + h - 18, size: 8, font, color: MUTED });
   // Valor — auto-shrink se muito grande
-  let vSize = 22;
+  let vSize = valueStartSize;
   while (bold.widthOfTextAtSize(value, vSize) > w - 24 && vSize > 11) vSize -= 1;
   page.drawText(value, { x: x + 12, y: y + 14, size: vSize, font: bold, color: NAVY });
 }
