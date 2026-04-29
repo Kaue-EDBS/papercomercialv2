@@ -427,10 +427,8 @@ const SLIDE_TITLES = [
   'Concorrência',
   'Market Share',
   'Faixa de Mensalidade',
-  'Perfil socioeconômico e aderência econômica',
-  'Potencial de consumo educacional e comercial',
-  'Insights estratégicos',
-  'Plano de ação comercial e marketing',
+  'Perfil Socioeconômico',
+  'Insights e Recomendações',
   'Ação comercial e marketing',
   'Encerramento',
 ];
@@ -458,9 +456,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
     { render: (p, n) => renderPdfMarketShare(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfMensalidade(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfSocioeconomico(p, font, bold, italic, ctx, data, n, total) },
-    { render: (p, n) => renderPdfPotencial(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfInsights(p, font, bold, italic, ctx, data, n, total) },
-    { render: (p, n) => renderPdfPlanoAcao(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfAcaoComercial(p, font, bold, italic, ctx, data, n, total) },
     { render: (p) => renderPdfEncerramento(p, font, bold, italic, ctx) },
   ];
@@ -1282,9 +1278,9 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
   const gap = 12;
   const cardW = (W - 3 * gap) / 4;
   drawKpiCard(page, font, bold, M + 0 * (cardW + gap), cardY, cardW, cardH, 'Faixa da escola', escFaixaLabel, TEAL);
-  drawKpiCard(page, font, bold, M + 1 * (cardW + gap), cardY, cardW, cardH, 'Na mesma faixa', String(data.mesmaFaixa), TEAL);
-  drawKpiCard(page, font, bold, M + 2 * (cardW + gap), cardY, cardW, cardH, 'Acima da faixa', String(data.acima), NAVY);
-  drawKpiCard(page, font, bold, M + 3 * (cardW + gap), cardY, cardW, cardH, 'Abaixo da faixa', String(data.abaixo), LIME);
+  drawKpiCard(page, font, bold, M + 1 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), TEAL);
+  drawKpiCard(page, font, bold, M + 2 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes acima da faixa', String(data.acima), NAVY);
+  drawKpiCard(page, font, bold, M + 3 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), LIME);
 
   // ---------- BLOCO A · TABELA · BLOCO B · DISTRIBUIÇÃO ----------
   const contentTop = cardY - 18;
@@ -1397,12 +1393,12 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
   const distItems = FAIXAS.map(f => {
     const tot = (e.Mensalidade === f ? 1 : 0) + concs.filter((c: any) => c.escola.Mensalidade === f).length;
     return { faixa: f, label: FAIXA_LABEL[f], total: tot, hasTarget: e.Mensalidade === f };
-  });
+  }).filter(x => x.total > 0);
   const maxTot = Math.max(...distItems.map(x => x.total), 1);
   const distAreaTop = contentTop - 24;
   const distAreaBottom = contentBottom + 6;
   const distAreaH = distAreaTop - distAreaBottom;
-  const distRowH = Math.min(28, distAreaH / distItems.length);
+  const distRowH = distItems.length > 0 ? Math.min(40, distAreaH / distItems.length) : 0;
   distItems.forEach((d2, i) => {
     const rY = distAreaTop - distRowH * (i + 1);
     const labelY = rY + distRowH - 11;
@@ -1424,7 +1420,7 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
 function renderPdfSocioeconomico(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Perfil Socioeconômico e Aderência Econômica', `Município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
+  drawPDFTitle(d, 'Perfil Socioeconômico', `Leitura demográfica e de potencial de consumo do município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}.`);
 
   if (!data.d) {
     page.drawText('Dado não disponível na base fornecida.', { x: M, y: PDF_H / 2, size: 12, font: italic, color: MUTED });
@@ -1593,7 +1589,7 @@ function renderPdfPotencial(page: PDFPage, font: PDFFont, bold: PDFFont, italic:
 function renderPdfInsights(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Insights Estratégicos', 'Dado observado · leitura · implicação comercial');
+  drawPDFTitle(d, 'Insights e Recomendações', 'Síntese estratégica da área de influência e direcionamentos comerciais prioritários.');
 
   const ms = ctx.analysis.marketShare;
   const segShares = [
@@ -1603,6 +1599,7 @@ function renderPdfInsights(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
     { l: 'Ensino Médio', v: ms.em },
   ].filter(s => s.v > 0).sort((a, b) => b.v - a.v);
   const bestSeg = segShares[0];
+  const weakSeg = segShares[segShares.length - 1];
 
   const insights: { tag: string; tagColor: RGB; title: string; dado: string; leitura: string; implic: string }[] = [
     {
@@ -1660,27 +1657,65 @@ function renderPdfInsights(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
     },
   ];
 
-  // Grade 3×2
-  const cw = (PDF_W - 2 * M - 24) / 3;
-  const ch = 168;
-  const gx = 12, gy = 12;
-  insights.slice(0, 6).forEach((it, i) => {
-    const col = i % 3, row = Math.floor(i / 3);
-    const x = M + col * (cw + gx);
-    const y = PDF_H - CONTENT_TOP - 70 - row * (ch + gy) - ch;
-    page.drawRectangle({ x, y, width: cw, height: ch, color: WHITE, borderColor: BORDER, borderWidth: 0.5 });
-    page.drawRectangle({ x, y: y + ch - 4, width: cw, height: 4, color: it.tagColor });
-    // tag
-    page.drawText(it.tag, { x: x + cw - 78, y: y + ch - 18, size: 7, font: bold, color: it.tagColor });
-    // title
-    page.drawText(it.title.toUpperCase(), { x: x + 12, y: y + ch - 18, size: 9, font: bold, color: NAVY });
-    // dado
-    let cy = y + ch - 38;
-    cy = drawParagraph(page, bold, it.dado, x + 12, cy, cw - 24, 11, it.tagColor, 2);
-    cy -= 6;
-    cy = drawParagraph(page, font, 'Leitura: ' + it.leitura, x + 12, cy, cw - 24, 8.5, TEXT, 2);
+  // ============== FAIXA SUPERIOR — 4 INSIGHTS (grade 4×1) ==============
+  page.drawText('INSIGHTS', { x: M, y: PDF_H - CONTENT_TOP - 56, size: 9, font: bold, color: NAVY });
+  const insTop4 = insights.slice(0, 4);
+  const cw = (PDF_W - 2 * M - 30) / 4;
+  const ch = 150;
+  const gx = 10;
+  const topY = PDF_H - CONTENT_TOP - 70 - ch;
+  insTop4.forEach((it, i) => {
+    const x = M + i * (cw + gx);
+    page.drawRectangle({ x, y: topY, width: cw, height: ch, color: WHITE, borderColor: BORDER, borderWidth: 0.5 });
+    page.drawRectangle({ x, y: topY + ch - 4, width: cw, height: 4, color: it.tagColor });
+    page.drawText(it.tag, { x: x + cw - 78, y: topY + ch - 18, size: 7, font: bold, color: it.tagColor });
+    page.drawText(it.title.toUpperCase(), { x: x + 12, y: topY + ch - 18, size: 8.5, font: bold, color: NAVY });
+    let cy = topY + ch - 38;
+    cy = drawParagraph(page, bold, it.dado, x + 12, cy, cw - 24, 10, it.tagColor, 2);
     cy -= 4;
-    drawParagraph(page, font, 'Implicação: ' + it.implic, x + 12, cy, cw - 24, 8.5, MUTED, 2);
+    drawParagraph(page, font, it.leitura, x + 12, cy, cw - 24, 8.5, TEXT, 3);
+  });
+
+  // ============== FAIXA INFERIOR — 4 RECOMENDAÇÕES ==============
+  type Reco = { prio: string; prioColor: RGB; titulo: string; acao: string; objetivo: string };
+  const recos: Reco[] = [
+    { prio: data.aderencia < 15 ? 'Alta prioridade' : 'Estratégica', prioColor: data.aderencia < 15 ? RED : TEAL,
+      titulo: 'Reforçar comunicação de valor',
+      acao: `Estruturar mensagens claras${bestSeg ? ` em ${bestSeg.l}` : ''}: proposta pedagógica, resultados e formação.`,
+      objetivo: 'Reduzir sensibilidade a preço e proteger ticket.' },
+    { prio: 'Alta prioridade', prioColor: TEAL,
+      titulo: bestSeg ? `Captação focada em ${bestSeg.l}` : 'Captação focada no segmento líder',
+      acao: 'Funil dedicado: cadastros → agendas → visitas → matrículas, com meta numérica e CPA-alvo por canal.',
+      objetivo: 'Ampliar volume e converter share em matrículas.' },
+    { prio: 'Estratégica', prioColor: NAVY,
+      titulo: 'Rematrícula antecipada e retenção',
+      acao: `Antecipar campanha${weakSeg ? `, com foco em ${weakSeg.l}` : ''}; mapear sinais de evasão e atuar antes da decisão.`,
+      objetivo: 'Sustentar base e reduzir reposição na captação.' },
+    { prio: 'Contínua', prioColor: LIME,
+      titulo: 'Monitoramento competitivo',
+      acao: `Acompanhar trimestralmente os ${data.concs.length} concorrentes diretos: preço, segmentos, comunicação e parcerias.`,
+      objetivo: 'Antecipar movimentos e proteger posicionamento.' },
+  ];
+  const recoTop = topY - 24;
+  page.drawText('RECOMENDAÇÕES', { x: M, y: recoTop, size: 9, font: bold, color: NAVY });
+  const rcw = (PDF_W - 2 * M - 30) / 4;
+  const rch = recoTop - 14 - (CONTENT_BOTTOM + 24);
+  const rcy0 = CONTENT_BOTTOM + 24;
+  recos.forEach((r, i) => {
+    const x = M + i * (rcw + gx);
+    page.drawRectangle({ x, y: rcy0, width: rcw, height: rch, color: WHITE, borderColor: BORDER, borderWidth: 0.5 });
+    page.drawRectangle({ x, y: rcy0, width: 4, height: rch, color: r.prioColor });
+    // prioridade pill
+    const pw = bold.widthOfTextAtSize(r.prio.toUpperCase(), 7) + 10;
+    page.drawRectangle({ x: x + 12, y: rcy0 + rch - 18, width: pw, height: 12, color: r.prioColor });
+    page.drawText(r.prio.toUpperCase(), { x: x + 17, y: rcy0 + rch - 15, size: 7, font: bold, color: WHITE });
+    // título
+    let cy = rcy0 + rch - 34;
+    cy = drawParagraph(page, bold, r.titulo, x + 12, cy, rcw - 24, 10.5, NAVY, 2);
+    cy -= 4;
+    cy = drawParagraph(page, font, 'Ação: ' + r.acao, x + 12, cy, rcw - 24, 8.5, TEXT, 3);
+    cy -= 3;
+    drawParagraph(page, italic, 'Objetivo: ' + r.objetivo, x + 12, cy, rcw - 24, 8.5, MUTED, 2);
   });
 }
 
@@ -1895,9 +1930,7 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
     { render: (s, n) => pptMarketShare(s, ctx, data, n, total) },
     { render: (s, n) => pptMensalidade(s, ctx, data, n, total) },
     { render: (s, n) => pptSocio(s, ctx, data, n, total) },
-    { render: (s, n) => pptPotencial(s, ctx, data, n, total) },
     { render: (s, n) => pptInsights(s, ctx, data, n, total) },
-    { render: (s, n) => pptPlano(s, ctx, data, n, total) },
     { render: (s, n) => pptAcaoComercial(s, ctx, data, n, total) },
     { render: (s) => pptEncerramento(s, ctx) },
   ];
@@ -2886,9 +2919,9 @@ function pptMensalidade(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: nu
   const gap = 0.2;
   const cw = (W - 3 * gap) / 4;
   pptKpi(s, SAFE + 0 * (cw + gap), cardsY, cw, cardH, 'Faixa da escola', escFaixaLabel, C.teal);
-  pptKpi(s, SAFE + 1 * (cw + gap), cardsY, cw, cardH, 'Na mesma faixa', String(data.mesmaFaixa), C.teal);
-  pptKpi(s, SAFE + 2 * (cw + gap), cardsY, cw, cardH, 'Acima da faixa', String(data.acima), C.navy);
-  pptKpi(s, SAFE + 3 * (cw + gap), cardsY, cw, cardH, 'Abaixo da faixa', String(data.abaixo), C.lime);
+  pptKpi(s, SAFE + 1 * (cw + gap), cardsY, cw, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), C.teal);
+  pptKpi(s, SAFE + 2 * (cw + gap), cardsY, cw, cardH, 'Concorrentes acima da faixa', String(data.acima), C.navy);
+  pptKpi(s, SAFE + 3 * (cw + gap), cardsY, cw, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), C.lime);
 
   // ---------- BLOCO A · TABELA + BLOCO B · DISTRIBUIÇÃO ----------
   const contentY = cardsY + cardH + 0.2;
@@ -2960,10 +2993,11 @@ function pptMensalidade(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: nu
   const distItems = FAIXAS.map(f => {
     const tot = (e.Mensalidade === f ? 1 : 0) + concs.filter((c: any) => c.escola.Mensalidade === f).length;
     return { label: FAIXA_LABEL[f] || f, total: tot, hasTarget: e.Mensalidade === f };
-  });
+  }).filter(x => x.total > 0);
   const maxTot = Math.max(...distItems.map(x => x.total), 1);
   const distAreaY = contentY + 0.32;
-  const distRowH = 0.42;
+  const availH = (PPT_H - 1.0) - distAreaY;
+  const distRowH = distItems.length > 0 ? Math.min(0.6, Math.max(0.42, availH / distItems.length)) : 0.42;
   distItems.forEach((d2, i) => {
     const rY = distAreaY + i * distRowH;
     s.addText(
@@ -2998,7 +3032,7 @@ function pptMensalidade(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: nu
 // ----- 10. Socioeconômico
 function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Perfil Socioeconômico e Aderência Econômica', `Município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
+  pptTitle(s, 'Perfil Socioeconômico', `Leitura demográfica e de potencial de consumo do município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}.`);
   if (!data.d) {
     s.addText('Dado não disponível na base fornecida.', { x: PPT_M, y: 3, w: PPT_W - 2 * PPT_M, h: 0.5, fontSize: 14, italic: true, color: C.muted, align: 'center', fontFace: 'Calibri' });
     return;
@@ -3138,11 +3172,7 @@ function pptPotencial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numb
 // ----- 12. Insights
 function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Leituras e Implicações Comerciais', undefined, 'Insights Estratégicos');
-  s.addText(
-    'Os dados consolidados revelam oportunidades concretas e riscos a serem gerenciados. A seguir, os principais insights com suas implicações diretas para a gestão comercial da escola.',
-    { x: PPT_M, y: 2.05, w: PPT_W - 2 * PPT_M, h: 0.7, fontSize: 12, color: C.text, fontFace: 'Calibri' }
-  );
+  pptTitle(s, 'Insights e Recomendações', 'Síntese estratégica da área de influência e direcionamentos comerciais prioritários.');
   const ms = ctx.analysis.marketShare;
   const segShares = [
     { l: 'Educação Infantil', v: ms.ei },
@@ -3151,6 +3181,7 @@ function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
     { l: 'Ensino Médio', v: ms.em },
   ].filter(x => x.v > 0).sort((a, b) => b.v - a.v);
   const bestSeg = segShares[0];
+  const weakSeg = segShares[segShares.length - 1];
 
   // 4 insights principais (estilo Santa Mônica): tag + título + dado + leitura + implicação
   const insights = [
@@ -3178,30 +3209,61 @@ function pptInsights(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
       implic: 'Calibrar discurso comercial, estruturar bolsas estratégicas e comunicar retorno do investimento educacional.' },
   ];
 
-  // Grid 2x2 com cards estilo Santa Mônica (borda lateral navy + chip)
-  const cw = (PPT_W - 2 * PPT_M - 0.3) / 2;
-  const ch = 2.0;
-  insights.forEach((it, i) => {
-    const col = i % 2, row = Math.floor(i / 2);
-    const x = PPT_M + col * (cw + 0.3);
-    const y = 2.85 + row * (ch + 0.2);
-    // Card branco com borda fina cinza
+  // ============== FAIXA SUPERIOR — 4 INSIGHTS (grade 4×1) ==============
+  s.addText('INSIGHTS', { x: PPT_M, y: 1.65, w: 4, h: 0.25, fontSize: 10, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1 });
+  const cw = (PPT_W - 2 * PPT_M - 0.3) / 4;
+  const ch = 1.95;
+  insights.slice(0, 4).forEach((it, i) => {
+    const x = PPT_M + i * (cw + 0.1);
+    const y = 1.95;
     s.addShape('roundRect', { x, y, w: cw, h: ch, fill: { color: C.white }, line: { color: C.border, width: 0.5 }, rectRadius: 0.05 } as any);
-    // Borda esquerda grossa navy
-    s.addShape('rect', { x, y, w: 0.07, h: ch, fill: { color: C.navy }, line: { color: C.navy } });
-    // Chip
-    pptChip(s, x + 0.25, y + 0.18, it.tag);
-    // Título
-    s.addText(it.title, { x: x + 0.25, y: y + 0.6, w: cw - 0.4, h: 0.4, fontSize: 14, bold: true, color: C.navy, fontFace: 'Calibri' });
-    // Dado
+    s.addShape('rect', { x, y, w: 0.06, h: ch, fill: { color: C.navy }, line: { color: C.navy } });
+    pptChip(s, x + 0.18, y + 0.14, it.tag);
+    s.addText(it.title, { x: x + 0.18, y: y + 0.55, w: cw - 0.3, h: 0.45, fontSize: 11.5, bold: true, color: C.navy, fontFace: 'Calibri' });
     s.addText([
-      { text: 'Dado: ', options: { bold: true, fontSize: 10, color: C.navy } },
-      { text: it.dado + ' ', options: { fontSize: 10, color: C.text } },
-      { text: 'Leitura: ', options: { bold: true, fontSize: 10, color: C.navy } },
-      { text: it.leitura + ' ', options: { fontSize: 10, color: C.text } },
-      { text: 'Implicação: ', options: { bold: true, fontSize: 10, color: C.navy } },
-      { text: it.implic, options: { fontSize: 10, color: C.text } },
-    ] as any, { x: x + 0.25, y: y + 1.05, w: cw - 0.4, h: ch - 1.15, fontFace: 'Calibri', valign: 'top' });
+      { text: it.dado, options: { bold: true, fontSize: 9.5, color: C.teal } },
+    ] as any, { x: x + 0.18, y: y + 1.0, w: cw - 0.3, h: 0.4, fontFace: 'Calibri', valign: 'top' });
+    s.addText(it.leitura, { x: x + 0.18, y: y + 1.4, w: cw - 0.3, h: ch - 1.45, fontSize: 9, color: C.text, fontFace: 'Calibri', valign: 'top' });
+  });
+
+  // ============== FAIXA INFERIOR — 4 RECOMENDAÇÕES ==============
+  type Reco = { prio: string; prioColor: string; titulo: string; acao: string; objetivo: string };
+  const recos: Reco[] = [
+    { prio: data.aderencia < 15 ? 'Alta prioridade' : 'Estratégica', prioColor: data.aderencia < 15 ? C.red : C.teal,
+      titulo: 'Reforçar comunicação de valor',
+      acao: `Mensagens claras${bestSeg ? ` em ${bestSeg.l}` : ''}: pedagogia, resultados e formação.`,
+      objetivo: 'Reduzir sensibilidade a preço e proteger ticket.' },
+    { prio: 'Alta prioridade', prioColor: C.teal,
+      titulo: bestSeg ? `Captação focada em ${bestSeg.l}` : 'Captação no segmento líder',
+      acao: 'Funil dedicado com meta numérica e CPA-alvo por canal.',
+      objetivo: 'Ampliar volume e converter share em matrículas.' },
+    { prio: 'Estratégica', prioColor: C.navy,
+      titulo: 'Rematrícula antecipada',
+      acao: `Antecipar campanha${weakSeg ? `, foco em ${weakSeg.l}` : ''}; mapear sinais de evasão.`,
+      objetivo: 'Sustentar base e reduzir reposição na captação.' },
+    { prio: 'Contínua', prioColor: C.lime,
+      titulo: 'Monitoramento competitivo',
+      acao: `Trimestralmente: preço, segmentos e comunicação dos ${data.concs.length} concorrentes.`,
+      objetivo: 'Antecipar movimentos e proteger posicionamento.' },
+  ];
+  s.addText('RECOMENDAÇÕES', { x: PPT_M, y: 4.05, w: 4, h: 0.25, fontSize: 10, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1 });
+  const rcw = (PPT_W - 2 * PPT_M - 0.3) / 4;
+  const rch = 2.55;
+  const ry = 4.35;
+  recos.forEach((r, i) => {
+    const x = PPT_M + i * (rcw + 0.1);
+    s.addShape('roundRect', { x, y: ry, w: rcw, h: rch, fill: { color: C.white }, line: { color: C.border, width: 0.5 }, rectRadius: 0.05 } as any);
+    s.addShape('rect', { x, y: ry, w: 0.06, h: rch, fill: { color: r.prioColor }, line: { color: r.prioColor } });
+    s.addText(r.prio.toUpperCase(), { x: x + 0.18, y: ry + 0.14, w: rcw - 0.3, h: 0.22, fontSize: 8, bold: true, color: C.white, fill: { color: r.prioColor }, align: 'left', fontFace: 'Calibri' });
+    s.addText(r.titulo, { x: x + 0.18, y: ry + 0.45, w: rcw - 0.3, h: 0.5, fontSize: 11.5, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top' });
+    s.addText([
+      { text: 'Ação: ', options: { bold: true, fontSize: 9.5, color: C.navy } },
+      { text: r.acao, options: { fontSize: 9.5, color: C.text } },
+    ] as any, { x: x + 0.18, y: ry + 0.95, w: rcw - 0.3, h: 0.85, fontFace: 'Calibri', valign: 'top' });
+    s.addText([
+      { text: 'Objetivo: ', options: { bold: true, fontSize: 9.5, color: C.muted, italic: true } },
+      { text: r.objetivo, options: { fontSize: 9.5, color: C.muted, italic: true } },
+    ] as any, { x: x + 0.18, y: ry + rch - 0.7, w: rcw - 0.3, h: 0.65, fontFace: 'Calibri', valign: 'top' });
   });
 }
 
