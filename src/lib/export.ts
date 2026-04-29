@@ -426,7 +426,7 @@ const SLIDE_TITLES = [
   'Panorama educacional da região',
   'Concorrência',
   'Market Share',
-  'Mensalidade e posicionamento competitivo',
+  'Faixa de Mensalidade',
   'Perfil socioeconômico e aderência econômica',
   'Potencial de consumo educacional e comercial',
   'Insights estratégicos',
@@ -934,20 +934,17 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
     yy -= 13;
     // Segmentos como chips compactos
     const segs = getSegmentos(c.escola);
-    const segColors: Record<string, RGB> = {
-      EI: rgb(0.18, 0.64, 0.61),
-      EFI: rgb(0.078, 0.149, 0.282),
-      EFII: rgb(0.71, 0.851, 0.392),
-      EM: rgb(0.039, 0.40, 0.392),
-    };
+    // Chip padronizado (mesmo tratamento p/ todos os segmentos):
+    // fundo teal-light suave + borda + texto navy escuro.
+    const chipFill = rgb(0.871, 0.953, 0.953); // tealLight (DEF3F3)
+    const chipBorder = rgb(0.624, 0.812, 0.800); // lavenderDark / tealLight darker
     let chipX = cx + 10;
     const chipY = yy - 11;
     segs.forEach(seg => {
-      const cc = segColors[seg] ?? NAVY;
       const cw = bold.widthOfTextAtSize(seg, 7) + 8;
       if (chipX + cw > cx + cardW - 8) return;
-      page.drawRectangle({ x: chipX, y: chipY, width: cw, height: 11, color: cc });
-      page.drawText(seg, { x: chipX + 4, y: chipY + 3, size: 7, font: bold, color: seg === 'EFII' ? NAVY : WHITE });
+      page.drawRectangle({ x: chipX, y: chipY, width: cw, height: 11, color: chipFill, borderColor: chipBorder, borderWidth: 0.4 });
+      page.drawText(seg, { x: chipX + 4, y: chipY + 3, size: 7, font: bold, color: NAVY });
       chipX += cw + 3;
     });
     if (segs.length === 0) {
@@ -980,10 +977,8 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
   }
 
   // ---------- TABELA — DEMAIS CONCORRENTES ----------
-  const apoioH = 32;
-  const apoioY = 56;
   const tableTop = cardY - 18;
-  const tableBottom = apoioY + apoioH + 14;
+  const tableBottom = 56; // espaço para rodapé institucional discreto
   const tableMaxH = tableTop - tableBottom;
 
   const cols = [
@@ -1050,20 +1045,16 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
     // Segmentos como chips
     {
       const segs = getSegmentos(c.escola);
-      const segColors: Record<string, RGB> = {
-        EI: rgb(0.18, 0.64, 0.61),
-        EFI: rgb(0.078, 0.149, 0.282),
-        EFII: rgb(0.71, 0.851, 0.392),
-        EM: rgb(0.039, 0.40, 0.392),
-      };
+      // Chip padronizado para todos os segmentos
+      const chipFill = rgb(0.871, 0.953, 0.953);
+      const chipBorder = rgb(0.624, 0.812, 0.800);
       let chipX = xc + 8;
       const chipY = rY + (rowH - 12) / 2;
       segs.forEach(seg => {
-        const cc = segColors[seg] ?? NAVY;
         const cw = bold.widthOfTextAtSize(seg, 7.5) + 10;
         if (chipX + cw > xc + cols[2].w - 6) return;
-        page.drawRectangle({ x: chipX, y: chipY, width: cw, height: 12, color: cc });
-        page.drawText(seg, { x: chipX + 5, y: chipY + 3, size: 7.5, font: bold, color: seg === 'EFII' ? NAVY : WHITE });
+        page.drawRectangle({ x: chipX, y: chipY, width: cw, height: 12, color: chipFill, borderColor: chipBorder, borderWidth: 0.4 });
+        page.drawText(seg, { x: chipX + 5, y: chipY + 3, size: 7.5, font: bold, color: NAVY });
         chipX += cw + 4;
       });
       if (segs.length === 0) {
@@ -1105,14 +1096,6 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
       x: M, y: headerY - tableHActual - 12, size: 8.5, font: italic, color: MUTED,
     });
   }
-
-  // ---------- BLOCO DE APOIO METODOLÓGICO ----------
-  page.drawRectangle({ x: M, y: apoioY, width: W, height: apoioH, color: TEAL_LIGHT, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
-  page.drawRectangle({ x: M, y: apoioY, width: 4, height: apoioH, color: TEAL });
-  page.drawText('METODOLOGIA', { x: M + 14, y: apoioY + apoioH - 12, size: 8.5, font: bold, color: TEAL_DARK });
-  page.drawText('Concorrentes priorizados por origem de seleção, proximidade geográfica, segmentos em comum, tipo de adoção e faixa de mensalidade.', {
-    x: M + 14, y: apoioY + 8, size: 9, font, color: NAVY,
-  });
 }
 
 // helper local — quebra texto em até maxLines linhas, com elipse na última
@@ -1261,9 +1244,10 @@ function renderPdfMarketShare(page: PDFPage, font: PDFFont, bold: PDFFont, itali
 function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Mensalidade · Posicionamento Competitivo', 'Faixa da escola e do grupo concorrencial');
 
+  const W = PDF_W - 2 * M;
   const e = ctx.analysis.escola;
+  const concs = data.concs as any[];
   const FAIXAS = ['até 399', '400 a 799', '800 a 1.399', '1.400 a 2.399', 'acima de R$ 2.400'];
   const FAIXA_LABEL: Record<string, string> = {
     'até 399': 'Até R$ 399',
@@ -1272,38 +1256,168 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
     '1.400 a 2.399': 'R$ 1.400 a R$ 2.399',
     'acima de R$ 2.400': 'Acima de R$ 2.400',
   };
-  const dist = FAIXAS.map(f => {
-    const tot = (e.Mensalidade === f ? 1 : 0) + data.concs.filter((c: any) => c.escola.Mensalidade === f).length;
+  const escIdx = getMensalidadeFaixa(e.Mensalidade);
+  const escFaixaLabel = (e.Mensalidade && e.Mensalidade !== '0' && escIdx > 0)
+    ? (FAIXA_LABEL[e.Mensalidade] || e.Mensalidade)
+    : 'Dado não disponível';
+
+  // ---------- TÍTULO COMPACTO + FILETE ----------
+  page.drawText('Faixa de Mensalidade', {
+    x: M, y: PDF_H - CONTENT_TOP - 12, size: 22, font: bold, color: NAVY,
+  });
+  page.drawRectangle({ x: M, y: PDF_H - CONTENT_TOP - 22, width: 36, height: 3, color: TEAL });
+  page.drawText('Posicionamento da escola analisada em relação ao grupo competitivo da área de influência.', {
+    x: M, y: PDF_H - CONTENT_TOP - 38, size: 10.5, font: italic, color: MUTED,
+  });
+
+  // ---------- LINHA-RESUMO ----------
+  const linhaY = PDF_H - CONTENT_TOP - 54;
+  const linha = `Faixa da escola: ${escFaixaLabel} · ${concs.length} concorrente(s) exibidos · ${data.mesmaFaixa} na mesma faixa`;
+  page.drawText(linha, { x: M, y: linhaY, size: 9.5, font, color: MUTED });
+
+  // ---------- 4 MINI CARDS ----------
+  const cardsTop = linhaY - 12;
+  const cardH = 60;
+  const cardY = cardsTop - cardH;
+  const gap = 12;
+  const cardW = (W - 3 * gap) / 4;
+  drawKpiCard(page, font, bold, M + 0 * (cardW + gap), cardY, cardW, cardH, 'Faixa da escola', escFaixaLabel, TEAL);
+  drawKpiCard(page, font, bold, M + 1 * (cardW + gap), cardY, cardW, cardH, 'Na mesma faixa', String(data.mesmaFaixa), TEAL);
+  drawKpiCard(page, font, bold, M + 2 * (cardW + gap), cardY, cardW, cardH, 'Acima da faixa', String(data.acima), NAVY);
+  drawKpiCard(page, font, bold, M + 3 * (cardW + gap), cardY, cardW, cardH, 'Abaixo da faixa', String(data.abaixo), LIME);
+
+  // ---------- BLOCO A · TABELA · BLOCO B · DISTRIBUIÇÃO ----------
+  const contentTop = cardY - 18;
+  const contentBottom = 56;
+  const contentH = contentTop - contentBottom;
+  const tableW = W * 0.62;
+  const distW = W - tableW - 16;
+  const distX = M + tableW + 16;
+
+  // Cabeçalho da tabela
+  const headerH = 22;
+  const tCols = [
+    { w: tableW * 0.50, label: 'Escola' },
+    { w: tableW * 0.26, label: 'Faixa' },
+    { w: tableW * 0.24, label: 'Relação' },
+  ];
+  page.drawRectangle({ x: M, y: contentTop - headerH, width: tableW, height: headerH, color: NAVY });
+  let hx = M;
+  tCols.forEach(c => {
+    page.drawText(c.label, { x: hx + 8, y: contentTop - 15, size: 9.5, font: bold, color: WHITE });
+    hx += c.w;
+  });
+
+  // Monta linhas: escola analisada primeiro, depois concorrentes
+  type Row = { nome: string; faixa: string; faixaIdx: number; isTarget: boolean };
+  const allRows: Row[] = [
+    { nome: e.Escola, faixa: e.Mensalidade, faixaIdx: escIdx, isTarget: true },
+    ...concs.map((c: any) => ({
+      nome: c.escola.Escola,
+      faixa: c.escola.Mensalidade,
+      faixaIdx: getMensalidadeFaixa(c.escola.Mensalidade),
+      isTarget: false,
+    })),
+  ];
+
+  const MAX_ROWS = 11;
+  const rowsShown = allRows.slice(0, MAX_ROWS);
+  const rowH = Math.min(22, Math.max(16, (contentH - headerH - 12) / Math.max(rowsShown.length, 1)));
+
+  const relLabel = (r: Row): { txt: string; muted: boolean } => {
+    if (r.isTarget) return { txt: 'Em análise', muted: false };
+    if (r.faixaIdx <= 0) return { txt: 'Dado não disponível', muted: true };
+    if (escIdx <= 0) return { txt: '—', muted: true };
+    if (r.faixaIdx === escIdx) return { txt: 'Mesma faixa', muted: false };
+    if (r.faixaIdx > escIdx) return { txt: 'Acima', muted: false };
+    return { txt: 'Abaixo', muted: false };
+  };
+
+  rowsShown.forEach((r, i) => {
+    const rY = contentTop - headerH - rowH * (i + 1);
+    if (r.isTarget) {
+      page.drawRectangle({ x: M, y: rY, width: tableW, height: rowH, color: TEAL_LIGHT });
+      page.drawRectangle({ x: M, y: rY, width: 3, height: rowH, color: TEAL });
+    } else if (i % 2 === 1) {
+      page.drawRectangle({ x: M, y: rY, width: tableW, height: rowH, color: BEIGE });
+    }
+    let xc = M;
+    // Escola + badge
+    {
+      const colW = tCols[0].w;
+      let size = 9.5;
+      let t = r.nome;
+      const reservedBadge = r.isTarget ? 60 : 0;
+      const maxW = colW - 16 - reservedBadge;
+      while (bold.widthOfTextAtSize(t, size) > maxW && size > 8) size -= 0.5;
+      if (bold.widthOfTextAtSize(t, size) > maxW) {
+        while (t.length > 4 && bold.widthOfTextAtSize(t + '…', size) > maxW) t = t.slice(0, -1);
+        t += '…';
+      }
+      page.drawText(t, { x: xc + 10, y: rY + rowH / 2 - 4, size, font: bold, color: NAVY });
+      if (r.isTarget) {
+        const badgeW = 56;
+        const bX = xc + colW - badgeW - 6;
+        const bY = rY + (rowH - 12) / 2;
+        page.drawRectangle({ x: bX, y: bY, width: badgeW, height: 12, color: TEAL });
+        page.drawText('Em análise', { x: bX + 5, y: bY + 3, size: 7, font: bold, color: WHITE });
+      }
+    }
+    xc += tCols[0].w;
+    // Faixa
+    {
+      const fLabel = (r.faixa && r.faixa !== '0' && r.faixaIdx > 0) ? (FAIXA_LABEL[r.faixa] || r.faixa) : 'Dado não disponível';
+      let size = 9; let t = fLabel;
+      const maxW = tCols[1].w - 12;
+      while (font.widthOfTextAtSize(t, size) > maxW && size > 7.5) size -= 0.5;
+      if (font.widthOfTextAtSize(t, size) > maxW) {
+        while (t.length > 4 && font.widthOfTextAtSize(t + '…', size) > maxW) t = t.slice(0, -1);
+        t += '…';
+      }
+      const isND = !(r.faixa && r.faixa !== '0' && r.faixaIdx > 0);
+      page.drawText(t, { x: xc + 8, y: rY + rowH / 2 - 4, size, font: isND ? italic : font, color: isND ? MUTED : TEXT });
+    }
+    xc += tCols[1].w;
+    // Relação
+    {
+      const rel = relLabel(r);
+      page.drawText(rel.txt, { x: xc + 8, y: rY + rowH / 2 - 4, size: 9, font: rel.muted ? italic : bold, color: rel.muted ? MUTED : (r.isTarget ? TEAL : NAVY) });
+    }
+    page.drawLine({ start: { x: M, y: rY }, end: { x: M + tableW, y: rY }, thickness: 0.3, color: BORDER_LIGHT });
+  });
+
+  if (allRows.length > MAX_ROWS) {
+    page.drawText(`Exibidos ${MAX_ROWS} de ${allRows.length} no total — listagem priorizada por proximidade.`, {
+      x: M, y: contentBottom - 4, size: 8.5, font: italic, color: MUTED,
+    });
+  }
+
+  // ---------- BLOCO B · DISTRIBUIÇÃO ----------
+  page.drawText('DISTRIBUIÇÃO POR FAIXA', { x: distX, y: contentTop - 12, size: 9, font: bold, color: NAVY });
+  const distItems = FAIXAS.map(f => {
+    const tot = (e.Mensalidade === f ? 1 : 0) + concs.filter((c: any) => c.escola.Mensalidade === f).length;
     return { faixa: f, label: FAIXA_LABEL[f], total: tot, hasTarget: e.Mensalidade === f };
   });
-
-  // KPIs
-  const cardW = (PDF_W - 2 * M - 48) / 5;
-  const cardY = PDF_H - CONTENT_TOP - 130;
-  const escFaixaLabel = (e.Mensalidade && e.Mensalidade !== '0') ? FAIXA_LABEL[e.Mensalidade] || e.Mensalidade : 'Dado não disponível';
-  drawKpiCard(page, font, bold, M + 0 * (cardW + 12), cardY, cardW, 60, 'Faixa da Escola', escFaixaLabel, TEAL);
-  drawKpiCard(page, font, bold, M + 1 * (cardW + 12), cardY, cardW, 60, 'Mesma Faixa', String(data.mesmaFaixa), TEAL);
-  drawKpiCard(page, font, bold, M + 2 * (cardW + 12), cardY, cardW, 60, 'Acima', String(data.acima), NAVY);
-  drawKpiCard(page, font, bold, M + 3 * (cardW + 12), cardY, cardW, 60, 'Abaixo', String(data.abaixo), LIME);
-  drawKpiCard(page, font, bold, M + 4 * (cardW + 12), cardY, cardW, 60, 'Concorrentes', String(data.concs.length), NAVY);
-
-  // Distribuição por faixa — gráfico horizontal
-  page.drawText('DISTRIBUIÇÃO DE ESCOLAS POR FAIXA', { x: M, y: cardY - 26, size: 10, font: bold, color: NAVY });
-  let y = cardY - 50;
-  const max = Math.max(...dist.map(d2 => d2.total), 1);
-  dist.forEach(d2 => {
-    const color = d2.hasTarget ? TEAL : NAVY;
-    drawHBar(page, font, M, y, PDF_W - 2 * M, 16, (d2.hasTarget ? '★ ' : '') + d2.label, (d2.total / max) * 100, color, `${d2.total} escola(s)`, 200);
-    y -= 24;
+  const maxTot = Math.max(...distItems.map(x => x.total), 1);
+  const distAreaTop = contentTop - 24;
+  const distAreaBottom = contentBottom + 6;
+  const distAreaH = distAreaTop - distAreaBottom;
+  const distRowH = Math.min(28, distAreaH / distItems.length);
+  distItems.forEach((d2, i) => {
+    const rY = distAreaTop - distRowH * (i + 1);
+    const labelY = rY + distRowH - 11;
+    const barY = rY + 4;
+    const barH = 8;
+    const barFullW = distW - 4;
+    page.drawText((d2.hasTarget ? '★ ' : '') + d2.label, { x: distX, y: labelY, size: 8, font: d2.hasTarget ? bold : font, color: d2.hasTarget ? TEAL : NAVY });
+    const totW = font.widthOfTextAtSize(`${d2.total}`, 8);
+    page.drawText(`${d2.total}`, { x: distX + distW - totW, y: labelY, size: 8, font: bold, color: NAVY });
+    page.drawRectangle({ x: distX, y: barY, width: barFullW, height: barH, color: BORDER_LIGHT });
+    const fillW = (d2.total / maxTot) * barFullW;
+    if (fillW > 0) {
+      page.drawRectangle({ x: distX, y: barY, width: fillW, height: barH, color: d2.hasTarget ? TEAL : NAVY });
+    }
   });
-
-  // Leitura
-  let leitura: string;
-  if (data.acima > data.abaixo + data.mesmaFaixa) leitura = 'Concorrência majoritariamente em faixas superiores — espaço para reposicionamento de valor.';
-  else if (data.abaixo > data.acima + data.mesmaFaixa) leitura = 'Concorrência em faixas inferiores — sustentar premium pedagógico e diferenciais.';
-  else leitura = 'Posicionamento alinhado ao grupo concorrencial — disputa direta por valor e diferenciação.';
-  page.drawRectangle({ x: M, y: 50, width: PDF_W - 2 * M, height: 28, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  page.drawText(leitura, { x: M + 12, y: 60, size: 9.5, font, color: NAVY });
 }
 
 // ----- 10. Socioeconômico
@@ -2456,14 +2570,11 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
   const cw = (W - 3 * gap) / 4;
 
   const segChipText = (seg: string) => {
-    const colorMap: Record<string, { bg: string; fg: string }> = {
-      EI:   { bg: C.segEI,   fg: C.white },
-      EFI:  { bg: C.segEFI,  fg: C.white },
-      EFII: { bg: C.segEFII, fg: C.navy  },
-      EM:   { bg: C.segEM,   fg: C.white },
+    // Padronizado: mesmo tratamento p/ EI, EFI, EFII e EM
+    return {
+      text: ` ${seg} `,
+      options: { fontSize: 8, bold: true, color: C.navy, fill: { color: C.tealLight }, fontFace: 'Calibri' },
     };
-    const c = colorMap[seg] ?? { bg: C.navy, fg: C.white };
-    return { text: ` ${seg} `, options: { fontSize: 8, bold: true, color: c.fg, fill: { color: c.bg }, fontFace: 'Calibri' } };
   };
 
   const drawMini = (cx: number, c: any | null) => {
@@ -2583,17 +2694,10 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
   const restantesNaoExibidos = Math.max(0, restantes.length - restShown.length);
   if (restantesNaoExibidos > 0) {
     s.addText(`A análise completa considera ${totalConc} concorrentes elegíveis · ${4 + restShown.length} exibidos por legibilidade.`, {
-      x: SAFE, y: PPT_H - 1.32, w: W, h: 0.24,
+      x: SAFE, y: PPT_H - 0.78, w: W, h: 0.24,
       fontSize: 9, italic: true, color: C.muted, fontFace: 'Calibri',
     });
   }
-
-  // ---------- BLOCO DE APOIO METODOLÓGICO ----------
-  pptLeitura(
-    s,
-    'Concorrentes priorizados por origem de seleção, proximidade geográfica, segmentos em comum, tipo de adoção e faixa de mensalidade.',
-    PPT_H - 0.95, 0.42, 'METODOLOGIA',
-  );
 }
 
 // ----- 6. Market Share — slide único (unifica geral + por segmento)
@@ -2741,8 +2845,11 @@ function interpolateColor(from: string, to: string, t: number): string {
 // ----- 9. Mensalidade
 function pptMensalidade(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Mensalidade · Posicionamento Competitivo', 'Faixa da escola e do grupo concorrencial');
+
+  const SAFE = 0.4;
+  const W = PPT_W - 2 * SAFE;
   const e = ctx.analysis.escola;
+  const concs = data.concs as any[];
   const FAIXA_LABEL: Record<string, string> = {
     'até 399': 'Até R$ 399',
     '400 a 799': 'R$ 400 a R$ 799',
@@ -2750,35 +2857,142 @@ function pptMensalidade(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: nu
     '1.400 a 2.399': 'R$ 1.400 a R$ 2.399',
     'acima de R$ 2.400': 'Acima de R$ 2.400',
   };
-  const escFaixaLabel = (e.Mensalidade && e.Mensalidade !== '0') ? FAIXA_LABEL[e.Mensalidade] || e.Mensalidade : 'Dado não disponível';
-
-  const cw = (PPT_W - 2 * PPT_M - 0.6) / 5;
-  pptKpi(s, PPT_M + 0 * (cw + 0.15), 1.7, cw, 0.85, 'Faixa da Escola', escFaixaLabel, C.teal);
-  pptKpi(s, PPT_M + 1 * (cw + 0.15), 1.7, cw, 0.85, 'Mesma Faixa', String(data.mesmaFaixa), C.teal);
-  pptKpi(s, PPT_M + 2 * (cw + 0.15), 1.7, cw, 0.85, 'Acima', String(data.acima), C.navy);
-  pptKpi(s, PPT_M + 3 * (cw + 0.15), 1.7, cw, 0.85, 'Abaixo', String(data.abaixo), C.lime);
-  pptKpi(s, PPT_M + 4 * (cw + 0.15), 1.7, cw, 0.85, 'Concorrentes', String(data.concs.length), C.navy);
-
   const FAIXAS = ['até 399', '400 a 799', '800 a 1.399', '1.400 a 2.399', 'acima de R$ 2.400'];
-  const dist = FAIXAS.map(f => {
-    const tot = (e.Mensalidade === f ? 1 : 0) + data.concs.filter((c: any) => c.escola.Mensalidade === f).length;
-    return { faixa: FAIXA_LABEL[f] || f, total: tot, hasTarget: e.Mensalidade === f };
+  const escIdx = getMensalidadeFaixa(e.Mensalidade);
+  const escFaixaLabel = (e.Mensalidade && e.Mensalidade !== '0' && escIdx > 0)
+    ? (FAIXA_LABEL[e.Mensalidade] || e.Mensalidade)
+    : 'Dado não disponível';
+
+  // ---------- TÍTULO COMPACTO + FILETE ----------
+  s.addText('Faixa de Mensalidade', {
+    x: SAFE, y: 0.42, w: W, h: 0.7,
+    fontSize: 30, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top',
   });
-  const chartData = [{ name: 'Escolas', labels: dist.map(d => d.faixa), values: dist.map(d => d.total) }];
-  s.addChart(pptxgenChartType('bar'), chartData, {
-    x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M, h: 2.7,
-    showTitle: true, title: 'Distribuição de Escolas por Faixa', titleFontFace: 'Calibri', titleFontSize: 11, titleColor: C.navy,
-    barDir: 'bar', chartColors: [C.teal],
-    showValue: true, dataLabelFontSize: 10, dataLabelColor: C.navy,
-    catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 10, valAxisLabelFontSize: 9,
-    showLegend: false,
+  s.addShape('rect', { x: SAFE, y: 1.08, w: 0.5, h: 0.05, fill: { color: C.teal }, line: { color: C.teal } });
+  s.addText('Posicionamento da escola analisada em relação ao grupo competitivo da área de influência.', {
+    x: SAFE, y: 1.18, w: W, h: 0.32,
+    fontSize: 11.5, color: C.muted, fontFace: 'Calibri', italic: true, valign: 'top',
   });
 
-  let txt: string;
-  if (data.acima > data.abaixo + data.mesmaFaixa) txt = 'Concorrência majoritariamente em faixas superiores — espaço para reposicionamento de valor.';
-  else if (data.abaixo > data.acima + data.mesmaFaixa) txt = 'Concorrência em faixas inferiores — sustentar premium pedagógico e diferenciais.';
-  else txt = 'Posicionamento alinhado ao grupo concorrencial — disputa direta por valor e diferenciação.';
-  pptLeitura(s, txt, PPT_H - 1.0, 0.5);
+  // ---------- LINHA-RESUMO ----------
+  s.addText(
+    `Faixa da escola: ${escFaixaLabel} · ${concs.length} concorrente(s) exibidos · ${data.mesmaFaixa} na mesma faixa`,
+    { x: SAFE, y: 1.55, w: W, h: 0.26, fontSize: 10, color: C.muted, fontFace: 'Calibri', valign: 'top' },
+  );
+
+  // ---------- 4 MINI CARDS ----------
+  const cardsY = 1.85;
+  const cardH = 0.85;
+  const gap = 0.2;
+  const cw = (W - 3 * gap) / 4;
+  pptKpi(s, SAFE + 0 * (cw + gap), cardsY, cw, cardH, 'Faixa da escola', escFaixaLabel, C.teal);
+  pptKpi(s, SAFE + 1 * (cw + gap), cardsY, cw, cardH, 'Na mesma faixa', String(data.mesmaFaixa), C.teal);
+  pptKpi(s, SAFE + 2 * (cw + gap), cardsY, cw, cardH, 'Acima da faixa', String(data.acima), C.navy);
+  pptKpi(s, SAFE + 3 * (cw + gap), cardsY, cw, cardH, 'Abaixo da faixa', String(data.abaixo), C.lime);
+
+  // ---------- BLOCO A · TABELA + BLOCO B · DISTRIBUIÇÃO ----------
+  const contentY = cardsY + cardH + 0.2;
+  const tableW = W * 0.62;
+  const distX = SAFE + tableW + 0.2;
+  const distW = W - tableW - 0.2;
+
+  // Tabela
+  type Row = { nome: string; faixa: string; faixaIdx: number; isTarget: boolean };
+  const allRows: Row[] = [
+    { nome: e.Escola, faixa: e.Mensalidade, faixaIdx: escIdx, isTarget: true },
+    ...concs.map((c: any) => ({
+      nome: c.escola.Escola,
+      faixa: c.escola.Mensalidade,
+      faixaIdx: getMensalidadeFaixa(c.escola.Mensalidade),
+      isTarget: false,
+    })),
+  ];
+  const MAX_ROWS = 11;
+  const rowsShown = allRows.slice(0, MAX_ROWS);
+
+  const relOf = (r: Row): { txt: string; muted: boolean; teal?: boolean } => {
+    if (r.isTarget) return { txt: 'Em análise', muted: false, teal: true };
+    if (r.faixaIdx <= 0) return { txt: 'Dado não disponível', muted: true };
+    if (escIdx <= 0) return { txt: '—', muted: true };
+    if (r.faixaIdx === escIdx) return { txt: 'Mesma faixa', muted: false };
+    if (r.faixaIdx > escIdx) return { txt: 'Acima', muted: false };
+    return { txt: 'Abaixo', muted: false };
+  };
+
+  const headerRow = ['Escola', 'Faixa', 'Relação'].map(h => ({
+    text: h,
+    options: { bold: true, color: C.white, fill: { color: C.navy }, fontSize: 10, fontFace: 'Calibri', valign: 'middle' },
+  }));
+  const tRows: any[] = [headerRow];
+  rowsShown.forEach((r, idx) => {
+    const fill = r.isTarget ? C.tealLight : (idx % 2 === 0 ? C.white : C.beige);
+    const fLabel = (r.faixa && r.faixa !== '0' && r.faixaIdx > 0) ? (FAIXA_LABEL[r.faixa] || r.faixa) : 'Dado não disponível';
+    const isFND = !(r.faixa && r.faixa !== '0' && r.faixaIdx > 0);
+    const rel = relOf(r);
+    const nameCell: any = r.isTarget
+      ? {
+          text: [
+            { text: r.nome, options: { bold: true, color: C.navy, fontSize: 9.5, fontFace: 'Calibri' } },
+            { text: '  ' },
+            { text: ' Em análise ', options: { bold: true, fontSize: 7.5, color: C.white, fill: { color: C.teal }, fontFace: 'Calibri' } },
+          ],
+          options: { fill: { color: fill }, valign: 'middle' },
+        }
+      : { text: r.nome, options: { fontSize: 9.5, bold: true, color: C.navy, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri' } };
+    tRows.push([
+      nameCell,
+      { text: fLabel, options: { fontSize: 9, color: isFND ? C.muted : C.text, italic: isFND, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri' } },
+      { text: rel.txt, options: { fontSize: 9, bold: !rel.muted, italic: rel.muted, color: rel.muted ? C.muted : (rel.teal ? C.teal : C.navy), valign: 'middle', fill: { color: fill }, fontFace: 'Calibri' } },
+    ]);
+  });
+  s.addTable(tRows, {
+    x: SAFE, y: contentY, w: tableW,
+    colW: [tableW * 0.50, tableW * 0.26, tableW * 0.24],
+    rowH: 0.30, fontFace: 'Calibri',
+    border: { type: 'solid', color: C.borderLight, pt: 0.4 },
+  });
+
+  // Distribuição (lado direito) — quadro compacto com barras
+  s.addText('DISTRIBUIÇÃO POR FAIXA', {
+    x: distX, y: contentY, w: distW, h: 0.28,
+    fontSize: 9, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1,
+  });
+  const distItems = FAIXAS.map(f => {
+    const tot = (e.Mensalidade === f ? 1 : 0) + concs.filter((c: any) => c.escola.Mensalidade === f).length;
+    return { label: FAIXA_LABEL[f] || f, total: tot, hasTarget: e.Mensalidade === f };
+  });
+  const maxTot = Math.max(...distItems.map(x => x.total), 1);
+  const distAreaY = contentY + 0.32;
+  const distRowH = 0.42;
+  distItems.forEach((d2, i) => {
+    const rY = distAreaY + i * distRowH;
+    s.addText(
+      [
+        { text: (d2.hasTarget ? '★ ' : '') + d2.label, options: { bold: d2.hasTarget, color: d2.hasTarget ? C.teal : C.navy, fontSize: 9, fontFace: 'Calibri' } },
+      ] as any,
+      { x: distX, y: rY, w: distW - 0.5, h: 0.2, valign: 'middle' },
+    );
+    s.addText(String(d2.total), {
+      x: distX + distW - 0.45, y: rY, w: 0.45, h: 0.2,
+      fontSize: 9, bold: true, color: C.navy, fontFace: 'Calibri', align: 'right', valign: 'middle',
+    });
+    // Barra
+    const barY = rY + 0.22;
+    const barH = 0.12;
+    s.addShape('rect', { x: distX, y: barY, w: distW, h: barH, fill: { color: C.borderLight }, line: { color: C.borderLight } });
+    const fillW = (d2.total / maxTot) * distW;
+    if (fillW > 0.02) {
+      s.addShape('rect', { x: distX, y: barY, w: fillW, h: barH, fill: { color: d2.hasTarget ? C.teal : C.navy }, line: { color: d2.hasTarget ? C.teal : C.navy } });
+    }
+  });
+
+  // Nota se houver mais
+  if (allRows.length > MAX_ROWS) {
+    s.addText(`Exibidos ${MAX_ROWS} de ${allRows.length} no total — listagem priorizada por proximidade.`, {
+      x: SAFE, y: PPT_H - 0.78, w: W, h: 0.24,
+      fontSize: 9, italic: true, color: C.muted, fontFace: 'Calibri',
+    });
+  }
 }
 
 // ----- 10. Socioeconômico
