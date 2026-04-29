@@ -338,10 +338,14 @@ function buildPageData(ctx: ExportContext) {
 
 function tipoAdocaoOf(esc: any): string {
   const t = String(esc?.['Tipo de Adoção'] || '').trim();
-  return t || 'Dado não disponível';
+  if (!t) return 'Sem dados';
+  // Normaliza valores residuais como "Não", "Nao", "N/A", "-" para "Sem dados"
+  const norm = t.toLowerCase().replace(/[ãâá]/g, 'a').replace(/[õô]/g, 'o');
+  if (norm === 'nao' || norm === 'n/a' || norm === '-' || norm === 'sem dados') return 'Sem dados';
+  return t;
 }
 function tipoAdocaoIsND(esc: any): boolean {
-  return !String(esc?.['Tipo de Adoção'] || '').trim();
+  return tipoAdocaoOf(esc) === 'Sem dados';
 }
 function distanciaLabel(c: any): { text: string; muted: boolean } {
   if (c.distancia !== null && c.distancia !== undefined) {
