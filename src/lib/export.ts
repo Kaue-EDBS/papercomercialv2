@@ -2177,67 +2177,114 @@ function pptPanorama(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
     { x: lx + 0.18, y: cardY + 0.36, w: cw - 0.36, h: cardH - 0.42, fontFace: 'Calibri', valign: 'middle', shrinkText: true } as any,
   );
 
-  // ===== 2 tabelas analíticas empilhadas =====
-  const totEsc = data.a.concorrentes.length + 1;
-  const todas = [data.e, ...data.concs.map((c: any) => c.escola)];
-  const segDefs = [
-    { sigla: 'EI',   nome: 'Educação Infantil',          field: 'qt_mat_educacao_infantil' },
-    { sigla: 'EFI',  nome: 'Ens. Fund. — Anos Iniciais', field: 'qt_mat_ensino_fundamental_anos_iniciais' },
-    { sigla: 'EFII', nome: 'Ens. Fund. — Anos Finais',   field: 'qt_mat_ensino_fundamental_anos_finais' },
-    { sigla: 'EM',   nome: 'Ensino Médio',               field: 'qt_mat_ensino_medio' },
-  ];
-  const cobertura = segDefs.map(sg => {
-    const escolas = todas.filter((x: any) => num(x[sg.field]) > 0).length;
-    return { ...sg, escolas, pct: totEsc > 0 ? (escolas / totEsc) * 100 : 0 };
+  // ===== Composição: gráfico (≈2/3) + tabela resumo (≈1/3) =====
+  const segOrd = data.segPanorama as Array<{ sigla: string; nome: string; alunos: number }>;
+
+  const blockY = 3.0;
+  const blockH = PPT_H - blockY - 0.55; // respiro inferior, sem leitura
+  const gapX = 0.25;
+  const totalW = PPT_W - 2 * PPT_M;
+  const chartW = totalW * 0.62;
+  const tableX = PPT_M + chartW + gapX;
+  const tableW = totalW - chartW - gapX;
+
+  // ----- Gráfico de barras horizontais -----
+  // Destaque sutil do líder via cor diferente (TEAL) vs demais (NAVY).
+  const liderSigla = segOrd[0]?.sigla;
+  const chartLabels = segOrd.map(seg => seg.nome);
+  const chartValues = segOrd.map(seg => seg.alunos);
+  const chartData = [{ name: 'Alunos', labels: chartLabels, values: chartValues }];
+  const barColorsArr = segOrd.map(seg => seg.sigla === liderSigla ? C.teal : C.navy);
+
+  s.addText('Distribuição de alunos por segmento', {
+    x: PPT_M, y: blockY, w: chartW, h: 0.3,
+    fontSize: 12, bold: true, color: C.navy, fontFace: 'Calibri',
   });
-  const cobertOrd = [...cobertura].sort((a, b) => b.escolas - a.escolas);
-  const maxCob = cobertOrd[0]?.escolas ?? 0;
-  const empateCob = cobertura.filter(c => c.escolas === maxCob).length > 1;
+  s.addChart(pptxgenChartType('bar'), chartData, {
+    x: PPT_M, y: blockY + 0.34, w: chartW, h: blockH - 0.34,
+    barDir: 'bar',
+    chartColors: barColorsArr,
+    chartColorsOpacity: 100,
+    showValue: true,
+    dataLabelFontSize: 10,
+    dataLabelColor: C.navy,
+    dataLabelFontFace: 'Calibri',
+    dataLabelPosition: 'outEnd',
+    catAxisLabelFontFace: 'Calibri',
+    catAxisLabelFontSize: 10,
+    catAxisLabelColor: C.navy,
+    valAxisLabelFontFace: 'Calibri',
+    valAxisLabelFontSize: 9,
+    valAxisLabelColor: C.muted,
+    valGridLine: { style: 'none' } as any,
+    catGridLine: { style: 'none' } as any,
+    showLegend: false,
+    showTitle: false,
+    barGapWidthPct: 60,
+  } as any);
 
-  const tableX = PPT_M;
-  const tableW = PPT_W - 2 * PPT_M;
-  const t1Y = 2.95;
-  const tableH = 1.75;
-  const t2Y = t1Y + tableH + 0.18;
+  // ----- Tabela resumo -----
+  s.addText('Resumo por Segmento', {
+    x: tableX, y: blockY, w: tableW, h: 0.3,
+    fontSize: 12, bold: true, color: C.navy, fontFace: 'Calibri',
+  });
+  const tHeadY = blockY + 0.34;
+  const tHeadH = 0.28;
+  const tBodyTop = tHeadY + tHeadH;
+  const tBodyBottom = blockY + blockH;
+  const tRowsCount = segOrd.length + 1; // + total
+  const tRowH = Math.max(0.30, Math.min(0.46, (tBodyBottom - tBodyTop) / tRowsCount));
 
-  pptAnalyticTable(s, {
-    x: tableX, y: t1Y, w: tableW, h: tableH,
-    title: 'Cobertura por Segmento',
-    subtitle: 'Quantas escolas ofertam cada nível de ensino na região',
-    headers: ['Segmento', 'Escolas que ofertam', '% das escolas'],
-    rows: cobertOrd.map((c, i) => ({
-      seg: c.nome,
-      val: `${c.escolas} de ${totEsc}`,
-      pctTxt: fmtPct(c.pct, 1),
-      pctNum: c.pct,
-      tag: i === 0 && !empateCob ? 'Maior cobertura' : null,
-      isLeader: i === 0 && !empateCob,
-    })),
+  // Header
+  const colSegW = tableW * 0.42;
+  const colAlW  = tableW * 0.30;
+  const colPctW = tableW - colSegW - colAlW;
+  s.addShape('rect', { x: tableX, y: tHeadY, w: tableW, h: tHeadH, fill: { color: C.beige }, line: { color: C.beige } });
+  s.addText('SEGMENTO', { x: tableX + 0.08, y: tHeadY, w: colSegW, h: tHeadH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', charSpacing: 1 });
+  s.addText('ALUNOS',   { x: tableX + colSegW, y: tHeadY, w: colAlW - 0.06,  h: tHeadH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', align: 'right', charSpacing: 1 });
+  s.addText('%',        { x: tableX + colSegW + colAlW, y: tHeadY, w: colPctW - 0.06, h: tHeadH, fontSize: 8.5, bold: true, color: C.muted, fontFace: 'Calibri', valign: 'middle', align: 'right', charSpacing: 1 });
+
+  segOrd.forEach((seg, i) => {
+    const ry = tBodyTop + i * tRowH;
+    const isLeader = i === 0;
+    if (i % 2 === 0) {
+      s.addShape('rect', { x: tableX, y: ry, w: tableW, h: tRowH, fill: { color: C.borderLight }, line: { color: C.borderLight } });
+    }
+    if (isLeader) {
+      s.addShape('rect', { x: tableX, y: ry, w: 0.05, h: tRowH, fill: { color: C.lime }, line: { color: C.lime } });
+    }
+    s.addText(seg.nome, {
+      x: tableX + 0.08, y: ry, w: colSegW - 0.08, h: tRowH,
+      fontSize: 10.5, bold: isLeader, color: C.navy, fontFace: 'Calibri', valign: 'middle',
+    });
+    s.addText(fmtInt(seg.alunos), {
+      x: tableX + colSegW, y: ry, w: colAlW - 0.06, h: tRowH,
+      fontSize: 10.5, bold: isLeader, color: C.text, fontFace: 'Calibri', valign: 'middle', align: 'right',
+    });
+    const pNum = data.totalAlunos > 0 ? (seg.alunos / data.totalAlunos) * 100 : 0;
+    s.addText(fmtPct(pNum, 1), {
+      x: tableX + colSegW + colAlW, y: ry, w: colPctW - 0.06, h: tRowH,
+      fontSize: 10.5, bold: isLeader, color: isLeader ? C.navy : C.text, fontFace: 'Calibri', valign: 'middle', align: 'right',
+    });
   });
 
-  pptAnalyticTable(s, {
-    x: tableX, y: t2Y, w: tableW, h: tableH,
-    title: 'Volume de Alunos por Segmento',
-    subtitle: 'Distribuição da demanda total entre os níveis de ensino',
-    headers: ['Segmento', 'Alunos', '%'],
-    rows: data.segPanorama.map((seg: any, i: number) => ({
-      seg: seg.nome,
-      val: fmtInt(seg.alunos),
-      pctTxt: data.totalAlunos > 0 ? fmtPct(seg.alunos / data.totalAlunos * 100, 1) : '—',
-      pctNum: data.totalAlunos > 0 ? seg.alunos / data.totalAlunos * 100 : 0,
-      tag: i === 0 ? 'Líder' : null,
-      isLeader: i === 0,
-    })),
-    totalRow: { label: 'Total', val: fmtInt(data.totalAlunos), pctTxt: '100%' },
-  });
-
-  // ===== Leitura estratégica — fechamento do slide =====
-  const cobLider = cobertOrd[0];
-  const cobTxt = empateCob
-    ? 'A cobertura é ampla e equilibrada entre os segmentos, com oferta presente em toda a área analisada.'
-    : `A cobertura é mais ampla em ${cobLider?.nome ?? '—'} (${cobLider?.escolas} de ${totEsc} escolas).`;
-  const leitura = `${cobTxt} Em volume, ${lider?.nome ?? '—'} lidera com ${fmtPct(liderPct, 1)}, ${menor?.alunos === 0 ? `enquanto ${menor?.nome} não registra oferta — possível oportunidade de posicionamento.` : `enquanto ${menor?.nome} concentra ${fmtPct(menorPct, 1)} — potencial espaço de diferenciação.`}`;
-  pptLeitura(s, leitura, PPT_H - 0.95, 0.55, 'LEITURA ESTRATÉGICA');
+  // Linha de total — peso visual maior
+  {
+    const ry = tBodyTop + segOrd.length * tRowH;
+    s.addShape('line', { x: tableX, y: ry, w: tableW, h: 0, line: { color: C.navy, width: 1.2 } });
+    s.addText('Total', {
+      x: tableX + 0.08, y: ry, w: colSegW - 0.08, h: tRowH,
+      fontSize: 11, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'middle',
+    });
+    s.addText(fmtInt(data.totalAlunos), {
+      x: tableX + colSegW, y: ry, w: colAlW - 0.06, h: tRowH,
+      fontSize: 11, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'middle', align: 'right',
+    });
+    s.addText('100%', {
+      x: tableX + colSegW + colAlW, y: ry, w: colPctW - 0.06, h: tRowH,
+      fontSize: 11, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'middle', align: 'right',
+    });
+  }
 }
 
 // Tabela analítica reutilizável para o slide Panorama (PPT)
