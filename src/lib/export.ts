@@ -1144,145 +1144,117 @@ function wrapTextToLines(text: string, font: PDFFont, size: number, maxW: number
   return lines.length ? lines : [''];
 }
 
-// ----- 7. Market share geral
-function renderPdfMarketShareGeral(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
+// ----- 6. Market Share — slide único (unifica geral + por segmento)
+function renderPdfMarketShare(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Market Share — Visão Geral', `Participação relativa em ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
 
-  const ms = ctx.analysis.marketShare;
-  // KPIs principais
-  const cardW = (PDF_W - 2 * M - 48) / 5;
-  const cardY = PDF_H - CONTENT_TOP - 130;
-  const kpis = [
-    { l: 'Geral',                v: fmtPct(ms.geral),  c: TEAL },
-    { l: 'Educação Infantil',    v: fmtPct(ms.ei),     c: NAVY },
-    { l: 'Fund. AI',             v: fmtPct(ms.efi),    c: NAVY },
-    { l: 'Fund. AF',             v: fmtPct(ms.efii),   c: NAVY },
-    { l: 'Ensino Médio',         v: fmtPct(ms.em),     c: NAVY },
-  ];
-  kpis.forEach((k, i) => {
-    drawKpiCard(page, font, bold, M + i * (cardW + 12), cardY, cardW, 60, k.l, k.v, k.c);
-  });
-
-  // Ranking geral — top 10
-  const top = data.allSchoolsRanked.slice(0, 10);
+  const W = PDF_W - 2 * M;
+  const a = ctx.analysis;
+  const ms = a.marketShare;
   const universe = data.totalAlunadoArea;
-  page.drawText('RANKING DE MARKET SHARE — TOP 10', { x: M, y: cardY - 24, size: 10, font: bold, color: NAVY });
-  let y = cardY - 44;
-  const rowH = 22;
-  top.forEach((s: any) => {
-    if (y < CONTENT_BOTTOM + 50) return;
-    const pct = universe > 0 ? (s.total / universe) * 100 : 0;
-    const color = s.isTarget ? TEAL : NAVY;
-    drawHBar(page, font, M, y, PDF_W - 2 * M, 14,
-      truncate((s.isTarget ? '★ ' : '') + s.name, 36), pct, color,
-      `${fmtPct(pct)} · ${fmtInt(s.total)} alunos`, 220);
-    y -= rowH;
+
+  // ---------- TÍTULO COMPACTO COM FILETE ----------
+  page.drawText('Market Share', {
+    x: M, y: PDF_H - CONTENT_TOP - 12, size: 22, font: bold, color: NAVY,
+  });
+  page.drawRectangle({ x: M, y: PDF_H - CONTENT_TOP - 22, width: 36, height: 3, color: TEAL });
+  page.drawText('Participação de mercado da escola analisada na área de influência, com visão geral e por segmento.', {
+    x: M, y: PDF_H - CONTENT_TOP - 38, size: 10.5, font: italic, color: MUTED,
   });
 
-  // Insight rodapé
-  const top3 = data.allSchoolsRanked.slice(0, 3).reduce((s: number, x: any) => s + x.total, 0);
-  const top3Pct = universe > 0 ? (top3 / universe) * 100 : 0;
-  const txt = `As 3 maiores escolas detêm ${fmtPct(top3Pct)} do alunado da área — mercado ${top3Pct > 50 ? 'concentrado' : 'fragmentado'}. Líder local: ${data.allSchoolsRanked[0]?.name ?? '—'}.`;
-  page.drawRectangle({ x: M, y: 50, width: PDF_W - 2 * M, height: 28, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  page.drawText(truncate(txt, 145), { x: M + 12, y: 60, size: 9.5, font, color: NAVY });
-}
+  // ---------- LINHA-RESUMO ----------
+  const linhaY = PDF_H - CONTENT_TOP - 54;
+  const linha = `Raio ${fmtKm(ctx.raioKm)} · ${a.concorrentes.length} concorrentes elegíveis · ${fmtInt(universe)} alunos na área de influência`;
+  page.drawText(linha, { x: M, y: linhaY, size: 9.5, font, color: MUTED });
 
-// ----- 8. Market share por segmento + heatmap
-function renderPdfMarketShareSegmentos(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
-  const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
-  drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Market Share por Segmento', 'Composição do alunado e participação por nível de ensino');
-
-  const e = ctx.analysis.escola;
-  const escTotal = num(e.qt_mat_educacao_infantil) + num(e.qt_mat_ensino_fundamental_anos_iniciais) + num(e.qt_mat_ensino_fundamental_anos_finais) + num(e.qt_mat_ensino_medio);
-  const segs = [
-    { k: 'EI',   l: 'Educação Infantil', v: num(e.qt_mat_educacao_infantil), c: TEAL },
-    { k: 'EFI',  l: 'Fund. AI',          v: num(e.qt_mat_ensino_fundamental_anos_iniciais), c: NAVY },
-    { k: 'EFII', l: 'Fund. AF',          v: num(e.qt_mat_ensino_fundamental_anos_finais), c: LIME },
-    { k: 'EM',   l: 'Ensino Médio',      v: num(e.qt_mat_ensino_medio), c: TEAL_DARK },
-  ].filter(s => s.v > 0);
-
-  // Composição do alunado da escola — barra empilhada
-  const compY = PDF_H - CONTENT_TOP - 90;
-  page.drawText('COMPOSIÇÃO DO ALUNADO — ' + truncate(e.Escola, 50).toUpperCase(), { x: M, y: compY + 36, size: 9, font: bold, color: NAVY });
-  const barW = PDF_W - 2 * M;
-  const barH = 24;
-  let bx = M;
-  segs.forEach(s => {
-    const segW = escTotal > 0 ? (s.v / escTotal) * barW : 0;
-    page.drawRectangle({ x: bx, y: compY, width: segW, height: barH, color: s.c });
-    if (segW > 60) {
-      const lbl = `${s.k} · ${escTotal > 0 ? fmtPct(s.v / escTotal * 100, 0) : '—'}`;
-      page.drawText(lbl, { x: bx + 6, y: compY + 8, size: 9, font: bold, color: WHITE });
-    }
-    bx += segW;
-  });
-  // legenda
-  let lx = M;
-  segs.forEach(s => {
-    page.drawRectangle({ x: lx, y: compY - 18, width: 8, height: 8, color: s.c });
-    page.drawText(`${s.l}: ${fmtInt(s.v)} (${escTotal > 0 ? fmtPct(s.v / escTotal * 100, 0) : '—'})`, { x: lx + 12, y: compY - 17, size: 8.5, font, color: TEXT });
-    lx += font.widthOfTextAtSize(`${s.l}: ${fmtInt(s.v)} (${escTotal > 0 ? fmtPct(s.v / escTotal * 100, 0) : '—'})`, 8.5) + 30;
+  // ---------- 5 MINI CARDS ----------
+  const segShares = [
+    { l: 'Educação Infantil', v: ms.ei },
+    { l: 'Fund. AI', v: ms.efi },
+    { l: 'Fund. AF', v: ms.efii },
+    { l: 'Ensino Médio', v: ms.em },
+  ];
+  const maxSeg = Math.max(ms.ei, ms.efi, ms.efii, ms.em);
+  const cardW = (W - 4 * 12) / 5;
+  const cardH = 60;
+  const cardY = linhaY - 14 - cardH;
+  // Geral
+  drawKpiCard(page, font, bold, M, cardY, cardW, cardH, 'Geral', fmtPct(ms.geral), TEAL);
+  segShares.forEach((seg, i) => {
+    const isStrong = maxSeg > 0 && seg.v === maxSeg;
+    drawKpiCard(page, font, bold, M + (i + 1) * (cardW + 12), cardY, cardW, cardH, seg.l, fmtPct(seg.v), isStrong ? LIME : NAVY);
   });
 
-  // Heatmap — top 8 escolas × 4 segmentos
-  const heatY = compY - 60;
-  page.drawText('HEATMAP DE MARKET SHARE POR SEGMENTO', { x: M, y: heatY, size: 9, font: bold, color: NAVY });
+  // ---------- HEATMAP ----------
   const heatTop = data.allSchoolsRanked.slice(0, 8);
+  const heatTitleY = cardY - 20;
+  page.drawText('HEATMAP DE MARKET SHARE POR SEGMENTO', { x: M, y: heatTitleY, size: 9, font: bold, color: NAVY, characterSpacing: 1 } as any);
+
   const segKeys = [
     { k: 'qt_mat_educacao_infantil', l: 'EI' },
     { k: 'qt_mat_ensino_fundamental_anos_iniciais', l: 'EFI' },
     { k: 'qt_mat_ensino_fundamental_anos_finais', l: 'EFII' },
     { k: 'qt_mat_ensino_medio', l: 'EM' },
   ];
-  const colSegW = 60;
-  const rowLabelW = 240;
-  const tblY = heatY - 16;
-  // header
-  page.drawText('ESCOLA', { x: M, y: tblY, size: 8, font: bold, color: MUTED });
-  segKeys.forEach((s, i) => {
+  const colSegW = 70;
+  const rowLabelW = W - colSegW * 4 - 8;
+  const headerY = heatTitleY - 16;
+  page.drawText('ESCOLA', { x: M + 6, y: headerY, size: 8, font: bold, color: MUTED });
+  segKeys.forEach((sk, i) => {
     const tx = M + rowLabelW + i * colSegW + colSegW / 2;
-    page.drawText(s.l, { x: tx - 8, y: tblY, size: 8, font: bold, color: MUTED });
+    const tw = bold.widthOfTextAtSize(sk.l, 8.5);
+    page.drawText(sk.l, { x: tx - tw / 2, y: headerY, size: 8.5, font: bold, color: MUTED });
   });
-  let hy = tblY - 14;
+
+  let hy = headerY - 6;
+  const cellH = 22;
   heatTop.forEach((row: any) => {
-    page.drawText((row.isTarget ? '★ ' : '  ') + truncate(row.name, 36), { x: M, y: hy + 4, size: 9, font: row.isTarget ? bold : font, color: row.isTarget ? TEAL : TEXT });
-    segKeys.forEach((s, i) => {
-      const val = num(row.data[s.k]);
-      const segTotal = data.allSchoolsRanked.reduce((acc: number, r: any) => acc + num(r.data[s.k]), 0);
+    hy -= cellH;
+    // Linha-base: highlight da escola analisada (badge "Em análise")
+    if (row.isTarget) {
+      page.drawRectangle({ x: M, y: hy, width: rowLabelW - 4, height: cellH, color: TEAL_LIGHT });
+      page.drawRectangle({ x: M, y: hy, width: 3, height: cellH, color: TEAL });
+    }
+    const nameTxt = truncate(row.name, 38);
+    page.drawText(nameTxt, { x: M + 8, y: hy + cellH / 2 - 4, size: 9, font: row.isTarget ? bold : font, color: row.isTarget ? NAVY : TEXT });
+    if (row.isTarget) {
+      const badge = 'Em análise';
+      const bw = bold.widthOfTextAtSize(badge, 7) + 8;
+      const bx = M + rowLabelW - bw - 8;
+      page.drawRectangle({ x: bx, y: hy + cellH / 2 - 6, width: bw, height: 12, color: TEAL });
+      page.drawText(badge, { x: bx + 4, y: hy + cellH / 2 - 3, size: 7, font: bold, color: WHITE });
+    }
+    segKeys.forEach((sk, i) => {
+      const val = num(row.data[sk.k]);
+      const segTotal = data.allSchoolsRanked.reduce((acc: number, r: any) => acc + num(r.data[sk.k]), 0);
       const pct = segTotal > 0 ? (val / segTotal) * 100 : 0;
       const intensity = Math.min(pct / 30, 1);
       const cx = M + rowLabelW + i * colSegW;
-      const cy = hy;
-      // Cor com intensidade
-      const fill = row.isTarget
-        ? rgb(0.05 + (1 - intensity) * 0.5, 0.604 - intensity * 0.2, 0.588 - intensity * 0.2)
-        : rgb(0.93 - intensity * 0.55, 0.93 - intensity * 0.7, 0.95 - intensity * 0.5);
-      page.drawRectangle({ x: cx, y: cy, width: colSegW - 4, height: 18, color: fill, borderColor: BORDER_LIGHT, borderWidth: 0.3 });
+      const fill = rgb(0.93 - intensity * 0.55, 0.93 - intensity * 0.7, 0.95 - intensity * 0.5);
+      page.drawRectangle({ x: cx, y: hy + 2, width: colSegW - 4, height: cellH - 4, color: fill, borderColor: BORDER_LIGHT, borderWidth: 0.3 });
+      if (row.isTarget) {
+        page.drawRectangle({ x: cx, y: hy + 2, width: colSegW - 4, height: cellH - 4, borderColor: TEAL, borderWidth: 1.2, color: fill, opacity: 0 });
+      }
       const tt = pct > 0 ? fmtPct(pct, 0) : '—';
-      const tw = font.widthOfTextAtSize(tt, 9);
-      page.drawText(tt, { x: cx + (colSegW - 4 - tw) / 2, y: cy + 5, size: 9, font: row.isTarget ? bold : font, color: intensity > 0.6 ? WHITE : NAVY });
+      const tw = (row.isTarget ? bold : font).widthOfTextAtSize(tt, 9.5);
+      page.drawText(tt, {
+        x: cx + (colSegW - 4 - tw) / 2, y: hy + cellH / 2 - 4,
+        size: 9.5, font: row.isTarget ? bold : font,
+        color: intensity > 0.6 ? WHITE : NAVY,
+      });
     });
-    hy -= 22;
   });
 
-  // Leitura
-  page.drawRectangle({ x: M, y: 50, width: PDF_W - 2 * M, height: 28, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  const ms = ctx.analysis.marketShare;
-  const segShares = [
-    { l: 'Educação Infantil', v: ms.ei },
-    { l: 'Fund. AI', v: ms.efi },
-    { l: 'Fund. AF', v: ms.efii },
-    { l: 'Ensino Médio', v: ms.em },
-  ].filter(s => s.v > 0).sort((a, b) => b.v - a.v);
-  const lider = segShares[0];
-  const fraco = segShares[segShares.length - 1];
-  const txt = lider && fraco
+  // ---------- LEITURA CURTA ----------
+  const segLido = segShares.filter(s => s.v > 0).sort((a, b) => b.v - a.v);
+  const lider = segLido[0];
+  const fraco = segLido[segLido.length - 1];
+  const leitura = lider && fraco && lider.l !== fraco.l
     ? `Maior penetração em ${lider.l} (${fmtPct(lider.v)}). Segmento mais vulnerável: ${fraco.l} (${fmtPct(fraco.v)}).`
     : 'Sem dados suficientes para leitura segmentada.';
-  page.drawText(truncate(txt, 150), { x: M + 12, y: 60, size: 9.5, font, color: NAVY });
+  page.drawRectangle({ x: M, y: 50, width: W, height: 28, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
+  page.drawText(truncate(leitura, 150), { x: M + 12, y: 60, size: 9.5, font, color: NAVY });
 }
 
 // ----- 9. Mensalidade
