@@ -1446,7 +1446,7 @@ function renderPdfSocioeconomico(page: PDFPage, font: PDFFont, bold: PDFFont, it
   const rightX = M + leftW + 18;
 
   // ESQUERDA — distribuição etária
-  page.drawText('DISTRIBUIÇÃO ETÁRIA · MUNICÍPIO (2025)', { x: M, y: blockTop - 12, size: 9, font: bold, color: NAVY, characterSpacing: 1 });
+  page.drawText('DISTRIBUIÇÃO ETÁRIA · MUNICÍPIO (2025)', { x: M, y: blockTop - 12, size: 9, font: bold, color: NAVY });
   const faixasEt = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
   const popData = faixasEt.map(f => ({
     label: f,
@@ -1456,7 +1456,7 @@ function renderPdfSocioeconomico(page: PDFPage, font: PDFFont, bold: PDFFont, it
   drawVBars(page, font, M + 16, blockBottom + 24, leftW - 24, blockH - 50, popData, undefined, fmtInt);
 
   // DIREITA — heatmap Renda × Faixa Etária
-  page.drawText('RENDA × FAIXA ETÁRIA · MUNICÍPIO', { x: rightX, y: blockTop - 12, size: 9, font: bold, color: NAVY, characterSpacing: 1 });
+  page.drawText('RENDA × FAIXA ETÁRIA · MUNICÍPIO', { x: rightX, y: blockTop - 12, size: 9, font: bold, color: NAVY });
   if (data.matrix) {
     const headers = ['Classe', '0–4', '5–14', '15–19', 'Total'];
     const colWeights = [0.20, 0.20, 0.20, 0.20, 0.20];
@@ -1511,7 +1511,7 @@ function renderPdfSocioeconomico(page: PDFPage, font: PDFFont, bold: PDFFont, it
   else if (aderencia >= 15) leitura = 'Existe nicho relevante — comunique custo-benefício e proposta de valor para reduzir sensibilidade a preço.';
   else leitura = 'Base aderente limitada — atenção à elasticidade de preço e à necessidade de comunicar retorno do investimento educacional.';
   page.drawRectangle({ x: M, y: 36, width: PDF_W - 2 * M, height: 26, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  page.drawText(`LEITURA · ${data.aderenteCls.label.toUpperCase()} (${aderencia.toFixed(0)}%)`, { x: M + 10, y: 50, size: 8.5, font: bold, color: TEAL, characterSpacing: 1 });
+  page.drawText(`LEITURA · ${data.aderenteCls.label.toUpperCase()} (${aderencia.toFixed(0)}%)`, { x: M + 10, y: 50, size: 8.5, font: bold, color: TEAL });
   drawParagraph(page, font, leitura, M + 10, 40, PDF_W - 2 * M - 20, 9, NAVY, 1);
 }
 
