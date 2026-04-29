@@ -1047,20 +1047,16 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
     // Segmentos como chips
     {
       const segs = getSegmentos(c.escola);
-      const segColors: Record<string, RGB> = {
-        EI: rgb(0.18, 0.64, 0.61),
-        EFI: rgb(0.078, 0.149, 0.282),
-        EFII: rgb(0.71, 0.851, 0.392),
-        EM: rgb(0.039, 0.40, 0.392),
-      };
+      // Chip padronizado para todos os segmentos
+      const chipFill = rgb(0.871, 0.953, 0.953);
+      const chipBorder = rgb(0.624, 0.812, 0.800);
       let chipX = xc + 8;
       const chipY = rY + (rowH - 12) / 2;
       segs.forEach(seg => {
-        const cc = segColors[seg] ?? NAVY;
         const cw = bold.widthOfTextAtSize(seg, 7.5) + 10;
         if (chipX + cw > xc + cols[2].w - 6) return;
-        page.drawRectangle({ x: chipX, y: chipY, width: cw, height: 12, color: cc });
-        page.drawText(seg, { x: chipX + 5, y: chipY + 3, size: 7.5, font: bold, color: seg === 'EFII' ? NAVY : WHITE });
+        page.drawRectangle({ x: chipX, y: chipY, width: cw, height: 12, color: chipFill, borderColor: chipBorder, borderWidth: 0.4 });
+        page.drawText(seg, { x: chipX + 5, y: chipY + 3, size: 7.5, font: bold, color: NAVY });
         chipX += cw + 4;
       });
       if (segs.length === 0) {
