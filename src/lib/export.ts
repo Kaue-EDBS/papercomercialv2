@@ -204,11 +204,11 @@ function drawCard(page: PDFPage, x: number, y: number, w: number, h: number, acc
   if (accentTop) page.drawRectangle({ x, y: y + h - 3, width: w, height: 3, color: accentTop });
 }
 
-function drawKpiCard(page: PDFPage, font: PDFFont, bold: PDFFont, x: number, y: number, w: number, h: number, label: string, value: string, accent: RGB = TEAL) {
+function drawKpiCard(page: PDFPage, font: PDFFont, bold: PDFFont, x: number, y: number, w: number, h: number, label: string, value: string, accent: RGB = TEAL, valueStartSize = 22) {
   drawCard(page, x, y, w, h, accent);
   page.drawText(label.toUpperCase(), { x: x + 12, y: y + h - 18, size: 8, font, color: MUTED });
   // Valor — auto-shrink se muito grande
-  let vSize = 22;
+  let vSize = valueStartSize;
   while (bold.widthOfTextAtSize(value, vSize) > w - 24 && vSize > 11) vSize -= 1;
   page.drawText(value, { x: x + 12, y: y + 14, size: vSize, font: bold, color: NAVY });
 }
@@ -427,7 +427,8 @@ const SLIDE_TITLES = [
   'Concorrência',
   'Market Share',
   'Faixa de Mensalidade',
-  'Perfil Socioeconômico',
+  'Perfil Socioeconômico e Aderência Econômica',
+  'Potencial de Consumo Educacional e Comercial',
   'Insights e Recomendações',
   'Ação comercial e marketing',
   'Encerramento',
@@ -456,6 +457,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
     { render: (p, n) => renderPdfMarketShare(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfMensalidade(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfSocioeconomico(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfPotencial(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfInsights(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfAcaoComercial(p, font, bold, italic, ctx, data, n, total) },
     { render: (p) => renderPdfEncerramento(p, font, bold, italic, ctx) },
@@ -1277,10 +1279,10 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
   const cardY = cardsTop - cardH;
   const gap = 12;
   const cardW = (W - 3 * gap) / 4;
-  drawKpiCard(page, font, bold, M + 0 * (cardW + gap), cardY, cardW, cardH, 'Faixa da escola', escFaixaLabel, TEAL);
-  drawKpiCard(page, font, bold, M + 1 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), TEAL);
-  drawKpiCard(page, font, bold, M + 2 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes acima da faixa', String(data.acima), NAVY);
-  drawKpiCard(page, font, bold, M + 3 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), LIME);
+  drawKpiCard(page, font, bold, M + 0 * (cardW + gap), cardY, cardW, cardH, 'Faixa da escola', escFaixaLabel, TEAL, 18);
+  drawKpiCard(page, font, bold, M + 1 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), TEAL, 18);
+  drawKpiCard(page, font, bold, M + 2 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes acima da faixa', String(data.acima), NAVY, 18);
+  drawKpiCard(page, font, bold, M + 3 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), LIME, 18);
 
   // ---------- BLOCO A · TABELA · BLOCO B · DISTRIBUIÇÃO ----------
   const contentTop = cardY - 18;
@@ -1420,83 +1422,97 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
 function renderPdfSocioeconomico(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Perfil Socioeconômico', `Leitura demográfica e de potencial de consumo do município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}.`);
+  drawPDFTitle(d, 'Perfil Socioeconômico e Aderência Econômica', `Leitura demográfica, econômica e de aderência ao ticket da população de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}.`);
 
   if (!data.d) {
     page.drawText('Dado não disponível na base fornecida.', { x: M, y: PDF_H / 2, size: 12, font: italic, color: MUTED });
     return;
   }
 
-  // KPIs
-  const cardW = (PDF_W - 2 * M - 48) / 5;
+  // ----- 3 KPIs grandes (Renda Média / IDH Renda / IDH Educação) -----
+  const cardW3 = (PDF_W - 2 * M - 24) / 3;
+  const cardH3 = 72;
   const cardY = PDF_H - CONTENT_TOP - 130;
-  const aderTone = data.aderenteCls.tone === 'teal' ? TEAL : data.aderenteCls.tone === 'lime' ? LIME : NAVY;
-  drawKpiCard(page, font, bold, M + 0 * (cardW + 12), cardY, cardW, 60, 'Renda Média', fmtBRL(data.rendaMedia), TEAL);
-  drawKpiCard(page, font, bold, M + 1 * (cardW + 12), cardY, cardW, 60, 'IDH Educação', String(data.idhEduc), NAVY);
-  drawKpiCard(page, font, bold, M + 2 * (cardW + 12), cardY, cardW, 60, 'IDH Renda', String(data.idhRenda), LIME);
-  drawKpiCard(page, font, bold, M + 3 * (cardW + 12), cardY, cardW, 60, 'Pop. 0–19', fmtInt(data.pop0_19), TEAL);
-  drawKpiCard(page, font, bold, M + 4 * (cardW + 12), cardY, cardW, 60, 'Aderência ao ticket', data.matrix ? `${data.aderencia.toFixed(0)}%` : 'N/D', aderTone);
+  drawKpiCard(page, font, bold, M + 0 * (cardW3 + 12), cardY, cardW3, cardH3, 'Renda Média', fmtBRL(data.rendaMedia), TEAL, 26);
+  drawKpiCard(page, font, bold, M + 1 * (cardW3 + 12), cardY, cardW3, cardH3, 'IDH Renda', String(data.idhRenda), NAVY, 26);
+  drawKpiCard(page, font, bold, M + 2 * (cardW3 + 12), cardY, cardW3, cardH3, 'IDH Educação', String(data.idhEduc), LIME, 26);
 
-  // Matriz Renda × Faixa Etária (heatmap)
+  // ----- Bloco esquerdo: distribuição etária / Bloco direito: heatmap -----
+  const blockTop = cardY - 16;
+  const blockBottom = 70;
+  const blockH = blockTop - blockBottom;
+  const leftW = (PDF_W - 2 * M - 18) * 0.42;
+  const rightW = (PDF_W - 2 * M - 18) - leftW;
+  const rightX = M + leftW + 18;
+
+  // ESQUERDA — distribuição etária
+  page.drawText('DISTRIBUIÇÃO ETÁRIA · MUNICÍPIO (2025)', { x: M, y: blockTop - 12, size: 9, font: bold, color: NAVY });
+  const faixasEt = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
+  const popData = faixasEt.map(f => ({
+    label: f,
+    value: parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'),
+    color: TEAL,
+  }));
+  drawVBars(page, font, M + 16, blockBottom + 24, leftW - 24, blockH - 50, popData, undefined, fmtInt);
+
+  // DIREITA — heatmap Renda × Faixa Etária
+  page.drawText('RENDA × FAIXA ETÁRIA · MUNICÍPIO', { x: rightX, y: blockTop - 12, size: 9, font: bold, color: NAVY });
   if (data.matrix) {
-    page.drawText('RENDA × FAIXA ETÁRIA · MUNICÍPIO', { x: M, y: cardY - 26, size: 10, font: bold, color: NAVY });
-    const tblY = cardY - 46;
-    const colW = [60, 110, 110, 110, 110];
-    const headers = ['Classe', '0 a 4', '5 a 14', '15 a 19', 'Total'];
-    let cx = M;
+    const headers = ['Classe', '0–4', '5–14', '15–19', 'Total'];
+    const colWeights = [0.20, 0.20, 0.20, 0.20, 0.20];
+    const colW = colWeights.map(w => rightW * w);
+    const tblHeadY = blockTop - 28;
+    let cx = rightX;
     headers.forEach((h, i) => {
-      page.drawText(h, { x: cx + 6, y: tblY, size: 9, font: bold, color: MUTED });
+      const align = i === 0 ? 0 : colW[i] - 6 - font.widthOfTextAtSize(h, 8);
+      page.drawText(h, { x: cx + (i === 0 ? 4 : align), y: tblHeadY, size: 8, font: bold, color: MUTED });
       cx += colW[i];
     });
     const allCells: number[] = [];
     data.matrix.forEach((r: any) => { allCells.push(r.ate4, r.de5a14, r.de15a19); });
     const maxCell = Math.max(...allCells, 1);
-    let ry = tblY - 16;
     const aderSet = new Set(data.faixasAderentes);
+    const rowsCount = data.matrix.length;
+    const availH = (tblHeadY - 6) - (blockBottom + 6);
+    const rowH = Math.min(18, Math.max(12, availH / rowsCount));
+    let ry = tblHeadY - rowH;
     data.matrix.forEach((r: any) => {
       const isAder = aderSet.has(r.faixa);
-      cx = M;
-      // classe
-      page.drawText((isAder ? '● ' : '  ') + r.faixa, { x: cx + 6, y: ry + 4, size: 9, font: isAder ? bold : font, color: isAder ? TEAL : NAVY });
+      if (isAder) {
+        page.drawRectangle({ x: rightX, y: ry, width: rightW, height: rowH, color: TEAL_LIGHT });
+      }
+      cx = rightX;
+      page.drawText((isAder ? '● ' : '  ') + r.faixa, { x: cx + 4, y: ry + rowH / 2 - 3, size: 8.5, font: isAder ? bold : font, color: isAder ? TEAL : NAVY });
       cx += colW[0];
       [r.ate4, r.de5a14, r.de15a19].forEach((v, i) => {
         const intensity = v / maxCell;
         const fill = rgb(0.93 - intensity * 0.55, 0.96 - intensity * 0.4, 0.96 - intensity * 0.4);
-        page.drawRectangle({ x: cx + 4, y: ry, width: colW[i + 1] - 8, height: 16, color: fill, borderColor: BORDER_LIGHT, borderWidth: 0.3 });
+        page.drawRectangle({ x: cx + 2, y: ry + 1, width: colW[i + 1] - 4, height: rowH - 2, color: fill, borderColor: BORDER_LIGHT, borderWidth: 0.3 });
         const tt = fmtInt(v);
-        const tw = font.widthOfTextAtSize(tt, 9);
-        page.drawText(tt, { x: cx + colW[i + 1] - 8 - tw, y: ry + 4, size: 9, font, color: NAVY });
+        const tw = font.widthOfTextAtSize(tt, 8);
+        page.drawText(tt, { x: cx + colW[i + 1] - 6 - tw, y: ry + rowH / 2 - 3, size: 8, font, color: NAVY });
         cx += colW[i + 1];
       });
       const tot = r.ate4 + r.de5a14 + r.de15a19;
       const tt = fmtInt(tot);
-      const tw = bold.widthOfTextAtSize(tt, 9);
-      page.drawText(tt, { x: cx + colW[4] - 8 - tw, y: ry + 4, size: 9, font: bold, color: NAVY });
-      ry -= 22;
+      const tw = bold.widthOfTextAtSize(tt, 8);
+      page.drawText(tt, { x: cx + colW[4] - 6 - tw, y: ry + rowH / 2 - 3, size: 8, font: bold, color: NAVY });
+      ry -= rowH;
     });
-    page.drawText('● Faixas com poder de compra aderente ao ticket atual da escola.', { x: M, y: ry, size: 8, font: italic, color: MUTED });
+    page.drawText('● Faixas aderentes ao ticket atual da escola.', { x: rightX, y: blockBottom + 2, size: 7.5, font: italic, color: MUTED });
   } else {
-    // Fallback: pirâmide etária 0–19 a partir da demográfica
-    page.drawText('DISTRIBUIÇÃO ETÁRIA 0–19 · MUNICÍPIO', { x: M, y: cardY - 26, size: 10, font: bold, color: NAVY });
-    const faixas = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
-    const popData = faixas.map((f) => ({
-      label: f,
-      value: parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'),
-      color: TEAL,
-    }));
-    drawVBars(page, font, M + 30, cardY - 200, PDF_W - 2 * M - 60, 150, popData, undefined, fmtInt);
-    page.drawText('Faixa etária com filhos em idade escolar — base de mercado potencial para captação no município.', { x: M, y: cardY - 220, size: 8.5, font: italic, color: MUTED });
+    page.drawText('Matriz de renda não disponível para este município.', { x: rightX, y: blockTop - 32, size: 9, font: italic, color: MUTED });
   }
 
-  // Leitura comercial
+  // ----- Leitura curta -----
   const aderencia = data.aderencia;
   let leitura: string;
   if (aderencia >= 30) leitura = 'Base sólida de famílias com poder de compra alinhado — espaço para reforçar valor agregado e diferenciais pedagógicos.';
   else if (aderencia >= 15) leitura = 'Existe nicho relevante — comunique custo-benefício e proposta de valor para reduzir sensibilidade a preço.';
-  else leitura = 'Base aderente limitada — atenção à elasticidade de preço e necessidade de comunicar fortemente o retorno do investimento educacional.';
-  page.drawRectangle({ x: M, y: 50, width: PDF_W - 2 * M, height: 32, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  page.drawText(`LEITURA COMERCIAL · ${data.aderenteCls.label.toUpperCase()} (${aderencia.toFixed(0)}%)`, { x: M + 12, y: 70, size: 9, font: bold, color: TEAL });
-  drawParagraph(page, font, leitura, M + 12, 58, PDF_W - 2 * M - 24, 9.5, NAVY, 2);
+  else leitura = 'Base aderente limitada — atenção à elasticidade de preço e à necessidade de comunicar retorno do investimento educacional.';
+  page.drawRectangle({ x: M, y: 36, width: PDF_W - 2 * M, height: 26, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
+  page.drawText(`LEITURA · ${data.aderenteCls.label.toUpperCase()} (${aderencia.toFixed(0)}%)`, { x: M + 10, y: 50, size: 8.5, font: bold, color: TEAL });
+  drawParagraph(page, font, leitura, M + 10, 40, PDF_W - 2 * M - 20, 9, NAVY, 1);
 }
 
 // ----- 11. Potencial de Consumo
@@ -1930,6 +1946,7 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
     { render: (s, n) => pptMarketShare(s, ctx, data, n, total) },
     { render: (s, n) => pptMensalidade(s, ctx, data, n, total) },
     { render: (s, n) => pptSocio(s, ctx, data, n, total) },
+    { render: (s, n) => pptPotencial(s, ctx, data, n, total) },
     { render: (s, n) => pptInsights(s, ctx, data, n, total) },
     { render: (s, n) => pptAcaoComercial(s, ctx, data, n, total) },
     { render: (s) => pptEncerramento(s, ctx) },
@@ -1977,10 +1994,10 @@ function pptTitle(s: PptxGenJS.Slide, title: string, subtitle?: string, chip?: s
 }
 
 // KPI estilo Santa Mônica: card lavanda discreto, label cinza pequeno, valor grande navy
-function pptKpi(s: PptxGenJS.Slide, x: number, y: number, w: number, h: number, label: string, value: string, _accent = C.teal) {
+function pptKpi(s: PptxGenJS.Slide, x: number, y: number, w: number, h: number, label: string, value: string, _accent = C.teal, valueFontSize = 22) {
   s.addShape('roundRect', { x, y, w, h, fill: { color: C.lavender }, line: { color: C.lavender }, rectRadius: 0.08 } as any);
   s.addText(label, { x: x + 0.18, y: y + 0.14, w: w - 0.36, h: 0.28, fontSize: 10, color: C.muted, fontFace: 'Calibri' });
-  s.addText(value, { x: x + 0.18, y: y + 0.42, w: w - 0.36, h: h - 0.5, fontSize: 22, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true, valign: 'top' });
+  s.addText(value, { x: x + 0.18, y: y + 0.42, w: w - 0.36, h: h - 0.5, fontSize: valueFontSize, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true, valign: 'top' });
 }
 
 // Callout de leitura: card branco com borda lateral ESQUERDA grossa navy + chip de prefixo
@@ -2918,10 +2935,10 @@ function pptMensalidade(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: nu
   const cardH = 0.85;
   const gap = 0.2;
   const cw = (W - 3 * gap) / 4;
-  pptKpi(s, SAFE + 0 * (cw + gap), cardsY, cw, cardH, 'Faixa da escola', escFaixaLabel, C.teal);
-  pptKpi(s, SAFE + 1 * (cw + gap), cardsY, cw, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), C.teal);
-  pptKpi(s, SAFE + 2 * (cw + gap), cardsY, cw, cardH, 'Concorrentes acima da faixa', String(data.acima), C.navy);
-  pptKpi(s, SAFE + 3 * (cw + gap), cardsY, cw, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), C.lime);
+  pptKpi(s, SAFE + 0 * (cw + gap), cardsY, cw, cardH, 'Faixa da escola', escFaixaLabel, C.teal, 18);
+  pptKpi(s, SAFE + 1 * (cw + gap), cardsY, cw, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), C.teal, 18);
+  pptKpi(s, SAFE + 2 * (cw + gap), cardsY, cw, cardH, 'Concorrentes acima da faixa', String(data.acima), C.navy, 18);
+  pptKpi(s, SAFE + 3 * (cw + gap), cardsY, cw, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), C.lime, 18);
 
   // ---------- BLOCO A · TABELA + BLOCO B · DISTRIBUIÇÃO ----------
   const contentY = cardsY + cardH + 0.2;
@@ -3032,30 +3049,58 @@ function pptMensalidade(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: nu
 // ----- 10. Socioeconômico
 function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Perfil Socioeconômico', `Leitura demográfica e de potencial de consumo do município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}.`);
+  pptTitle(s, 'Perfil Socioeconômico e Aderência Econômica', `Leitura demográfica, econômica e de aderência ao ticket da população de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}.`);
   if (!data.d) {
     s.addText('Dado não disponível na base fornecida.', { x: PPT_M, y: 3, w: PPT_W - 2 * PPT_M, h: 0.5, fontSize: 14, italic: true, color: C.muted, align: 'center', fontFace: 'Calibri' });
     return;
   }
-  const aderTone = data.aderenteCls.tone === 'teal' ? C.teal : data.aderenteCls.tone === 'lime' ? C.lime : C.navy;
-  const cw = (PPT_W - 2 * PPT_M - 0.6) / 5;
-  pptKpi(s, PPT_M + 0 * (cw + 0.15), 1.7, cw, 0.85, 'Renda Média', fmtBRL(data.rendaMedia), C.teal);
-  pptKpi(s, PPT_M + 1 * (cw + 0.15), 1.7, cw, 0.85, 'IDH Educação', String(data.idhEduc), C.navy);
-  pptKpi(s, PPT_M + 2 * (cw + 0.15), 1.7, cw, 0.85, 'IDH Renda', String(data.idhRenda), C.lime);
-  pptKpi(s, PPT_M + 3 * (cw + 0.15), 1.7, cw, 0.85, 'Pop. 0–19', fmtInt(data.pop0_19), C.teal);
-  pptKpi(s, PPT_M + 4 * (cw + 0.15), 1.7, cw, 0.85, 'Aderência ao ticket', data.matrix ? `${data.aderencia.toFixed(0)}%` : 'N/D', aderTone);
 
+  // 3 KPIs principais — destacados
+  const cw = (PPT_W - 2 * PPT_M - 0.4) / 3;
+  const cardsY = 1.7;
+  const cardsH = 1.05;
+  pptKpi(s, PPT_M + 0 * (cw + 0.2), cardsY, cw, cardsH, 'Renda Média', fmtBRL(data.rendaMedia), C.teal, 26);
+  pptKpi(s, PPT_M + 1 * (cw + 0.2), cardsY, cw, cardsH, 'IDH Renda', String(data.idhRenda), C.navy, 26);
+  pptKpi(s, PPT_M + 2 * (cw + 0.2), cardsY, cw, cardsH, 'IDH Educação', String(data.idhEduc), C.lime, 26);
+
+  // Bloco esquerdo — distribuição etária / Bloco direito — heatmap
+  const blockY = cardsY + cardsH + 0.25;
+  const blockH = PPT_H - blockY - 1.0;
+  const leftW = (PPT_W - 2 * PPT_M - 0.3) * 0.42;
+  const rightW = (PPT_W - 2 * PPT_M - 0.3) - leftW;
+  const rightX = PPT_M + leftW + 0.3;
+
+  // Esquerda: gráfico
+  s.addText('DISTRIBUIÇÃO ETÁRIA · MUNICÍPIO (2025)', {
+    x: PPT_M, y: blockY, w: leftW, h: 0.28,
+    fontSize: 9, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1,
+  });
+  const faixasEt = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
+  const valsEt = faixasEt.map(f => parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'));
+  s.addChart(pptxgenChartType('bar'), [{ name: 'População', labels: faixasEt, values: valsEt }], {
+    x: PPT_M, y: blockY + 0.32, w: leftW, h: blockH - 0.4,
+    barDir: 'col', chartColors: [C.teal],
+    showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy,
+    catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 10, valAxisLabelFontSize: 9,
+    showLegend: false, showTitle: false,
+  });
+
+  // Direita: heatmap
+  s.addText('RENDA × FAIXA ETÁRIA · MUNICÍPIO', {
+    x: rightX, y: blockY, w: rightW, h: 0.28,
+    fontSize: 9, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1,
+  });
   if (data.matrix) {
     const aderSet = new Set(data.faixasAderentes);
     const allCells: number[] = [];
     data.matrix.forEach((r: any) => allCells.push(r.ate4, r.de5a14, r.de15a19));
     const maxCell = Math.max(...allCells, 1);
     const headerRow: any[] = [
-      { text: 'Classe', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, fontFace: 'Calibri' } },
-      { text: '0 a 4', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
-      { text: '5 a 14', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
-      { text: '15 a 19', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
-      { text: 'Total', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
+      { text: 'Classe', options: { bold: true, color: C.muted, fontSize: 8.5, fill: { color: C.beige }, fontFace: 'Calibri' } },
+      { text: '0–4', options: { bold: true, color: C.muted, fontSize: 8.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
+      { text: '5–14', options: { bold: true, color: C.muted, fontSize: 8.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
+      { text: '15–19', options: { bold: true, color: C.muted, fontSize: 8.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
+      { text: 'Total', options: { bold: true, color: C.muted, fontSize: 8.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
     ];
     const rows: any[] = [headerRow];
     data.matrix.forEach((r: any) => {
@@ -3064,33 +3109,30 @@ function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
       const cells = [r.ate4, r.de5a14, r.de15a19].map(v => {
         const intensity = v / maxCell;
         const fill = interpolateColor('FFFFFF', '129A96', intensity * 0.7);
-        return { text: fmtInt(v), options: { fontSize: 9.5, color: intensity > 0.55 ? C.white : C.navy, align: 'right', fill: { color: fill }, fontFace: 'Calibri' } };
+        return { text: fmtInt(v), options: { fontSize: 8.5, color: intensity > 0.55 ? C.white : C.navy, align: 'right', fill: { color: fill }, fontFace: 'Calibri' } };
       });
+      const rowFill = isAder ? C.tealLight : C.white;
       rows.push([
-        { text: (isAder ? '● ' : '') + r.faixa, options: { fontSize: 9.5, bold: isAder, color: isAder ? C.teal : C.navy, fontFace: 'Calibri' } },
+        { text: (isAder ? '● ' : '') + r.faixa, options: { fontSize: 8.5, bold: isAder, color: isAder ? C.teal : C.navy, fill: { color: rowFill }, fontFace: 'Calibri' } },
         ...cells,
-        { text: fmtInt(tot), options: { fontSize: 9.5, bold: true, color: C.navy, align: 'right', fontFace: 'Calibri' } },
+        { text: fmtInt(tot), options: { fontSize: 8.5, bold: true, color: C.navy, align: 'right', fill: { color: rowFill }, fontFace: 'Calibri' } },
       ]);
     });
+    const colTotal = rightW;
+    const colWArr = [colTotal * 0.20, colTotal * 0.20, colTotal * 0.20, colTotal * 0.20, colTotal * 0.20];
     s.addTable(rows, {
-      x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M,
-      colW: [1.2, 2.6, 2.6, 2.6, 2.66],
-      rowH: 0.28, fontFace: 'Calibri',
+      x: rightX, y: blockY + 0.32, w: rightW,
+      colW: colWArr,
+      rowH: 0.24, fontFace: 'Calibri',
       border: { type: 'solid', color: C.borderLight, pt: 0.4 },
     });
+    s.addText('● Faixas aderentes ao ticket atual da escola.', {
+      x: rightX, y: blockY + blockH - 0.32, w: rightW, h: 0.22,
+      fontSize: 8.5, italic: true, color: C.muted, fontFace: 'Calibri',
+    });
   } else {
-    // Fallback: gráfico de barras de população 0–19
-    const faixas = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
-    const vals = faixas.map(f => parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'));
-    const chartData = [{ name: 'População', labels: faixas, values: vals }];
-    s.addChart(pptxgenChartType('bar'), chartData, {
-      x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M, h: 2.7,
-      showTitle: true, title: 'Distribuição etária 0–19 · município',
-      titleFontFace: 'Calibri', titleFontSize: 11, titleColor: C.navy,
-      barDir: 'col', chartColors: [C.teal],
-      showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy,
-      catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 10, valAxisLabelFontSize: 9,
-      showLegend: false,
+    s.addText('Matriz de renda não disponível para este município.', {
+      x: rightX, y: blockY + 0.4, w: rightW, h: 0.4, fontSize: 10, italic: true, color: C.muted, fontFace: 'Calibri',
     });
   }
 
@@ -3099,7 +3141,7 @@ function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
   if (aderencia >= 30) leitura = 'Base sólida com poder de compra alinhado — espaço para reforçar valor agregado e diferenciais pedagógicos.';
   else if (aderencia >= 15) leitura = 'Existe nicho relevante — comunique custo-benefício e proposta de valor.';
   else leitura = 'Base aderente limitada — atenção à elasticidade de preço e necessidade de comunicar retorno do investimento.';
-  pptLeitura(s, `${data.aderenteCls.label.toUpperCase()} (${aderencia.toFixed(0)}%) · ${leitura}`, PPT_H - 1.0, 0.5, 'LEITURA COMERCIAL');
+  pptLeitura(s, `${data.aderenteCls.label.toUpperCase()} (${aderencia.toFixed(0)}%) · ${leitura}`, PPT_H - 0.85, 0.45, 'LEITURA');
 }
 
 // ----- 11. Potencial
