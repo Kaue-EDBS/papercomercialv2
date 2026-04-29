@@ -2300,15 +2300,47 @@ function pptxgenChartType(t: 'bar' | 'pie'): any {
 }
 
 // ----- 5. Concorrência mapa
+// Padrão visual alinhado ao "Resumo Executivo" e "Panorama Educacional":
+// título compacto + filete teal, 4 cards-resumo, mapa estático abaixo,
+// legenda discreta e bloco curto de apoio.
 function pptConcorrenciaMapa(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Concorrência — Mapa e Régua', `Raio ${fmtKm(ctx.raioKm)} · ${ctx.raioMode === 'personalizado' ? 'Personalizado' : 'Padrão'} · ${data.concs.length} concorrentes`);
 
-  // Área do mapa — começa um pouco mais abaixo para não conflitar com subtítulo
-  const mx = PPT_M, my = 1.95, mw = 8, mh = 3.8;
-  s.addShape('rect', { x: mx, y: my, w: mw, h: mh, fill: { color: C.beige }, line: { color: C.border, width: 0.5 } });
-
+  const SAFE = 0.4;
+  const W = PPT_W - 2 * SAFE;
   const e = data.e;
+  const totalConc = data.concs.length;
+  const comCoord = data.concs.filter((c: any) => !isNaN(parseFloat(String(c.escola.Latitude))) && !isNaN(parseFloat(String(c.escola.Longitude)))).length;
+  const semCoord = totalConc - comCoord;
+  const totalEleg = totalConc + 1;
+
+  // ---------- TOPO · TÍTULO COMPACTO COM FILETE (mesmo padrão do Resumo Executivo) ----------
+  s.addText('Mapa de Concorrência Escolar', {
+    x: SAFE, y: 0.42, w: W, h: 0.7,
+    fontSize: 30, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top',
+  });
+  s.addShape('rect', { x: SAFE, y: 1.08, w: 0.5, h: 0.05, fill: { color: C.teal }, line: { color: C.teal } });
+  s.addText('Visualização geográfica da escola analisada e dos concorrentes elegíveis dentro do raio operacional.', {
+    x: SAFE, y: 1.18, w: W, h: 0.32,
+    fontSize: 11.5, color: C.muted, fontFace: 'Calibri', italic: true, valign: 'top',
+  });
+
+  // ---------- CARDS-RESUMO (mesmo padrão do Resumo Executivo / Panorama) ----------
+  const cardsY = 1.70;
+  const cardH = 1.05;
+  const cw = (W - 0.6) / 4;
+  pptResumoCard(s, SAFE + 0 * (cw + 0.2), cardsY, cw, cardH, 'Raio Operacional',       fmtKm(ctx.raioKm),  C.teal, true);
+  pptResumoCard(s, SAFE + 1 * (cw + 0.2), cardsY, cw, cardH, 'Concorrentes c/ Coords', String(comCoord),   C.navy, false);
+  pptResumoCard(s, SAFE + 2 * (cw + 0.2), cardsY, cw, cardH, 'Estimados por CEP',      String(semCoord),   C.navy, false);
+  pptResumoCard(s, SAFE + 3 * (cw + 0.2), cardsY, cw, cardH, 'Total Elegível',         String(totalEleg),  C.lime, true);
+
+  // ---------- MAPA ESTÁTICO ----------
+  const mx = SAFE;
+  const my = 2.95;
+  const mw = W;
+  const mh = 3.55;
+  s.addShape('rect', { x: mx, y: my, w: mw, h: mh, fill: { color: C.beige }, line: { color: C.borderLight, width: 0.5 } });
+
   const lat = parseFloat(String(e.Latitude));
   const lng = parseFloat(String(e.Longitude));
   if (!isNaN(lat) && !isNaN(lng)) {
@@ -2325,54 +2357,58 @@ function pptConcorrenciaMapa(s: PptxGenJS.Slide, ctx: ExportContext, data: any, 
       y: my + (1 - (la - (lat - dLat)) / (2 * dLat)) * mh,
     });
 
-    // Grid
+    // Grid neutro e leve
+    for (let i = 1; i < 5; i++) {
+      s.addShape('line', { x: mx + (mw / 5) * i, y: my, w: 0, h: mh, line: { color: C.borderLight, width: 0.4 } });
+    }
     for (let i = 1; i < 4; i++) {
-      s.addShape('line', { x: mx + (mw / 4) * i, y: my, w: 0, h: mh, line: { color: C.borderLight, width: 0.4 } });
       s.addShape('line', { x: mx, y: my + (mh / 4) * i, w: mw, h: 0, line: { color: C.borderLight, width: 0.4 } });
     }
-    // Círculo do raio
+    // Halo do raio operacional
     const center = proj(lat, lng);
-    const radiusIn = (ctx.raioKm / r) * (mw / 2);
+    const radiusIn = (ctx.raioKm / r) * (Math.min(mw, mh) / 2);
     s.addShape('ellipse', {
       x: center.x - radiusIn, y: center.y - radiusIn, w: radiusIn * 2, h: radiusIn * 2,
       fill: { color: C.teal, transparency: 92 }, line: { color: C.teal, width: 0.8 },
     });
-    // Concorrentes
+    // Concorrentes (navy, menores)
     points.forEach((p: any) => {
       const { x, y } = proj(p.lat, p.lng);
       if (x < mx || x > mx + mw || y < my || y > my + mh) return;
-      s.addShape('ellipse', { x: x - 0.06, y: y - 0.06, w: 0.12, h: 0.12, fill: { color: C.navy }, line: { color: C.white, width: 1 } });
+      s.addShape('ellipse', { x: x - 0.05, y: y - 0.05, w: 0.10, h: 0.10, fill: { color: C.navy }, line: { color: C.white, width: 1 } });
     });
-    // Escola
-    s.addShape('ellipse', { x: center.x - 0.1, y: center.y - 0.1, w: 0.2, h: 0.2, fill: { color: C.teal }, line: { color: C.white, width: 1.5 } });
+    // Escola analisada (teal, maior)
+    s.addShape('ellipse', { x: center.x - 0.1, y: center.y - 0.1, w: 0.20, h: 0.20, fill: { color: C.teal }, line: { color: C.white, width: 1.5 } });
   } else {
     s.addText('Coordenadas da escola não disponíveis para renderização do mapa.', {
-      x: mx + 0.3, y: my + mh / 2 - 0.2, w: mw - 0.6, h: 0.4, fontSize: 12, italic: true, color: C.muted, align: 'center', fontFace: 'Calibri',
+      x: mx + 0.3, y: my + mh / 2 - 0.2, w: mw - 0.6, h: 0.4,
+      fontSize: 12, italic: true, color: C.muted, align: 'center', fontFace: 'Calibri',
     });
   }
 
-  // Painel lateral
-  const px = mx + mw + 0.2;
-  const pw = PPT_W - PPT_M - px;
-  const comCoord = data.concs.filter((c: any) => !isNaN(parseFloat(String(c.escola.Latitude))) && !isNaN(parseFloat(String(c.escola.Longitude)))).length;
-  const panels = [
-    { t: 'RÉGUA', items: [['Raio operacional', fmtKm(ctx.raioKm)], ['Modo', ctx.raioMode === 'personalizado' ? 'Personalizado' : 'Padrão']] },
-    { t: 'COBERTURA', items: [['Plotados', `${comCoord} / ${data.concs.length}`], ['Estimados por CEP', String(data.concs.length - comCoord)]] },
-    { t: 'LEGENDA', items: [['● Escola analisada', 'teal'], ['● Concorrentes', 'navy']] },
+  // Legenda discreta sobre o mapa (faixa branca translúcida no topo)
+  const legY = my + 0.10;
+  s.addShape('rect', { x: mx + 0.12, y: legY, w: mw - 0.24, h: 0.26, fill: { color: C.white, transparency: 15 }, line: { color: C.white } });
+  const legendaTxt: any[] = [
+    { text: '●  ', options: { color: C.teal, fontSize: 11, bold: true } },
+    { text: 'Escola analisada', options: { color: C.navy, fontSize: 9.5 } },
+    { text: '     ●  ', options: { color: C.navy, fontSize: 11, bold: true } },
+    { text: 'Concorrentes com coordenadas', options: { color: C.navy, fontSize: 9.5 } },
   ];
-  let py = my;
-  panels.forEach(pn => {
-    s.addText(pn.t, { x: px, y: py, w: pw, h: 0.25, fontSize: 10, bold: true, color: C.teal, fontFace: 'Calibri' });
-    py += 0.28;
-    pn.items.forEach(([k, v]) => {
-      s.addText(k, { x: px, y: py, w: pw * 0.6, h: 0.22, fontSize: 10, color: C.muted, fontFace: 'Calibri' });
-      s.addText(v, { x: px + pw * 0.6, y: py, w: pw * 0.4, h: 0.22, fontSize: 10, bold: true, color: C.navy, align: 'right', fontFace: 'Calibri' });
-      py += 0.24;
-    });
-    py += 0.15;
+  if (semCoord > 0) {
+    legendaTxt.push({ text: `     + ${semCoord} estimado(s) por CEP`, options: { color: C.muted, fontSize: 9.5, italic: true } });
+  }
+  s.addText(legendaTxt, {
+    x: mx + 0.22, y: legY, w: mw - 0.4, h: 0.26,
+    fontFace: 'Calibri', valign: 'middle',
   });
 
-  pptLeitura(s, `Área de influência: ${data.concs.length} concorrente(s) · ${data.mesmaFaixa} na mesma faixa · ${data.adotamBrasil} adota(m) Editora do Brasil.`, PPT_H - 1.0, 0.5);
+  // ---------- BLOCO DE APOIO (curto, discreto) ----------
+  pptLeitura(
+    s,
+    'O mapa exibe os concorrentes com coordenadas válidas dentro do raio final definido. Escolas sem coordenadas permanecem consideradas na análise quando elegíveis por proximidade estimada.',
+    PPT_H - 0.95, 0.42, 'CONTEXTO GEOGRÁFICO',
+  );
 }
 
 // ----- 6. Concorrência tabela
