@@ -1671,25 +1671,29 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
   pptx.company = 'Editora do Brasil';
 
   const data = buildPageData(ctx);
-  const total = SLIDE_TITLES.length;
+  const includeMapa = hasMapPoints(ctx);
+  const total = SLIDE_TITLES.length - (includeMapa ? 0 : 1);
 
-  const renderers: Array<(s: PptxGenJS.Slide, n: number) => void> = [
-    (s) => pptCapa(s, ctx),
-    (s, n) => pptAbertura(s, ctx, n, total),
-    (s, n) => pptResumo(s, ctx, data, n, total),
-    (s, n) => pptPanorama(s, ctx, data, n, total),
-    (s, n) => pptConcorrenciaMapa(s, ctx, data, n, total),
-    (s, n) => pptConcorrenciaTabela(s, ctx, data, n, total),
-    (s, n) => pptMSGeral(s, ctx, data, n, total),
-    (s, n) => pptMSSeg(s, ctx, data, n, total),
-    (s, n) => pptMensalidade(s, ctx, data, n, total),
-    (s, n) => pptSocio(s, ctx, data, n, total),
-    (s, n) => pptPotencial(s, ctx, data, n, total),
-    (s, n) => pptInsights(s, ctx, data, n, total),
-    (s, n) => pptPlano(s, ctx, data, n, total),
-    (s, n) => pptAcaoComercial(s, ctx, data, n, total),
-    (s) => pptEncerramento(s, ctx),
+  const renderersAll: Array<{ render: (s: PptxGenJS.Slide, n: number) => void; key?: string }> = [
+    { render: (s) => pptCapa(s, ctx) },
+    { render: (s, n) => pptAbertura(s, ctx, n, total) },
+    { render: (s, n) => pptResumo(s, ctx, data, n, total) },
+    { render: (s, n) => pptPanorama(s, ctx, data, n, total) },
+    { render: (s, n) => pptConcorrenciaMapa(s, ctx, data, n, total), key: 'mapa' },
+    { render: (s, n) => pptConcorrenciaTabela(s, ctx, data, n, total) },
+    { render: (s, n) => pptMSGeral(s, ctx, data, n, total) },
+    { render: (s, n) => pptMSSeg(s, ctx, data, n, total) },
+    { render: (s, n) => pptMensalidade(s, ctx, data, n, total) },
+    { render: (s, n) => pptSocio(s, ctx, data, n, total) },
+    { render: (s, n) => pptPotencial(s, ctx, data, n, total) },
+    { render: (s, n) => pptInsights(s, ctx, data, n, total) },
+    { render: (s, n) => pptPlano(s, ctx, data, n, total) },
+    { render: (s, n) => pptAcaoComercial(s, ctx, data, n, total) },
+    { render: (s) => pptEncerramento(s, ctx) },
   ];
+  const renderers = renderersAll
+    .filter(r => includeMapa || r.key !== 'mapa')
+    .map(r => r.render);
 
   renderers.forEach((render, i) => {
     const slide = pptx.addSlide();
