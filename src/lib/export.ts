@@ -381,9 +381,33 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const italic = await pdf.embedFont(StandardFonts.HelveticaOblique);
   const data = buildPageData(ctx);
-  const total = SLIDE_TITLES.length;
+  const includeMapa = hasMapPoints(ctx);
 
-  const slideRenderers: Array<(page: PDFPage, n: number) => void> = [
+  const slideRenderersAll: Array<{ render: (page: PDFPage, n: number) => void; key?: string }> = [
+    { render: (p) => renderPdfCapa(p, font, bold, italic, ctx) },
+    { render: (p, n) => renderPdfAbertura(p, font, bold, italic, ctx, n, total) },
+    { render: (p, n) => renderPdfResumo(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfPanorama(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfConcorrenciaMapa(p, font, bold, italic, ctx, data, n, total), key: 'mapa' },
+    { render: (p, n) => renderPdfConcorrenciaTabela(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfMarketShareGeral(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfMarketShareSegmentos(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfMensalidade(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfSocioeconomico(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfPotencial(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfInsights(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfPlanoAcao(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfAcaoComercial(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p) => renderPdfEncerramento(p, font, bold, italic, ctx) },
+  ];
+  const slideRenderers = slideRenderersAll
+    .filter(r => includeMapa || r.key !== 'mapa')
+    .map(r => r.render);
+  const total = slideRenderers.length;
+
+  // referências antigas (mantidas como comentário) — substituídas pela lista dinâmica acima
+  // legacy renderer list:
+  const _legacy: Array<(page: PDFPage, n: number) => void> = [
     (p) => renderPdfCapa(p, font, bold, italic, ctx),
     (p, n) => renderPdfAbertura(p, font, bold, italic, ctx, n, total),
     (p, n) => renderPdfResumo(p, font, bold, italic, ctx, data, n, total),
@@ -400,6 +424,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
     (p, n) => renderPdfAcaoComercial(p, font, bold, italic, ctx, data, n, total),
     (p) => renderPdfEncerramento(p, font, bold, italic, ctx),
   ];
+  void _legacy;
 
   slideRenderers.forEach((render, i) => {
     const page = pdf.addPage([PDF_W, PDF_H]);
