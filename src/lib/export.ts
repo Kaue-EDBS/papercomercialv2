@@ -1589,7 +1589,7 @@ function renderPdfPotencial(page: PDFPage, font: PDFFont, bold: PDFFont, italic:
 function renderPdfInsights(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Insights Estratégicos', 'Dado observado · leitura · implicação comercial');
+  drawPDFTitle(d, 'Insights e Recomendações', 'Síntese estratégica da área de influência e direcionamentos comerciais prioritários.');
 
   const ms = ctx.analysis.marketShare;
   const segShares = [
@@ -1599,6 +1599,7 @@ function renderPdfInsights(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
     { l: 'Ensino Médio', v: ms.em },
   ].filter(s => s.v > 0).sort((a, b) => b.v - a.v);
   const bestSeg = segShares[0];
+  const weakSeg = segShares[segShares.length - 1];
 
   const insights: { tag: string; tagColor: RGB; title: string; dado: string; leitura: string; implic: string }[] = [
     {
@@ -1656,27 +1657,65 @@ function renderPdfInsights(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
     },
   ];
 
-  // Grade 3×2
-  const cw = (PDF_W - 2 * M - 24) / 3;
-  const ch = 168;
-  const gx = 12, gy = 12;
-  insights.slice(0, 6).forEach((it, i) => {
-    const col = i % 3, row = Math.floor(i / 3);
-    const x = M + col * (cw + gx);
-    const y = PDF_H - CONTENT_TOP - 70 - row * (ch + gy) - ch;
-    page.drawRectangle({ x, y, width: cw, height: ch, color: WHITE, borderColor: BORDER, borderWidth: 0.5 });
-    page.drawRectangle({ x, y: y + ch - 4, width: cw, height: 4, color: it.tagColor });
-    // tag
-    page.drawText(it.tag, { x: x + cw - 78, y: y + ch - 18, size: 7, font: bold, color: it.tagColor });
-    // title
-    page.drawText(it.title.toUpperCase(), { x: x + 12, y: y + ch - 18, size: 9, font: bold, color: NAVY });
-    // dado
-    let cy = y + ch - 38;
-    cy = drawParagraph(page, bold, it.dado, x + 12, cy, cw - 24, 11, it.tagColor, 2);
-    cy -= 6;
-    cy = drawParagraph(page, font, 'Leitura: ' + it.leitura, x + 12, cy, cw - 24, 8.5, TEXT, 2);
+  // ============== FAIXA SUPERIOR — 4 INSIGHTS (grade 4×1) ==============
+  page.drawText('INSIGHTS', { x: M, y: PDF_H - CONTENT_TOP - 56, size: 9, font: bold, color: NAVY });
+  const insTop4 = insights.slice(0, 4);
+  const cw = (PDF_W - 2 * M - 30) / 4;
+  const ch = 150;
+  const gx = 10;
+  const topY = PDF_H - CONTENT_TOP - 70 - ch;
+  insTop4.forEach((it, i) => {
+    const x = M + i * (cw + gx);
+    page.drawRectangle({ x, y: topY, width: cw, height: ch, color: WHITE, borderColor: BORDER, borderWidth: 0.5 });
+    page.drawRectangle({ x, y: topY + ch - 4, width: cw, height: 4, color: it.tagColor });
+    page.drawText(it.tag, { x: x + cw - 78, y: topY + ch - 18, size: 7, font: bold, color: it.tagColor });
+    page.drawText(it.title.toUpperCase(), { x: x + 12, y: topY + ch - 18, size: 8.5, font: bold, color: NAVY });
+    let cy = topY + ch - 38;
+    cy = drawParagraph(page, bold, it.dado, x + 12, cy, cw - 24, 10, it.tagColor, 2);
     cy -= 4;
-    drawParagraph(page, font, 'Implicação: ' + it.implic, x + 12, cy, cw - 24, 8.5, MUTED, 2);
+    drawParagraph(page, font, it.leitura, x + 12, cy, cw - 24, 8.5, TEXT, 3);
+  });
+
+  // ============== FAIXA INFERIOR — 4 RECOMENDAÇÕES ==============
+  type Reco = { prio: string; prioColor: RGB; titulo: string; acao: string; objetivo: string };
+  const recos: Reco[] = [
+    { prio: data.aderencia < 15 ? 'Alta prioridade' : 'Estratégica', prioColor: data.aderencia < 15 ? RED : TEAL,
+      titulo: 'Reforçar comunicação de valor',
+      acao: `Estruturar mensagens claras${bestSeg ? ` em ${bestSeg.l}` : ''}: proposta pedagógica, resultados e formação.`,
+      objetivo: 'Reduzir sensibilidade a preço e proteger ticket.' },
+    { prio: 'Alta prioridade', prioColor: TEAL,
+      titulo: bestSeg ? `Captação focada em ${bestSeg.l}` : 'Captação focada no segmento líder',
+      acao: 'Funil dedicado: cadastros → agendas → visitas → matrículas, com meta numérica e CPA-alvo por canal.',
+      objetivo: 'Ampliar volume e converter share em matrículas.' },
+    { prio: 'Estratégica', prioColor: NAVY,
+      titulo: 'Rematrícula antecipada e retenção',
+      acao: `Antecipar campanha${weakSeg ? `, com foco em ${weakSeg.l}` : ''}; mapear sinais de evasão e atuar antes da decisão.`,
+      objetivo: 'Sustentar base e reduzir reposição na captação.' },
+    { prio: 'Contínua', prioColor: LIME,
+      titulo: 'Monitoramento competitivo',
+      acao: `Acompanhar trimestralmente os ${data.concs.length} concorrentes diretos: preço, segmentos, comunicação e parcerias.`,
+      objetivo: 'Antecipar movimentos e proteger posicionamento.' },
+  ];
+  const recoTop = topY - 24;
+  page.drawText('RECOMENDAÇÕES', { x: M, y: recoTop, size: 9, font: bold, color: NAVY });
+  const rcw = (PDF_W - 2 * M - 30) / 4;
+  const rch = recoTop - 14 - (CONTENT_BOTTOM + 24);
+  const rcy0 = CONTENT_BOTTOM + 24;
+  recos.forEach((r, i) => {
+    const x = M + i * (rcw + gx);
+    page.drawRectangle({ x, y: rcy0, width: rcw, height: rch, color: WHITE, borderColor: BORDER, borderWidth: 0.5 });
+    page.drawRectangle({ x, y: rcy0, width: 4, height: rch, color: r.prioColor });
+    // prioridade pill
+    const pw = bold.widthOfTextAtSize(r.prio.toUpperCase(), 7) + 10;
+    page.drawRectangle({ x: x + 12, y: rcy0 + rch - 18, width: pw, height: 12, color: r.prioColor });
+    page.drawText(r.prio.toUpperCase(), { x: x + 17, y: rcy0 + rch - 15, size: 7, font: bold, color: WHITE });
+    // título
+    let cy = rcy0 + rch - 34;
+    cy = drawParagraph(page, bold, r.titulo, x + 12, cy, rcw - 24, 10.5, NAVY, 2);
+    cy -= 4;
+    cy = drawParagraph(page, font, 'Ação: ' + r.acao, x + 12, cy, rcw - 24, 8.5, TEXT, 3);
+    cy -= 3;
+    drawParagraph(page, italic, 'Objetivo: ' + r.objetivo, x + 12, cy, rcw - 24, 8.5, MUTED, 2);
   });
 }
 
