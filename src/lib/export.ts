@@ -895,14 +895,6 @@ function renderPdfConcorrenciaMapa(page: PDFPage, font: PDFFont, bold: PDFFont, 
     }
     const points = allPoints;
 
-    const r = ctx.raioKm * 1.4;
-    const kmPerDegLat = 111;
-    const kmPerDegLng = 111 * Math.cos(lat * Math.PI / 180);
-    const dLat = r / kmPerDegLat;
-    const dLng = r / kmPerDegLng;
-    const minLat = lat - dLat, maxLat = lat + dLat;
-    const minLng = lng - dLng, maxLng = lng + dLng;
-
     // Mantém aspecto correto: usa o menor lado para o raio
     const proj = (la: number, lo: number) => ({
       x: mapX + ((lo - minLng) / (maxLng - minLng)) * mapW,
