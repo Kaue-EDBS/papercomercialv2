@@ -940,7 +940,14 @@ function renderPdfConcorrenciaMapa(page: PDFPage, font: PDFFont, bold: PDFFont, 
   };
   // Fundo branco translúcido para leitura
   page.drawRectangle({ x: mapX + 8, y: mapY + 6, width: mapW - 16, height: 16, color: WHITE, opacity: 0.85 });
-  drawLegendItem(TEAL, 'Escola analisada', 4);
+  if (escolaHasCoords) {
+    drawLegendItem(TEAL, 'Escola analisada', 4);
+  } else {
+    page.drawText('Escola analisada sem coordenadas na base · mapa exibe apenas concorrentes georreferenciados', {
+      x: legX, y: legY, size: 8.5, font: italic, color: MUTED,
+    });
+    legX += font.widthOfTextAtSize('Escola analisada sem coordenadas na base · mapa exibe apenas concorrentes georreferenciados', 8.5) + 14;
+  }
   drawLegendItem(NAVY, 'Concorrentes com coordenadas', 3);
   if (semCoord > 0) {
     page.drawText(`+ ${semCoord} concorrente(s) estimado(s) por CEP`, { x: legX, y: legY, size: 8.5, font: italic, color: MUTED });
@@ -950,7 +957,10 @@ function renderPdfConcorrenciaMapa(page: PDFPage, font: PDFFont, bold: PDFFont, 
   page.drawRectangle({ x: M, y: apoioY, width: W, height: apoioH, color: TEAL_LIGHT, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
   page.drawRectangle({ x: M, y: apoioY, width: 4, height: apoioH, color: TEAL });
   page.drawText('CONTEXTO GEOGRÁFICO', { x: M + 14, y: apoioY + apoioH - 12, size: 8.5, font: bold, color: TEAL_DARK });
-  page.drawText('O mapa exibe os concorrentes com coordenadas válidas dentro do raio final definido. Escolas sem coordenadas permanecem consideradas na análise quando elegíveis por proximidade estimada.', {
+  const apoioTxt = escolaHasCoords
+    ? 'O mapa exibe os concorrentes com coordenadas válidas dentro do raio final definido. Escolas sem coordenadas permanecem consideradas na análise quando elegíveis por proximidade estimada.'
+    : 'A escola analisada não possui coordenadas na base. O mapa exibe apenas os concorrentes georreferenciados disponíveis; demais escolas seguem consideradas na análise quando elegíveis por proximidade estimada.';
+  page.drawText(apoioTxt, {
     x: M + 14, y: apoioY + 8, size: 9, font, color: NAVY,
   });
 }
