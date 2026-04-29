@@ -1420,7 +1420,7 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
 function renderPdfSocioeconomico(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Perfil Socioeconômico e Aderência Econômica', `Município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
+  drawPDFTitle(d, 'Perfil Socioeconômico', `Leitura demográfica e de potencial de consumo do município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}.`);
 
   if (!data.d) {
     page.drawText('Dado não disponível na base fornecida.', { x: M, y: PDF_H / 2, size: 12, font: italic, color: MUTED });
