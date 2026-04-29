@@ -977,10 +977,8 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
   }
 
   // ---------- TABELA — DEMAIS CONCORRENTES ----------
-  const apoioH = 32;
-  const apoioY = 56;
   const tableTop = cardY - 18;
-  const tableBottom = apoioY + apoioH + 14;
+  const tableBottom = 56; // espaço para rodapé institucional discreto
   const tableMaxH = tableTop - tableBottom;
 
   const cols = [
@@ -1098,14 +1096,6 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
       x: M, y: headerY - tableHActual - 12, size: 8.5, font: italic, color: MUTED,
     });
   }
-
-  // ---------- BLOCO DE APOIO METODOLÓGICO ----------
-  page.drawRectangle({ x: M, y: apoioY, width: W, height: apoioH, color: TEAL_LIGHT, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
-  page.drawRectangle({ x: M, y: apoioY, width: 4, height: apoioH, color: TEAL });
-  page.drawText('METODOLOGIA', { x: M + 14, y: apoioY + apoioH - 12, size: 8.5, font: bold, color: TEAL_DARK });
-  page.drawText('Concorrentes priorizados por origem de seleção, proximidade geográfica, segmentos em comum, tipo de adoção e faixa de mensalidade.', {
-    x: M + 14, y: apoioY + 8, size: 9, font, color: NAVY,
-  });
 }
 
 // helper local — quebra texto em até maxLines linhas, com elipse na última
