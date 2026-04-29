@@ -2398,18 +2398,37 @@ function pptConcorrenciaMapa(s: PptxGenJS.Slide, ctx: ExportContext, data: any, 
 
   const lat = parseFloat(String(e.Latitude));
   const lng = parseFloat(String(e.Longitude));
-  if (!isNaN(lat) && !isNaN(lng)) {
-    const points = data.concs.map((c: any) => ({
-      lat: parseFloat(String(c.escola.Latitude)),
-      lng: parseFloat(String(c.escola.Longitude)),
-    })).filter((p: any) => !isNaN(p.lat) && !isNaN(p.lng));
+  const escolaHasCoords = !isNaN(lat) && !isNaN(lng);
+  const points = data.concs.map((c: any) => ({
+    lat: parseFloat(String(c.escola.Latitude)),
+    lng: parseFloat(String(c.escola.Longitude)),
+  })).filter((p: any) => !isNaN(p.lat) && !isNaN(p.lng));
 
-    const r = ctx.raioKm * 1.4;
-    const dLat = r / 111;
-    const dLng = r / (111 * Math.cos(lat * Math.PI / 180));
+  if (escolaHasCoords || points.length > 0) {
+    let minLng: number, maxLng: number, minLat: number, maxLat: number;
+    let centerLat: number, centerLng: number;
+    if (escolaHasCoords) {
+      const r = ctx.raioKm * 1.4;
+      const dLat = r / 111;
+      const dLng = r / (111 * Math.cos(lat * Math.PI / 180));
+      minLat = lat - dLat; maxLat = lat + dLat;
+      minLng = lng - dLng; maxLng = lng + dLng;
+      centerLat = lat; centerLng = lng;
+    } else {
+      const lats = points.map((p: any) => p.lat);
+      const lngs = points.map((p: any) => p.lng);
+      const minLa = Math.min(...lats), maxLa = Math.max(...lats);
+      const minLo = Math.min(...lngs), maxLo = Math.max(...lngs);
+      const padLa = Math.max(0.01, (maxLa - minLa) * 0.25);
+      const padLo = Math.max(0.01, (maxLo - minLo) * 0.25);
+      minLat = minLa - padLa; maxLat = maxLa + padLa;
+      minLng = minLo - padLo; maxLng = maxLo + padLo;
+      centerLat = (minLat + maxLat) / 2;
+      centerLng = (minLng + maxLng) / 2;
+    }
     const proj = (la: number, lo: number) => ({
-      x: mx + ((lo - (lng - dLng)) / (2 * dLng)) * mw,
-      y: my + (1 - (la - (lat - dLat)) / (2 * dLat)) * mh,
+      x: mx + ((lo - minLng) / (maxLng - minLng)) * mw,
+      y: my + (1 - (la - minLat) / (maxLat - minLat)) * mh,
     });
 
     // Grid neutro e leve
@@ -2419,37 +2438,43 @@ function pptConcorrenciaMapa(s: PptxGenJS.Slide, ctx: ExportContext, data: any, 
     for (let i = 1; i < 4; i++) {
       s.addShape('line', { x: mx, y: my + (mh / 4) * i, w: mw, h: 0, line: { color: C.borderLight, width: 0.4 } });
     }
-    // Halo do raio operacional
-    const center = proj(lat, lng);
-    const radiusIn = (ctx.raioKm / r) * (Math.min(mw, mh) / 2);
-    s.addShape('ellipse', {
-      x: center.x - radiusIn, y: center.y - radiusIn, w: radiusIn * 2, h: radiusIn * 2,
-      fill: { color: C.teal, transparency: 92 }, line: { color: C.teal, width: 0.8 },
-    });
+    // Halo do raio operacional (apenas quando a escola tem coords)
+    const center = proj(centerLat, centerLng);
+    if (escolaHasCoords) {
+      const r = ctx.raioKm * 1.4;
+      const radiusIn = (ctx.raioKm / r) * (Math.min(mw, mh) / 2);
+      s.addShape('ellipse', {
+        x: center.x - radiusIn, y: center.y - radiusIn, w: radiusIn * 2, h: radiusIn * 2,
+        fill: { color: C.teal, transparency: 92 }, line: { color: C.teal, width: 0.8 },
+      });
+    }
     // Concorrentes (navy, menores)
     points.forEach((p: any) => {
       const { x, y } = proj(p.lat, p.lng);
       if (x < mx || x > mx + mw || y < my || y > my + mh) return;
       s.addShape('ellipse', { x: x - 0.05, y: y - 0.05, w: 0.10, h: 0.10, fill: { color: C.navy }, line: { color: C.white, width: 1 } });
     });
-    // Escola analisada (teal, maior)
-    s.addShape('ellipse', { x: center.x - 0.1, y: center.y - 0.1, w: 0.20, h: 0.20, fill: { color: C.teal }, line: { color: C.white, width: 1.5 } });
-  } else {
-    s.addText('Coordenadas da escola não disponíveis para renderização do mapa.', {
-      x: mx + 0.3, y: my + mh / 2 - 0.2, w: mw - 0.6, h: 0.4,
-      fontSize: 12, italic: true, color: C.muted, align: 'center', fontFace: 'Calibri',
-    });
+    // Escola analisada (teal, maior) — apenas quando há coords
+    if (escolaHasCoords) {
+      s.addShape('ellipse', { x: center.x - 0.1, y: center.y - 0.1, w: 0.20, h: 0.20, fill: { color: C.teal }, line: { color: C.white, width: 1.5 } });
+    }
   }
 
   // Legenda discreta sobre o mapa (faixa branca translúcida no topo)
   const legY = my + 0.10;
   s.addShape('rect', { x: mx + 0.12, y: legY, w: mw - 0.24, h: 0.26, fill: { color: C.white, transparency: 15 }, line: { color: C.white } });
   const legendaTxt: any[] = [
-    { text: '●  ', options: { color: C.teal, fontSize: 11, bold: true } },
-    { text: 'Escola analisada', options: { color: C.navy, fontSize: 9.5 } },
-    { text: '     ●  ', options: { color: C.navy, fontSize: 11, bold: true } },
-    { text: 'Concorrentes com coordenadas', options: { color: C.navy, fontSize: 9.5 } },
   ];
+  if (escolaHasCoords) {
+    legendaTxt.push({ text: '●  ', options: { color: C.teal, fontSize: 11, bold: true } });
+    legendaTxt.push({ text: 'Escola analisada', options: { color: C.navy, fontSize: 9.5 } });
+    legendaTxt.push({ text: '     ●  ', options: { color: C.navy, fontSize: 11, bold: true } });
+    legendaTxt.push({ text: 'Concorrentes com coordenadas', options: { color: C.navy, fontSize: 9.5 } });
+  } else {
+    legendaTxt.push({ text: '●  ', options: { color: C.navy, fontSize: 11, bold: true } });
+    legendaTxt.push({ text: 'Concorrentes com coordenadas', options: { color: C.navy, fontSize: 9.5 } });
+    legendaTxt.push({ text: '     Escola analisada sem coordenadas na base', options: { color: C.muted, fontSize: 9, italic: true } });
+  }
   if (semCoord > 0) {
     legendaTxt.push({ text: `     + ${semCoord} estimado(s) por CEP`, options: { color: C.muted, fontSize: 9.5, italic: true } });
   }
@@ -2459,11 +2484,10 @@ function pptConcorrenciaMapa(s: PptxGenJS.Slide, ctx: ExportContext, data: any, 
   });
 
   // ---------- BLOCO DE APOIO (curto, discreto) ----------
-  pptLeitura(
-    s,
-    'O mapa exibe os concorrentes com coordenadas válidas dentro do raio final definido. Escolas sem coordenadas permanecem consideradas na análise quando elegíveis por proximidade estimada.',
-    PPT_H - 0.95, 0.42, 'CONTEXTO GEOGRÁFICO',
-  );
+  const apoioTxt = escolaHasCoords
+    ? 'O mapa exibe os concorrentes com coordenadas válidas dentro do raio final definido. Escolas sem coordenadas permanecem consideradas na análise quando elegíveis por proximidade estimada.'
+    : 'A escola analisada não possui coordenadas na base. O mapa exibe apenas os concorrentes georreferenciados disponíveis; demais escolas seguem consideradas na análise quando elegíveis por proximidade estimada.';
+  pptLeitura(s, apoioTxt, PPT_H - 0.95, 0.42, 'CONTEXTO GEOGRÁFICO');
 }
 
 // ----- 6. Concorrência tabela
