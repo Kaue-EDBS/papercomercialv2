@@ -473,6 +473,7 @@ export default function Index() {
                 session={session}
                 raioKm={raioCustom ?? analysis?.raioOperacional}
                 raioMode={raioCustom !== null ? 'personalizado' : 'padrao'}
+                essenciaisInep={essenciaisInep}
               />
             )}
           </>
