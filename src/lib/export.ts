@@ -1278,9 +1278,9 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
   const gap = 12;
   const cardW = (W - 3 * gap) / 4;
   drawKpiCard(page, font, bold, M + 0 * (cardW + gap), cardY, cardW, cardH, 'Faixa da escola', escFaixaLabel, TEAL);
-  drawKpiCard(page, font, bold, M + 1 * (cardW + gap), cardY, cardW, cardH, 'Na mesma faixa', String(data.mesmaFaixa), TEAL);
-  drawKpiCard(page, font, bold, M + 2 * (cardW + gap), cardY, cardW, cardH, 'Acima da faixa', String(data.acima), NAVY);
-  drawKpiCard(page, font, bold, M + 3 * (cardW + gap), cardY, cardW, cardH, 'Abaixo da faixa', String(data.abaixo), LIME);
+  drawKpiCard(page, font, bold, M + 1 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), TEAL);
+  drawKpiCard(page, font, bold, M + 2 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes acima da faixa', String(data.acima), NAVY);
+  drawKpiCard(page, font, bold, M + 3 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), LIME);
 
   // ---------- BLOCO A · TABELA · BLOCO B · DISTRIBUIÇÃO ----------
   const contentTop = cardY - 18;
@@ -1393,12 +1393,12 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
   const distItems = FAIXAS.map(f => {
     const tot = (e.Mensalidade === f ? 1 : 0) + concs.filter((c: any) => c.escola.Mensalidade === f).length;
     return { faixa: f, label: FAIXA_LABEL[f], total: tot, hasTarget: e.Mensalidade === f };
-  });
+  }).filter(x => x.total > 0);
   const maxTot = Math.max(...distItems.map(x => x.total), 1);
   const distAreaTop = contentTop - 24;
   const distAreaBottom = contentBottom + 6;
   const distAreaH = distAreaTop - distAreaBottom;
-  const distRowH = Math.min(28, distAreaH / distItems.length);
+  const distRowH = distItems.length > 0 ? Math.min(40, distAreaH / distItems.length) : 0;
   distItems.forEach((d2, i) => {
     const rY = distAreaTop - distRowH * (i + 1);
     const labelY = rY + distRowH - 11;
