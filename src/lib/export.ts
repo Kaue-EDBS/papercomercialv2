@@ -3049,30 +3049,58 @@ function pptMensalidade(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: nu
 // ----- 10. Socioeconômico
 function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Perfil Socioeconômico', `Leitura demográfica e de potencial de consumo do município de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}.`);
+  pptTitle(s, 'Perfil Socioeconômico e Aderência Econômica', `Leitura demográfica, econômica e de aderência ao ticket da população de ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}.`);
   if (!data.d) {
     s.addText('Dado não disponível na base fornecida.', { x: PPT_M, y: 3, w: PPT_W - 2 * PPT_M, h: 0.5, fontSize: 14, italic: true, color: C.muted, align: 'center', fontFace: 'Calibri' });
     return;
   }
-  const aderTone = data.aderenteCls.tone === 'teal' ? C.teal : data.aderenteCls.tone === 'lime' ? C.lime : C.navy;
-  const cw = (PPT_W - 2 * PPT_M - 0.6) / 5;
-  pptKpi(s, PPT_M + 0 * (cw + 0.15), 1.7, cw, 0.85, 'Renda Média', fmtBRL(data.rendaMedia), C.teal);
-  pptKpi(s, PPT_M + 1 * (cw + 0.15), 1.7, cw, 0.85, 'IDH Educação', String(data.idhEduc), C.navy);
-  pptKpi(s, PPT_M + 2 * (cw + 0.15), 1.7, cw, 0.85, 'IDH Renda', String(data.idhRenda), C.lime);
-  pptKpi(s, PPT_M + 3 * (cw + 0.15), 1.7, cw, 0.85, 'Pop. 0–19', fmtInt(data.pop0_19), C.teal);
-  pptKpi(s, PPT_M + 4 * (cw + 0.15), 1.7, cw, 0.85, 'Aderência ao ticket', data.matrix ? `${data.aderencia.toFixed(0)}%` : 'N/D', aderTone);
 
+  // 3 KPIs principais — destacados
+  const cw = (PPT_W - 2 * PPT_M - 0.4) / 3;
+  const cardsY = 1.7;
+  const cardsH = 1.05;
+  pptKpi(s, PPT_M + 0 * (cw + 0.2), cardsY, cw, cardsH, 'Renda Média', fmtBRL(data.rendaMedia), C.teal, 26);
+  pptKpi(s, PPT_M + 1 * (cw + 0.2), cardsY, cw, cardsH, 'IDH Renda', String(data.idhRenda), C.navy, 26);
+  pptKpi(s, PPT_M + 2 * (cw + 0.2), cardsY, cw, cardsH, 'IDH Educação', String(data.idhEduc), C.lime, 26);
+
+  // Bloco esquerdo — distribuição etária / Bloco direito — heatmap
+  const blockY = cardsY + cardsH + 0.25;
+  const blockH = PPT_H - blockY - 1.0;
+  const leftW = (PPT_W - 2 * PPT_M - 0.3) * 0.42;
+  const rightW = (PPT_W - 2 * PPT_M - 0.3) - leftW;
+  const rightX = PPT_M + leftW + 0.3;
+
+  // Esquerda: gráfico
+  s.addText('DISTRIBUIÇÃO ETÁRIA · MUNICÍPIO (2025)', {
+    x: PPT_M, y: blockY, w: leftW, h: 0.28,
+    fontSize: 9, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1,
+  });
+  const faixasEt = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
+  const valsEt = faixasEt.map(f => parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'));
+  s.addChart(pptxgenChartType('bar'), [{ name: 'População', labels: faixasEt, values: valsEt }], {
+    x: PPT_M, y: blockY + 0.32, w: leftW, h: blockH - 0.4,
+    barDir: 'col', chartColors: [C.teal],
+    showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy,
+    catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 10, valAxisLabelFontSize: 9,
+    showLegend: false, showTitle: false,
+  });
+
+  // Direita: heatmap
+  s.addText('RENDA × FAIXA ETÁRIA · MUNICÍPIO', {
+    x: rightX, y: blockY, w: rightW, h: 0.28,
+    fontSize: 9, bold: true, color: C.navy, fontFace: 'Calibri', charSpacing: 1,
+  });
   if (data.matrix) {
     const aderSet = new Set(data.faixasAderentes);
     const allCells: number[] = [];
     data.matrix.forEach((r: any) => allCells.push(r.ate4, r.de5a14, r.de15a19));
     const maxCell = Math.max(...allCells, 1);
     const headerRow: any[] = [
-      { text: 'Classe', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, fontFace: 'Calibri' } },
-      { text: '0 a 4', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
-      { text: '5 a 14', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
-      { text: '15 a 19', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
-      { text: 'Total', options: { bold: true, color: C.muted, fontSize: 9.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
+      { text: 'Classe', options: { bold: true, color: C.muted, fontSize: 8.5, fill: { color: C.beige }, fontFace: 'Calibri' } },
+      { text: '0–4', options: { bold: true, color: C.muted, fontSize: 8.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
+      { text: '5–14', options: { bold: true, color: C.muted, fontSize: 8.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
+      { text: '15–19', options: { bold: true, color: C.muted, fontSize: 8.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
+      { text: 'Total', options: { bold: true, color: C.muted, fontSize: 8.5, fill: { color: C.beige }, align: 'right', fontFace: 'Calibri' } },
     ];
     const rows: any[] = [headerRow];
     data.matrix.forEach((r: any) => {
@@ -3081,33 +3109,30 @@ function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
       const cells = [r.ate4, r.de5a14, r.de15a19].map(v => {
         const intensity = v / maxCell;
         const fill = interpolateColor('FFFFFF', '129A96', intensity * 0.7);
-        return { text: fmtInt(v), options: { fontSize: 9.5, color: intensity > 0.55 ? C.white : C.navy, align: 'right', fill: { color: fill }, fontFace: 'Calibri' } };
+        return { text: fmtInt(v), options: { fontSize: 8.5, color: intensity > 0.55 ? C.white : C.navy, align: 'right', fill: { color: fill }, fontFace: 'Calibri' } };
       });
+      const rowFill = isAder ? C.tealLight : C.white;
       rows.push([
-        { text: (isAder ? '● ' : '') + r.faixa, options: { fontSize: 9.5, bold: isAder, color: isAder ? C.teal : C.navy, fontFace: 'Calibri' } },
+        { text: (isAder ? '● ' : '') + r.faixa, options: { fontSize: 8.5, bold: isAder, color: isAder ? C.teal : C.navy, fill: { color: rowFill }, fontFace: 'Calibri' } },
         ...cells,
-        { text: fmtInt(tot), options: { fontSize: 9.5, bold: true, color: C.navy, align: 'right', fontFace: 'Calibri' } },
+        { text: fmtInt(tot), options: { fontSize: 8.5, bold: true, color: C.navy, align: 'right', fill: { color: rowFill }, fontFace: 'Calibri' } },
       ]);
     });
+    const colTotal = rightW;
+    const colWArr = [colTotal * 0.20, colTotal * 0.20, colTotal * 0.20, colTotal * 0.20, colTotal * 0.20];
     s.addTable(rows, {
-      x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M,
-      colW: [1.2, 2.6, 2.6, 2.6, 2.66],
-      rowH: 0.28, fontFace: 'Calibri',
+      x: rightX, y: blockY + 0.32, w: rightW,
+      colW: colWArr,
+      rowH: 0.24, fontFace: 'Calibri',
       border: { type: 'solid', color: C.borderLight, pt: 0.4 },
     });
+    s.addText('● Faixas aderentes ao ticket atual da escola.', {
+      x: rightX, y: blockY + blockH - 0.32, w: rightW, h: 0.22,
+      fontSize: 8.5, italic: true, color: C.muted, fontFace: 'Calibri',
+    });
   } else {
-    // Fallback: gráfico de barras de população 0–19
-    const faixas = ['0 a 4', '5 a 9', '10 a 14', '15 a 19'];
-    const vals = faixas.map(f => parseInt(data.d[`População por Faixa Etária (2025) - ${f} anos`] || '0'));
-    const chartData = [{ name: 'População', labels: faixas, values: vals }];
-    s.addChart(pptxgenChartType('bar'), chartData, {
-      x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M, h: 2.7,
-      showTitle: true, title: 'Distribuição etária 0–19 · município',
-      titleFontFace: 'Calibri', titleFontSize: 11, titleColor: C.navy,
-      barDir: 'col', chartColors: [C.teal],
-      showValue: true, dataLabelFontSize: 9, dataLabelColor: C.navy,
-      catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 10, valAxisLabelFontSize: 9,
-      showLegend: false,
+    s.addText('Matriz de renda não disponível para este município.', {
+      x: rightX, y: blockY + 0.4, w: rightW, h: 0.4, fontSize: 10, italic: true, color: C.muted, fontFace: 'Calibri',
     });
   }
 
@@ -3116,7 +3141,7 @@ function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
   if (aderencia >= 30) leitura = 'Base sólida com poder de compra alinhado — espaço para reforçar valor agregado e diferenciais pedagógicos.';
   else if (aderencia >= 15) leitura = 'Existe nicho relevante — comunique custo-benefício e proposta de valor.';
   else leitura = 'Base aderente limitada — atenção à elasticidade de preço e necessidade de comunicar retorno do investimento.';
-  pptLeitura(s, `${data.aderenteCls.label.toUpperCase()} (${aderencia.toFixed(0)}%) · ${leitura}`, PPT_H - 1.0, 0.5, 'LEITURA COMERCIAL');
+  pptLeitura(s, `${data.aderenteCls.label.toUpperCase()} (${aderencia.toFixed(0)}%) · ${leitura}`, PPT_H - 0.85, 0.45, 'LEITURA');
 }
 
 // ----- 11. Potencial
