@@ -870,11 +870,11 @@ function renderPdfPanorama(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
   });
 }
 
-// ----- 5. Concorrência — visão geral e tabela (slide unificado, sem mapa)
+// ----- 5. Concorrência — slide único (sem mapa)
 // Padrão visual alinhado ao "Resumo Executivo" e "Panorama Educacional":
 // título compacto + filete teal + subtítulo italic, linha-resumo,
-// 4 cards-resumo, tabela analítica com escola em análise fixa no topo,
-// e bloco curto de apoio metodológico.
+// 4 mini cards de principais concorrentes (com prioridade aos essenciais
+// escolhidos pelo consultor) e tabela enxuta com os demais.
 function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
@@ -883,16 +883,11 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
   const e = data.e;
   const concsAll = data.concs as any[];
   const totalConc = concsAll.length;
-  const comCoord = concsAll.filter((c: any) => c.distancia !== null).length;
-  const estCEP = concsAll.filter((c: any) => c.distancia === null && c.proximidadeCEP).length;
-  const proximos = concsAll
-    .filter((c: any) => c.distancia !== null)
-    .sort((a: any, b: any) => a.distancia - b.distancia)
-    .slice(0, 3).length;
-  const proximosLabel = proximos > 0 ? String(proximos) : '—';
+  const essList = ctx.essenciaisInep ?? [];
+  const { top, restantes, isEssencial } = selectTopConcorrentes(concsAll, e, essList, 4);
 
   // ---------- TOPO · TÍTULO COMPACTO COM FILETE ----------
-  page.drawText('Concorrência — Visão Geral e Tabela', {
+  page.drawText('Concorrência', {
     x: M, y: PDF_H - CONTENT_TOP - 12, size: 22, font: bold, color: NAVY,
   });
   page.drawRectangle({ x: M, y: PDF_H - CONTENT_TOP - 22, width: 36, height: 3, color: TEAL });
@@ -902,19 +897,87 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
 
   // ---------- LINHA-RESUMO ----------
   const linhaY = PDF_H - CONTENT_TOP - 54;
-  const linha = `Raio ${fmtKm(ctx.raioKm)} · padrão · ${totalConc} concorrente(s) elegíveis`;
+  const linha = `Raio ${fmtKm(ctx.raioKm)} · ${ctx.raioMode === 'personalizado' ? 'personalizado' : 'padrão'} · ${totalConc} concorrente(s) elegíveis`;
   page.drawText(linha, { x: M, y: linhaY, size: 9.5, font, color: MUTED });
 
-  // ---------- CARDS-RESUMO ----------
-  const cardH = 64;
-  const cardY = linhaY - 12 - cardH;
-  const cardW = (W - 36) / 4;
-  drawResumoCard(page, font, bold, italic, M + 0 * (cardW + 12), cardY, cardW, cardH, 'Concorrentes Elegíveis', String(totalConc),       TEAL, true);
-  drawResumoCard(page, font, bold, italic, M + 1 * (cardW + 12), cardY, cardW, cardH, 'Mesma Faixa de Mensal.', String(data.mesmaFaixa),  NAVY, false);
-  drawResumoCard(page, font, bold, italic, M + 2 * (cardW + 12), cardY, cardW, cardH, 'Mais Próximos (Top 3)',  proximosLabel,            NAVY, false);
-  drawResumoCard(page, font, bold, italic, M + 3 * (cardW + 12), cardY, cardW, cardH, 'Estimados por CEP',      String(estCEP),           LIME, true);
+  // ---------- MINI CARDS — PRINCIPAIS CONCORRENTES ----------
+  const cardsTop = linhaY - 12;
+  const cardH = 84;
+  const cardY = cardsTop - cardH;
+  const gap = 12;
+  const cardW = (W - 3 * gap) / 4;
 
-  // ---------- TABELA ANALÍTICA ----------
+  const drawMiniCard = (cx: number, cy: number, c: any | null) => {
+    // fundo + borda
+    const ess = c ? isEssencial(c) : false;
+    const fill = ess ? TEAL_LIGHT : WHITE;
+    page.drawRectangle({ x: cx, y: cy, width: cardW, height: cardH, color: fill, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
+    page.drawRectangle({ x: cx, y: cy, width: 3, height: cardH, color: ess ? TEAL : NAVY });
+    if (!c) {
+      page.drawText('—', { x: cx + 12, y: cy + cardH / 2 - 6, size: 12, font: italic, color: MUTED });
+      return;
+    }
+    // Nome (até 2 linhas)
+    const nameMaxW = cardW - 18;
+    const nameSize = 9.5;
+    const nameLines = wrapTextToLines(c.escola.Escola, bold, nameSize, nameMaxW, 2);
+    let yy = cy + cardH - 14;
+    nameLines.forEach(line => {
+      page.drawText(line, { x: cx + 10, y: yy, size: nameSize, font: bold, color: NAVY });
+      yy -= nameSize + 2;
+    });
+    // Distância
+    const dist = distanciaLabel(c);
+    page.drawText(dist.text, { x: cx + 10, y: yy - 2, size: 8.5, font, color: dist.muted ? MUTED : TEXT });
+    yy -= 13;
+    // Segmentos como chips compactos
+    const segs = getSegmentos(c.escola);
+    const segColors: Record<string, RGB> = {
+      EI: rgb(0.18, 0.64, 0.61),
+      EFI: rgb(0.078, 0.149, 0.282),
+      EFII: rgb(0.71, 0.851, 0.392),
+      EM: rgb(0.039, 0.40, 0.392),
+    };
+    let chipX = cx + 10;
+    const chipY = yy - 11;
+    segs.forEach(seg => {
+      const cc = segColors[seg] ?? NAVY;
+      const cw = bold.widthOfTextAtSize(seg, 7) + 8;
+      if (chipX + cw > cx + cardW - 8) return;
+      page.drawRectangle({ x: chipX, y: chipY, width: cw, height: 11, color: cc });
+      page.drawText(seg, { x: chipX + 4, y: chipY + 3, size: 7, font: bold, color: seg === 'EFII' ? NAVY : WHITE });
+      chipX += cw + 3;
+    });
+    if (segs.length === 0) {
+      page.drawText('—', { x: chipX, y: chipY + 2, size: 8.5, font, color: MUTED });
+    }
+    // Tipo de adoção (linha de base)
+    const tipo = tipoAdocaoOf(c.escola);
+    const tipoND = tipoAdocaoIsND(c.escola);
+    let tipoTxt = tipo;
+    let tipoSize = 8;
+    const tipoMaxW = cardW - 18;
+    while (font.widthOfTextAtSize(tipoTxt, tipoSize) > tipoMaxW && tipoSize > 7) tipoSize -= 0.5;
+    if (font.widthOfTextAtSize(tipoTxt, tipoSize) > tipoMaxW) {
+      while (tipoTxt.length > 4 && font.widthOfTextAtSize(tipoTxt + '…', tipoSize) > tipoMaxW) tipoTxt = tipoTxt.slice(0, -1);
+      tipoTxt += '…';
+    }
+    page.drawText(tipoTxt, { x: cx + 10, y: cy + 6, size: tipoSize, font: tipoND ? italic : font, color: tipoND ? MUTED : TEXT });
+    // Selo discreto (canto sup. direito)
+    const selo = ess ? 'Selecionado' : 'Automático';
+    const seloSize = 6.5;
+    const seloW = bold.widthOfTextAtSize(selo, seloSize) + 8;
+    page.drawRectangle({ x: cx + cardW - seloW - 6, y: cy + cardH - 12, width: seloW, height: 10, color: ess ? TEAL : BORDER_LIGHT });
+    page.drawText(selo, {
+      x: cx + cardW - seloW - 2, y: cy + cardH - 10, size: seloSize, font: bold, color: ess ? WHITE : MUTED,
+    });
+  };
+
+  for (let i = 0; i < 4; i++) {
+    drawMiniCard(M + i * (cardW + gap), cardY, top[i] ?? null);
+  }
+
+  // ---------- TABELA — DEMAIS CONCORRENTES ----------
   const apoioH = 32;
   const apoioY = 56;
   const tableTop = cardY - 18;
@@ -923,40 +986,36 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
 
   const cols = [
     { k: 'esc',  w: W * 0.40, label: 'Escola' },
-    { k: 'mat',  w: W * 0.12, label: 'Matrículas', align: 'right' as const },
-    { k: 'dist', w: W * 0.16, label: 'Distância / Proximidade' },
-    { k: 'segs', w: W * 0.16, label: 'Segmentos' },
-    { k: 'mens', w: W * 0.16, label: 'Mensalidade' },
+    { k: 'dist', w: W * 0.20, label: 'Distância / Proximidade' },
+    { k: 'segs', w: W * 0.18, label: 'Segmentos' },
+    { k: 'tipo', w: W * 0.22, label: 'Tipo de adoção' },
   ];
 
   // Cabeçalho navy com texto branco
   const headerH = 22;
   const headerY = tableTop;
   page.drawRectangle({ x: M, y: headerY - headerH, width: W, height: headerH, color: NAVY });
-  let cx = M;
+  let cx0 = M;
   cols.forEach(c => {
-    const tx = c.align === 'right' ? cx + c.w - 10 - bold.widthOfTextAtSize(c.label, 9.5)
-             : cx + 10;
-    page.drawText(c.label, { x: tx, y: headerY - 15, size: 9.5, font: bold, color: WHITE });
-    cx += c.w;
+    page.drawText(c.label, { x: cx0 + 10, y: headerY - 15, size: 9.5, font: bold, color: WHITE });
+    cx0 += c.w;
   });
 
-  // Linhas: escola em análise primeiro, depois até 10 concorrentes mais relevantes
+  // Limita por legibilidade
   const TOP_N = 10;
-  const concsShown = concsAll.slice(0, TOP_N);
-  const totalRows = 1 + concsShown.length;
-  const rowH = Math.min(24, Math.max(18, (tableMaxH - headerH) / Math.max(totalRows, 1)));
+  const restShown = restantes.slice(0, TOP_N);
+  const totalRows = restShown.length;
+  const rowH = totalRows > 0
+    ? Math.min(24, Math.max(18, (tableMaxH - headerH) / Math.max(totalRows, 1)))
+    : 22;
 
-  const drawRow = (rowIdx: number, opts: {
-    nome: string; mat: string; dist: string; distColor: RGB; segs: string[];
-    mens: string; mensIsND: boolean; isTarget: boolean;
-  }) => {
-    const rY = headerY - headerH - rowH * (rowIdx + 1);
-    // Fundo
-    if (opts.isTarget) {
+  restShown.forEach((c: any, i: number) => {
+    const ess = isEssencial(c);
+    const rY = headerY - headerH - rowH * (i + 1);
+    if (ess) {
       page.drawRectangle({ x: M, y: rY, width: W, height: rowH, color: TEAL_LIGHT });
       page.drawRectangle({ x: M, y: rY, width: 3, height: rowH, color: TEAL });
-    } else if (rowIdx % 2 === 1) {
+    } else if (i % 2 === 1) {
       page.drawRectangle({ x: M, y: rY, width: W, height: rowH, color: BEIGE });
     }
 
@@ -964,132 +1023,83 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
     // Escola
     {
       const colW = cols[0].w;
-      const fnt = opts.isTarget ? bold : bold;
+      const fnt = bold;
       let size = 9.5;
-      let t = opts.nome;
-      const maxW = colW - (opts.isTarget ? 86 : 16);
+      let t = c.escola.Escola;
+      const maxW = colW - 16;
       while (fnt.widthOfTextAtSize(t, size) > maxW && size > 8) size -= 0.5;
       if (fnt.widthOfTextAtSize(t, size) > maxW) {
         while (t.length > 4 && fnt.widthOfTextAtSize(t + '…', size) > maxW) t = t.slice(0, -1);
-        t = t + '…';
+        t += '…';
       }
-      const ty = rY + rowH / 2 - size / 2 + 1;
-      page.drawText(t, { x: xc + 10, y: ty, size, font: fnt, color: NAVY });
-      if (opts.isTarget) {
-        // Badge "Em análise"
-        const badge = 'Em análise';
-        const bSize = 7.5;
-        const bw = bold.widthOfTextAtSize(badge, bSize) + 10;
-        const bh = 12;
-        const bx = xc + colW - bw - 8;
-        const by = rY + (rowH - bh) / 2;
-        page.drawRectangle({ x: bx, y: by, width: bw, height: bh, color: TEAL });
-        page.drawText(badge, { x: bx + 5, y: by + 3, size: bSize, font: bold, color: WHITE });
-      }
+      page.drawText(t, { x: xc + 10, y: rY + rowH / 2 - 4, size, font: fnt, color: NAVY });
     }
     xc += cols[0].w;
-    // Matrículas (right)
-    {
-      const colW = cols[1].w;
-      const t = opts.mat;
-      const tw = font.widthOfTextAtSize(t, 9.5);
-      page.drawText(t, { x: xc + colW - 10 - tw, y: rY + rowH / 2 - 4, size: 9.5, font: opts.isTarget ? bold : font, color: opts.isTarget ? NAVY : TEXT });
-    }
-    xc += cols[1].w;
     // Distância
     {
-      let t = opts.dist;
+      const dist = distanciaLabel(c);
+      let t = dist.text;
       let size = 9.5;
-      const maxW = cols[2].w - 16;
+      const maxW = cols[1].w - 16;
       while (font.widthOfTextAtSize(t, size) > maxW && size > 8) size -= 0.5;
-      page.drawText(t, { x: xc + 10, y: rY + rowH / 2 - 4, size, font, color: opts.distColor });
+      page.drawText(t, { x: xc + 10, y: rY + rowH / 2 - 4, size, font, color: dist.muted ? MUTED : TEXT });
     }
-    xc += cols[2].w;
+    xc += cols[1].w;
     // Segmentos como chips
     {
+      const segs = getSegmentos(c.escola);
       const segColors: Record<string, RGB> = {
-        EI: rgb(0.18, 0.64, 0.61),    // segEI
-        EFI: rgb(0.078, 0.149, 0.282), // segEFI
-        EFII: rgb(0.71, 0.851, 0.392), // segEFII
-        EM: rgb(0.039, 0.40, 0.392),   // segEM
+        EI: rgb(0.18, 0.64, 0.61),
+        EFI: rgb(0.078, 0.149, 0.282),
+        EFII: rgb(0.71, 0.851, 0.392),
+        EM: rgb(0.039, 0.40, 0.392),
       };
       let chipX = xc + 8;
       const chipY = rY + (rowH - 12) / 2;
-      opts.segs.forEach(seg => {
-        const c = segColors[seg] ?? NAVY;
+      segs.forEach(seg => {
+        const cc = segColors[seg] ?? NAVY;
         const cw = bold.widthOfTextAtSize(seg, 7.5) + 10;
-        if (chipX + cw > xc + cols[3].w - 6) return;
-        const isLight = seg === 'EFII';
-        page.drawRectangle({ x: chipX, y: chipY, width: cw, height: 12, color: c });
-        page.drawText(seg, { x: chipX + 5, y: chipY + 3, size: 7.5, font: bold, color: isLight ? NAVY : WHITE });
+        if (chipX + cw > xc + cols[2].w - 6) return;
+        page.drawRectangle({ x: chipX, y: chipY, width: cw, height: 12, color: cc });
+        page.drawText(seg, { x: chipX + 5, y: chipY + 3, size: 7.5, font: bold, color: seg === 'EFII' ? NAVY : WHITE });
         chipX += cw + 4;
       });
-      if (opts.segs.length === 0) {
+      if (segs.length === 0) {
         page.drawText('—', { x: xc + 10, y: rY + rowH / 2 - 4, size: 9.5, font, color: MUTED });
       }
     }
-    xc += cols[3].w;
-    // Mensalidade
+    xc += cols[2].w;
+    // Tipo de adoção
     {
-      let t = opts.mens;
+      const tipoND = tipoAdocaoIsND(c.escola);
+      let t = tipoAdocaoOf(c.escola);
       let size = 9.5;
-      const maxW = cols[4].w - 16;
-      while (font.widthOfTextAtSize(t, size) > maxW && size > 7.5) size -= 0.5;
+      const maxW = cols[3].w - 16;
+      while (font.widthOfTextAtSize(t, size) > maxW && size > 8) size -= 0.5;
       if (font.widthOfTextAtSize(t, size) > maxW) {
         while (t.length > 4 && font.widthOfTextAtSize(t + '…', size) > maxW) t = t.slice(0, -1);
-        t = t + '…';
+        t += '…';
       }
-      page.drawText(t, { x: xc + 10, y: rY + rowH / 2 - 4, size, font: opts.mensIsND ? italic : font, color: opts.mensIsND ? MUTED : TEXT });
+      page.drawText(t, { x: xc + 10, y: rY + rowH / 2 - 4, size, font: tipoND ? italic : font, color: tipoND ? MUTED : TEXT });
     }
 
-    // Linha divisória inferior
     page.drawLine({ start: { x: M, y: rY }, end: { x: M + W, y: rY }, thickness: 0.3, color: BORDER_LIGHT });
-  };
+  });
 
-  // Linha 0 — escola em análise
-  {
-    const segs = getSegmentos(e);
-    const mensRaw = (e.Mensalidade || '').trim();
-    const mensIsND = !mensRaw || mensRaw === '0';
-    drawRow(0, {
-      nome: e.Escola,
-      mat: fmtInt(num(e['Alunado Total'])),
-      dist: '—',
-      distColor: MUTED,
-      segs,
-      mens: mensIsND ? 'Dado não disponível' : mensRaw,
-      mensIsND,
-      isTarget: true,
+  if (totalRows === 0) {
+    page.drawText('Demais concorrentes não disponíveis — todos os elegíveis já estão destacados acima.', {
+      x: M + 12, y: headerY - headerH - 22, size: 9.5, font: italic, color: MUTED,
     });
   }
 
-  concsShown.forEach((c: any, i: number) => {
-    const segs = getSegmentos(c.escola);
-    const dist = c.distancia !== null
-      ? fmtKm(c.distancia)
-      : (c.proximidadeCEP ? 'Estimado por CEP' : 'Sem coordenadas');
-    const distColor = c.distancia !== null ? TEXT : (c.proximidadeCEP ? MUTED : MUTED);
-    const mensRaw = (c.escola.Mensalidade || '').trim();
-    const mensIsND = !mensRaw || mensRaw === '0';
-    drawRow(i + 1, {
-      nome: c.escola.Escola,
-      mat: fmtInt(num(c.escola['Alunado Total'])),
-      dist, distColor,
-      segs,
-      mens: mensIsND ? 'Dado não disponível' : mensRaw,
-      mensIsND,
-      isTarget: false,
-    });
-  });
-
-  // Borda externa
-  const tableHActual = headerH + rowH * totalRows;
+  // Borda externa da tabela
+  const tableHActual = headerH + rowH * Math.max(totalRows, 1);
   page.drawRectangle({ x: M, y: headerY - tableHActual, width: W, height: tableHActual, borderColor: BORDER, borderWidth: 0.4, color: WHITE, opacity: 0 });
 
-  // Nota se houver mais concorrentes além dos exibidos
-  const restantes = Math.max(0, totalConc - concsShown.length);
-  if (restantes > 0) {
-    page.drawText(`A análise completa considera ${totalConc} concorrentes elegíveis · ${concsShown.length} exibidos por legibilidade.`, {
+  // Nota de truncamento
+  const restantesNaoExibidos = Math.max(0, restantes.length - restShown.length);
+  if (restantesNaoExibidos > 0) {
+    page.drawText(`A análise completa considera ${totalConc} concorrentes elegíveis · ${4 + restShown.length} exibidos por legibilidade.`, {
       x: M, y: headerY - tableHActual - 12, size: 8.5, font: italic, color: MUTED,
     });
   }
@@ -1098,9 +1108,38 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
   page.drawRectangle({ x: M, y: apoioY, width: W, height: apoioH, color: TEAL_LIGHT, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
   page.drawRectangle({ x: M, y: apoioY, width: 4, height: apoioH, color: TEAL });
   page.drawText('METODOLOGIA', { x: M + 14, y: apoioY + apoioH - 12, size: 8.5, font: bold, color: TEAL_DARK });
-  page.drawText('Concorrentes selecionados com base em proximidade geográfica, segmentos em comum, faixa de mensalidade e critérios operacionais definidos na análise.', {
+  page.drawText('Concorrentes selecionados com base em proximidade geográfica, segmentos em comum, tipo de adoção, faixa de mensalidade e critérios operacionais definidos na análise.', {
     x: M + 14, y: apoioY + 8, size: 9, font, color: NAVY,
   });
+}
+
+// helper local — quebra texto em até maxLines linhas, com elipse na última
+function wrapTextToLines(text: string, font: PDFFont, size: number, maxW: number, maxLines: number): string[] {
+  const words = String(text || '').split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    const tryLine = cur ? cur + ' ' + w : w;
+    if (font.widthOfTextAtSize(tryLine, size) <= maxW) {
+      cur = tryLine;
+    } else {
+      if (cur) lines.push(cur);
+      cur = w;
+      if (lines.length === maxLines - 1) break;
+    }
+    if (lines.length === maxLines) break;
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  // Elipse se sobrou
+  const remaining = words.slice(lines.join(' ').split(/\s+/).filter(Boolean).length).join(' ');
+  if (remaining && lines.length === maxLines) {
+    let last = lines[maxLines - 1];
+    while (font.widthOfTextAtSize(last + '…', size) > maxW && last.length > 4) last = last.slice(0, -1);
+    lines[maxLines - 1] = last + '…';
+  } else if (lines.length === maxLines) {
+    // ok
+  }
+  return lines.length ? lines : [''];
 }
 
 // ----- 7. Market share geral
