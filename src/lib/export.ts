@@ -367,16 +367,14 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const italic = await pdf.embedFont(StandardFonts.HelveticaOblique);
   const data = buildPageData(ctx);
-  const includeMapa = hasMapPoints(ctx);
-  const total = SLIDE_TITLES.length - (includeMapa ? 0 : 1);
+  const total = SLIDE_TITLES.length;
 
   const slideRenderersAll: Array<{ render: (page: PDFPage, n: number) => void; key?: string }> = [
     { render: (p) => renderPdfCapa(p, font, bold, italic, ctx) },
     { render: (p, n) => renderPdfAbertura(p, font, bold, italic, ctx, n, total) },
     { render: (p, n) => renderPdfResumo(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfPanorama(p, font, bold, italic, ctx, data, n, total) },
-    { render: (p, n) => renderPdfConcorrenciaMapa(p, font, bold, italic, ctx, data, n, total), key: 'mapa' },
-    { render: (p, n) => renderPdfConcorrenciaTabela(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfConcorrencia(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfMarketShareGeral(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfMarketShareSegmentos(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfMensalidade(p, font, bold, italic, ctx, data, n, total) },
@@ -387,9 +385,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
     { render: (p, n) => renderPdfAcaoComercial(p, font, bold, italic, ctx, data, n, total) },
     { render: (p) => renderPdfEncerramento(p, font, bold, italic, ctx) },
   ];
-  const slideRenderers = slideRenderersAll
-    .filter(r => includeMapa || r.key !== 'mapa')
-    .map(r => r.render);
+  const slideRenderers = slideRenderersAll.map(r => r.render);
 
   slideRenderers.forEach((render, i) => {
     const page = pdf.addPage([PDF_W, PDF_H]);
@@ -1689,16 +1685,14 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
   pptx.company = 'Editora do Brasil';
 
   const data = buildPageData(ctx);
-  const includeMapa = hasMapPoints(ctx);
-  const total = SLIDE_TITLES.length - (includeMapa ? 0 : 1);
+  const total = SLIDE_TITLES.length;
 
   const renderersAll: Array<{ render: (s: PptxGenJS.Slide, n: number) => void; key?: string }> = [
     { render: (s) => pptCapa(s, ctx) },
     { render: (s, n) => pptAbertura(s, ctx, n, total) },
     { render: (s, n) => pptResumo(s, ctx, data, n, total) },
     { render: (s, n) => pptPanorama(s, ctx, data, n, total) },
-    { render: (s, n) => pptConcorrenciaMapa(s, ctx, data, n, total), key: 'mapa' },
-    { render: (s, n) => pptConcorrenciaTabela(s, ctx, data, n, total) },
+    { render: (s, n) => pptConcorrencia(s, ctx, data, n, total) },
     { render: (s, n) => pptMSGeral(s, ctx, data, n, total) },
     { render: (s, n) => pptMSSeg(s, ctx, data, n, total) },
     { render: (s, n) => pptMensalidade(s, ctx, data, n, total) },
@@ -1709,9 +1703,7 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
     { render: (s, n) => pptAcaoComercial(s, ctx, data, n, total) },
     { render: (s) => pptEncerramento(s, ctx) },
   ];
-  const renderers = renderersAll
-    .filter(r => includeMapa || r.key !== 'mapa')
-    .map(r => r.render);
+  const renderers = renderersAll.map(r => r.render);
 
   renderers.forEach((render, i) => {
     const slide = pptx.addSlide();
