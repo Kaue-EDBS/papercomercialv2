@@ -1277,10 +1277,10 @@ function renderPdfMensalidade(page: PDFPage, font: PDFFont, bold: PDFFont, itali
   const cardY = cardsTop - cardH;
   const gap = 12;
   const cardW = (W - 3 * gap) / 4;
-  drawKpiCard(page, font, bold, M + 0 * (cardW + gap), cardY, cardW, cardH, 'Faixa da escola', escFaixaLabel, TEAL);
-  drawKpiCard(page, font, bold, M + 1 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), TEAL);
-  drawKpiCard(page, font, bold, M + 2 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes acima da faixa', String(data.acima), NAVY);
-  drawKpiCard(page, font, bold, M + 3 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), LIME);
+  drawKpiCard(page, font, bold, M + 0 * (cardW + gap), cardY, cardW, cardH, 'Faixa da escola', escFaixaLabel, TEAL, 18);
+  drawKpiCard(page, font, bold, M + 1 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), TEAL, 18);
+  drawKpiCard(page, font, bold, M + 2 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes acima da faixa', String(data.acima), NAVY, 18);
+  drawKpiCard(page, font, bold, M + 3 * (cardW + gap), cardY, cardW, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), LIME, 18);
 
   // ---------- BLOCO A · TABELA · BLOCO B · DISTRIBUIÇÃO ----------
   const contentTop = cardY - 18;
@@ -2918,10 +2918,10 @@ function pptMensalidade(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: nu
   const cardH = 0.85;
   const gap = 0.2;
   const cw = (W - 3 * gap) / 4;
-  pptKpi(s, SAFE + 0 * (cw + gap), cardsY, cw, cardH, 'Faixa da escola', escFaixaLabel, C.teal);
-  pptKpi(s, SAFE + 1 * (cw + gap), cardsY, cw, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), C.teal);
-  pptKpi(s, SAFE + 2 * (cw + gap), cardsY, cw, cardH, 'Concorrentes acima da faixa', String(data.acima), C.navy);
-  pptKpi(s, SAFE + 3 * (cw + gap), cardsY, cw, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), C.lime);
+  pptKpi(s, SAFE + 0 * (cw + gap), cardsY, cw, cardH, 'Faixa da escola', escFaixaLabel, C.teal, 18);
+  pptKpi(s, SAFE + 1 * (cw + gap), cardsY, cw, cardH, 'Concorrentes na mesma faixa', String(data.mesmaFaixa), C.teal, 18);
+  pptKpi(s, SAFE + 2 * (cw + gap), cardsY, cw, cardH, 'Concorrentes acima da faixa', String(data.acima), C.navy, 18);
+  pptKpi(s, SAFE + 3 * (cw + gap), cardsY, cw, cardH, 'Concorrentes abaixo da faixa', String(data.abaixo), C.lime, 18);
 
   // ---------- BLOCO A · TABELA + BLOCO B · DISTRIBUIÇÃO ----------
   const contentY = cardsY + cardH + 0.2;
