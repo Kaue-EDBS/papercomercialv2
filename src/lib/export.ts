@@ -682,60 +682,146 @@ function renderPdfPanorama(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
   drawKpiCard(page, font, bold, M + 2 * (cardW + 12), cardY, cardW, 58, 'Média/Escola',    fmtInt(Math.round(data.totalAlunos / Math.max(1, data.a.concorrentes.length + 1))), TEAL_DARK);
   drawKpiCard(page, font, bold, M + 3 * (cardW + 12), cardY, cardW, 58, 'Segmento Líder',  `${lider?.sigla ?? '—'} · ${fmtPct(liderPct, 0)}`, LIME);
 
-  // ----- Bloco principal: gráfico (esquerda, ~62%) + tabela (direita, ~38%)
-  const blockTop = cardY - 18;          // topo do bloco principal
-  const blockBottom = 130;              // deixa espaço p/ leitura no rodapé
-  const blockH = blockTop - blockBottom;
-  const gap = 18;
-  const chartW = Math.round((PDF_W - 2 * M - gap) * 0.60);
-  const tableX = M + chartW + gap;
-  const tableW = PDF_W - M - tableX;
+  // ===== 2 tabelas analíticas empilhadas =====
+  // Cobertura por segmento (oferta) e Volume de alunos (demanda).
+  const totEsc = data.a.concorrentes.length + 1;
+  const todas = [data.e, ...data.concs.map((c: any) => c.escola)];
+  const segDefs = [
+    { sigla: 'EI',   nome: 'Educação Infantil',          field: 'qt_mat_educacao_infantil' },
+    { sigla: 'EFI',  nome: 'Ens. Fund. — Anos Iniciais', field: 'qt_mat_ensino_fundamental_anos_iniciais' },
+    { sigla: 'EFII', nome: 'Ens. Fund. — Anos Finais',   field: 'qt_mat_ensino_fundamental_anos_finais' },
+    { sigla: 'EM',   nome: 'Ensino Médio',               field: 'qt_mat_ensino_medio' },
+  ];
+  const cobertura = segDefs.map(sg => {
+    const escolas = todas.filter((x: any) => num(x[sg.field]) > 0).length;
+    return { ...sg, escolas, pct: totEsc > 0 ? (escolas / totEsc) * 100 : 0 };
+  });
+  const cobertOrd = [...cobertura].sort((a, b) => b.escolas - a.escolas);
+  const maxCob = cobertOrd[0]?.escolas ?? 0;
+  const empateCob = cobertura.filter(c => c.escolas === maxCob).length > 1;
 
-  // Header do gráfico
-  page.drawText('DISTRIBUIÇÃO DO MERCADO POR SEGMENTO', { x: M, y: blockTop - 14, size: 10, font: bold, color: NAVY });
-  page.drawText('Volume de alunos por nível de ensino', { x: M, y: blockTop - 28, size: 8.5, font: italic, color: MUTED });
+  // Layout: duas tabelas no espaço entre cards e leitura
+  const blockTop = cardY - 22;
+  const leituraH = 56;
+  const leituraY = 64;
+  const leituraTop = leituraY + leituraH;
+  const gap = 16;
+  const totalH = blockTop - leituraTop - gap;
+  const t1H = Math.floor(totalH / 2);
+  const t2H = totalH - t1H - gap;
+  const t1Top = blockTop;
+  const t2Top = t1Top - t1H - gap;
+  const tableW = PDF_W - 2 * M;
 
-  // Área do gráfico — maior, com mais respiro
-  const chartInnerY = blockBottom + 28;       // espaço p/ labels eixo
-  const chartInnerH = blockH - 56;            // espaço p/ títulos
-  drawVBars(
-    page, font,
-    M + 12, chartInnerY,
-    chartW - 24, chartInnerH,
-    data.segPanorama.map((s: any, i: number) => ({ label: s.sigla, value: s.alunos, color: colors[i] })),
-    undefined, fmtInt,
-  );
-
-  // Tabela lateral — cabeçalho com fundo bege
-  page.drawText('SEGMENTOS', { x: tableX, y: blockTop - 14, size: 10, font: bold, color: NAVY });
-  const thY = blockTop - 44;
-  page.drawRectangle({ x: tableX, y: thY, width: tableW, height: 18, color: BEIGE });
-  page.drawText('SEGMENTO', { x: tableX + 8,  y: thY + 5, size: 8, font: bold, color: MUTED });
-  page.drawText('ALUNOS',   { x: tableX + tableW - 90, y: thY + 5, size: 8, font: bold, color: MUTED });
-  page.drawText('%',        { x: tableX + tableW - 28, y: thY + 5, size: 8, font: bold, color: MUTED });
-
-  const rowH = 22;
-  data.segPanorama.forEach((s: any, i: number) => {
-    const ry = thY - (i + 1) * rowH;
-    if (i % 2 === 0) page.drawRectangle({ x: tableX, y: ry, width: tableW, height: rowH, color: BORDER_LIGHT });
-    if (i === 0) page.drawRectangle({ x: tableX, y: ry, width: 3, height: rowH, color: LIME });
-    // bullet color
-    page.drawRectangle({ x: tableX + 10, y: ry + rowH / 2 - 3, width: 6, height: 6, color: colors[i] });
-    page.drawText(s.sigla, { x: tableX + 22, y: ry + rowH / 2 - 4, size: 10, font: bold, color: NAVY });
-    page.drawText(truncate(s.nome, 18), { x: tableX + 50, y: ry + rowH / 2 - 4, size: 8.5, font, color: MUTED });
-    const av = fmtInt(s.alunos);
-    page.drawText(av, { x: tableX + tableW - 90 + (52 - font.widthOfTextAtSize(av, 9)), y: ry + rowH / 2 - 4, size: 9, font, color: TEXT });
-    const pv = data.totalAlunos > 0 ? fmtPct(s.alunos / data.totalAlunos * 100, 0) : '—';
-    page.drawText(pv, { x: tableX + tableW - 28 + (22 - bold.widthOfTextAtSize(pv, 9)), y: ry + rowH / 2 - 4, size: 9, font: i === 0 ? bold : font, color: i === 0 ? NAVY : TEXT });
+  drawPdfAnalyticTable(page, font, bold, italic, {
+    x: M, top: t1Top, w: tableW, h: t1H,
+    title: 'Cobertura por Segmento',
+    subtitle: 'Quantas escolas ofertam cada nível de ensino na região',
+    headers: ['Segmento', 'Escolas que ofertam', '% das escolas', ''],
+    rows: cobertOrd.map((s, i) => ({
+      seg: s.nome,
+      val: `${s.escolas} de ${totEsc}`,
+      pctTxt: fmtPct(s.pct, 1),
+      pctNum: s.pct,
+      barColor: NAVY,
+      tag: i === 0 ? (empateCob ? null : 'Maior cobertura') : null,
+    })),
   });
 
-  // Leitura estratégica — fina e integrada na base
-  const leitura = `${lider?.nome ?? '—'} lidera com ${fmtPct(liderPct, 0)} do mercado · ${menor?.nome ?? '—'}: ${fmtPct(menorPct, 0)} (${menor?.alunos === 0 ? 'ausência de oferta' : 'oportunidade de diferenciação'}).`;
-  const lY = 70;
-  page.drawRectangle({ x: M, y: lY, width: PDF_W - 2 * M, height: 38, color: TEAL_LIGHT });
-  page.drawRectangle({ x: M, y: lY, width: 3, height: 38, color: NAVY });
-  page.drawText('LEITURA ESTRATÉGICA', { x: M + 14, y: lY + 22, size: 8.5, font: bold, color: NAVY });
-  drawParagraph(page, font, leitura, M + 14, lY + 8, PDF_W - 2 * M - 28, 9.5, TEXT, 2);
+  drawPdfAnalyticTable(page, font, bold, italic, {
+    x: M, top: t2Top, w: tableW, h: t2H,
+    title: 'Volume de Alunos por Segmento',
+    subtitle: 'Distribuição da demanda total entre os níveis de ensino',
+    headers: ['Segmento', 'Alunos', '%', ''],
+    rows: data.segPanorama.map((s: any, i: number) => ({
+      seg: s.nome,
+      val: fmtInt(s.alunos),
+      pctTxt: data.totalAlunos > 0 ? fmtPct(s.alunos / data.totalAlunos * 100, 1) : '—',
+      pctNum: data.totalAlunos > 0 ? s.alunos / data.totalAlunos * 100 : 0,
+      barColor: colors[i],
+      tag: i === 0 ? 'Líder' : null,
+    })),
+    totalRow: { label: 'Total', val: fmtInt(data.totalAlunos), pctTxt: '100%' },
+  });
+
+  // Leitura estratégica
+  const cobLider = cobertOrd[0];
+  const cobTxt = empateCob
+    ? 'A cobertura é ampla e equilibrada entre os segmentos, com oferta presente em toda a área analisada.'
+    : `A cobertura é mais ampla em ${cobLider?.nome ?? '—'} (${cobLider?.escolas} de ${totEsc} escolas).`;
+  const leitura = `${cobTxt} Em volume, ${lider?.nome ?? '—'} lidera com ${fmtPct(liderPct, 1)}, ${menor?.alunos === 0 ? `enquanto ${menor?.nome} não registra oferta — possível oportunidade de posicionamento.` : `enquanto ${menor?.nome} concentra ${fmtPct(menorPct, 1)} — potencial espaço de diferenciação.`}`;
+  page.drawRectangle({ x: M, y: leituraY, width: PDF_W - 2 * M, height: leituraH, color: TEAL_LIGHT });
+  page.drawRectangle({ x: M, y: leituraY, width: 3, height: leituraH, color: NAVY });
+  page.drawText('LEITURA ESTRATÉGICA', { x: M + 14, y: leituraY + leituraH - 16, size: 8.5, font: bold, color: NAVY });
+  drawParagraph(page, font, leitura, M + 14, leituraY + leituraH - 30, PDF_W - 2 * M - 28, 9.5, TEXT, 2);
+}
+
+// Tabela analítica reutilizável (cobertura + volume) — mesmo padrão visual
+function drawPdfAnalyticTable(
+  page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont,
+  o: {
+    x: number; top: number; w: number; h: number;
+    title: string; subtitle: string;
+    headers: [string, string, string, string];
+    rows: Array<{ seg: string; val: string; pctTxt: string; pctNum: number; barColor: RGB; tag: string | null }>;
+    totalRow?: { label: string; val: string; pctTxt: string };
+  },
+) {
+  // Título + subtítulo
+  page.drawText(o.title, { x: o.x, y: o.top - 12, size: 11, font: bold, color: NAVY });
+  page.drawText(o.subtitle, { x: o.x, y: o.top - 24, size: 8.5, font: italic, color: MUTED });
+
+  // Cabeçalho da tabela
+  const headY = o.top - 44;
+  const headH = 16;
+  const colSegX = o.x + 10;
+  const colValX = o.x + Math.round(o.w * 0.50);
+  const colPctX = o.x + Math.round(o.w * 0.66);
+  const barX    = o.x + Math.round(o.w * 0.74);
+  const barW    = o.w - (barX - o.x) - 10;
+  page.drawRectangle({ x: o.x, y: headY, width: o.w, height: headH, color: BEIGE });
+  page.drawText(o.headers[0].toUpperCase(), { x: colSegX, y: headY + 4, size: 7.5, font: bold, color: MUTED });
+  page.drawText(o.headers[1].toUpperCase(), { x: colValX, y: headY + 4, size: 7.5, font: bold, color: MUTED });
+  page.drawText(o.headers[2].toUpperCase(), { x: colPctX, y: headY + 4, size: 7.5, font: bold, color: MUTED });
+
+  // Linhas
+  const totalRows = o.rows.length + (o.totalRow ? 1 : 0);
+  const bodyTop = headY;
+  const bodyBottom = o.top - o.h + 4;
+  const rowH = Math.max(18, Math.min(26, Math.floor((bodyTop - bodyBottom) / totalRows)));
+
+  o.rows.forEach((r, i) => {
+    const ry = headY - (i + 1) * rowH;
+    if (i % 2 === 0) page.drawRectangle({ x: o.x, y: ry, width: o.w, height: rowH, color: BORDER_LIGHT });
+    const isLeader = i === 0;
+    if (isLeader) page.drawRectangle({ x: o.x, y: ry, width: 3, height: rowH, color: LIME });
+    const ty = ry + rowH / 2 - 4;
+    page.drawText(truncate(r.seg, 32), { x: colSegX, y: ty, size: 9.5, font: isLeader ? bold : font, color: NAVY });
+    if (r.tag) {
+      const tw = font.widthOfTextAtSize(r.tag, 7) + 10;
+      const segW = font.widthOfTextAtSize(truncate(r.seg, 32), 9.5);
+      const tagX = colSegX + segW + 8;
+      page.drawRectangle({ x: tagX, y: ty - 2, width: tw, height: 12, color: TEAL_LIGHT });
+      page.drawText(r.tag, { x: tagX + 5, y: ty + 1, size: 7, font: bold, color: NAVY });
+    }
+    page.drawText(r.val, { x: colValX, y: ty, size: 9.5, font, color: TEXT });
+    page.drawText(r.pctTxt, { x: colPctX, y: ty, size: 9.5, font: isLeader ? bold : font, color: isLeader ? NAVY : TEXT });
+    // Barra
+    const bH = 5;
+    const by = ry + rowH / 2 - bH / 2;
+    page.drawRectangle({ x: barX, y: by, width: barW, height: bH, color: BORDER_LIGHT });
+    const fillW = Math.max(2, Math.min(barW, (r.pctNum / 100) * barW));
+    page.drawRectangle({ x: barX, y: by, width: fillW, height: bH, color: r.barColor });
+  });
+
+  if (o.totalRow) {
+    const ry = headY - (o.rows.length + 1) * rowH;
+    page.drawLine({ start: { x: o.x, y: ry + rowH }, end: { x: o.x + o.w, y: ry + rowH }, thickness: 1.2, color: NAVY });
+    const ty = ry + rowH / 2 - 4;
+    page.drawText(o.totalRow.label, { x: colSegX, y: ty, size: 10, font: bold, color: NAVY });
+    page.drawText(o.totalRow.val, { x: colValX, y: ty, size: 10, font: bold, color: NAVY });
+    page.drawText(o.totalRow.pctTxt, { x: colPctX, y: ty, size: 10, font: bold, color: NAVY });
+  }
 }
 
 // ----- 5. Concorrência — mapa e régua (mapa estático SVG)
