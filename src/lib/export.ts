@@ -1189,7 +1189,7 @@ function renderPdfMarketShare(page: PDFPage, font: PDFFont, bold: PDFFont, itali
   // ---------- HEATMAP ----------
   const heatTop = data.allSchoolsRanked.slice(0, 8);
   const heatTitleY = cardY - 20;
-  page.drawText('HEATMAP DE MARKET SHARE POR SEGMENTO', { x: M, y: heatTitleY, size: 9, font: bold, color: NAVY, characterSpacing: 1 } as any);
+  page.drawText('HEATMAP DE MARKET SHARE POR SEGMENTO', { x: M, y: heatTitleY, size: 9, font: bold, color: NAVY });
 
   const segKeys = [
     { k: 'qt_mat_educacao_infantil', l: 'EI' },
