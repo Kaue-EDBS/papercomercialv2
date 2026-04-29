@@ -3,6 +3,8 @@ import { Download, FileText, Presentation, Loader2 } from 'lucide-react';
 import { AnalysisResult, PresentationType, ConsultorSession } from '@/lib/types';
 import { exportPDF, exportPPTX, downloadBlob, buildFilename, ExportContext } from '@/lib/export';
 import { toast } from 'sonner';
+import { usePotencialConsumo } from '@/hooks/usePotencialConsumo';
+import { useRendaFaixaEtaria } from '@/hooks/useRendaFaixaEtaria';
 
 interface Props {
   analysis?: AnalysisResult | null;
@@ -15,11 +17,18 @@ interface Props {
 
 export default function PageEncerramento({ analysis, presentationType, session, raioKm, raioMode, essenciaisInep }: Props = {}) {
   const [busy, setBusy] = useState<'pdf' | 'pptx' | null>(null);
+  const { data: potencialData, loading: loadingPotencial } = usePotencialConsumo();
+  const { data: rendaData, loading: loadingRenda } = useRendaFaixaEtaria();
+  const dataLoading = loadingPotencial || loadingRenda;
 
-  const canExport = !!(analysis && presentationType);
+  const canExport = !!(analysis && presentationType) && !dataLoading;
 
   const handleExport = async (kind: 'pdf' | 'pptx') => {
     if (!analysis || !presentationType) return;
+    if (dataLoading) {
+      toast.message('Aguarde — finalizando o carregamento dos dados socioeconômicos e de potencial de consumo…');
+      return;
+    }
     setBusy(kind);
     try {
       const ctx: ExportContext = {
@@ -29,6 +38,8 @@ export default function PageEncerramento({ analysis, presentationType, session, 
         raioKm: raioKm ?? analysis.raioOperacional,
         raioMode: raioMode ?? 'padrao',
         essenciaisInep: essenciaisInep ?? [],
+        rendaData: rendaData ?? [],
+        potencialData: potencialData ?? null,
       };
       const blob = kind === 'pdf' ? await exportPDF(ctx) : await exportPPTX(ctx);
       downloadBlob(blob, buildFilename(ctx, kind));
