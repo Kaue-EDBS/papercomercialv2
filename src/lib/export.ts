@@ -2443,10 +2443,11 @@ function pptxgenChartType(t: 'bar' | 'pie'): any {
   return ((PptxGenJS as any).ChartType ?? { bar: 'bar', pie: 'pie' })[t];
 }
 
-// ----- 5. Concorrência — visão geral e tabela (slide unificado, sem mapa)
+// ----- 5. Concorrência — slide único (sem mapa)
 // Padrão visual alinhado ao "Resumo Executivo" e "Panorama Educacional":
-// título compacto + filete teal, linha-resumo, 4 cards-resumo, tabela
-// analítica com escola em análise fixa no topo e bloco curto de apoio.
+// título compacto + filete teal + subtítulo italic, linha-resumo,
+// 4 mini cards de principais concorrentes (com prioridade aos essenciais
+// escolhidos pelo consultor) e tabela enxuta com os demais.
 function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
 
@@ -2455,12 +2456,11 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
   const e = data.e;
   const concsAll = data.concs as any[];
   const totalConc = concsAll.length;
-  const estCEP = concsAll.filter((c: any) => c.distancia === null && c.proximidadeCEP).length;
-  const proximos = concsAll.filter((c: any) => c.distancia !== null).sort((a: any, b: any) => a.distancia - b.distancia).slice(0, 3).length;
-  const proximosLabel = proximos > 0 ? String(proximos) : '—';
+  const essList = ctx.essenciaisInep ?? [];
+  const { top, restantes, isEssencial } = selectTopConcorrentes(concsAll, e, essList, 4);
 
   // ---------- TOPO · TÍTULO COMPACTO COM FILETE ----------
-  s.addText('Concorrência — Visão Geral e Tabela', {
+  s.addText('Concorrência', {
     x: SAFE, y: 0.42, w: W, h: 0.7,
     fontSize: 30, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top',
   });
@@ -2471,26 +2471,18 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
   });
 
   // ---------- LINHA-RESUMO ----------
-  s.addText(`Raio ${fmtKm(ctx.raioKm)} · padrão · ${totalConc} concorrente(s) elegíveis`, {
+  s.addText(`Raio ${fmtKm(ctx.raioKm)} · ${ctx.raioMode === 'personalizado' ? 'personalizado' : 'padrão'} · ${totalConc} concorrente(s) elegíveis`, {
     x: SAFE, y: 1.55, w: W, h: 0.26,
     fontSize: 10, color: C.muted, fontFace: 'Calibri', valign: 'top',
   });
 
-  // ---------- CARDS-RESUMO ----------
+  // ---------- MINI CARDS — PRINCIPAIS CONCORRENTES ----------
   const cardsY = 1.85;
-  const cardH = 0.95;
-  const cw = (W - 0.6) / 4;
-  pptResumoCard(s, SAFE + 0 * (cw + 0.2), cardsY, cw, cardH, 'Concorrentes Elegíveis', String(totalConc),       C.teal, true);
-  pptResumoCard(s, SAFE + 1 * (cw + 0.2), cardsY, cw, cardH, 'Mesma Faixa de Mensal.', String(data.mesmaFaixa),  C.navy, false);
-  pptResumoCard(s, SAFE + 2 * (cw + 0.2), cardsY, cw, cardH, 'Mais Próximos (Top 3)',  proximosLabel,            C.navy, false);
-  pptResumoCard(s, SAFE + 3 * (cw + 0.2), cardsY, cw, cardH, 'Estimados por CEP',      String(estCEP),           C.lime, true);
+  const cardH = 1.30;
+  const gap = 0.2;
+  const cw = (W - 3 * gap) / 4;
 
-  // ---------- TABELA ANALÍTICA ----------
-  const TOP_N = 10;
-  const concsShown = concsAll.slice(0, TOP_N);
-  const restantes = Math.max(0, totalConc - concsShown.length);
-
-  const segChip = (seg: string): { text: string; opts: any } => {
+  const segChipText = (seg: string) => {
     const colorMap: Record<string, { bg: string; fg: string }> = {
       EI:   { bg: C.segEI,   fg: C.white },
       EFI:  { bg: C.segEFI,  fg: C.white },
@@ -2498,89 +2490,121 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
       EM:   { bg: C.segEM,   fg: C.white },
     };
     const c = colorMap[seg] ?? { bg: C.navy, fg: C.white };
-    return { text: ` ${seg} `, opts: { fontSize: 8.5, bold: true, color: c.fg, fill: { color: c.bg }, fontFace: 'Calibri' } };
+    return { text: ` ${seg} `, options: { fontSize: 8, bold: true, color: c.fg, fill: { color: c.bg }, fontFace: 'Calibri' } };
   };
 
-  const headers = ['Escola', 'Matrículas', 'Distância / Proximidade', 'Segmentos', 'Mensalidade'];
-  const headerRow = headers.map((h, i) => ({
+  const drawMini = (cx: number, c: any | null) => {
+    const ess = c ? isEssencial(c) : false;
+    const fill = ess ? C.tealLight : C.white;
+    s.addShape('rect', { x: cx, y: cardsY, w: cw, h: cardH, fill: { color: fill }, line: { color: C.borderLight, width: 0.75 } });
+    s.addShape('rect', { x: cx, y: cardsY, w: 0.06, h: cardH, fill: { color: ess ? C.teal : C.navy }, line: { color: ess ? C.teal : C.navy } });
+    if (!c) {
+      s.addText('—', { x: cx + 0.18, y: cardsY + 0.4, w: cw - 0.3, h: 0.4, fontSize: 14, italic: true, color: C.muted, fontFace: 'Calibri', valign: 'middle' });
+      return;
+    }
+    // Selo (canto sup. direito)
+    const seloTxt = ess ? 'Selecionado' : 'Automático';
+    s.addText(seloTxt, {
+      x: cx + cw - 0.95, y: cardsY + 0.08, w: 0.88, h: 0.22,
+      fontSize: 7.5, bold: true, color: ess ? C.white : C.muted, align: 'center',
+      fill: { color: ess ? C.teal : C.borderLight }, fontFace: 'Calibri', valign: 'middle',
+    });
+    // Nome (até 2 linhas)
+    s.addText(c.escola.Escola, {
+      x: cx + 0.18, y: cardsY + 0.10, w: cw - 1.05, h: 0.50,
+      fontSize: 10.5, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top', shrinkText: true,
+    });
+    // Distância
+    const dist = distanciaLabel(c);
+    s.addText(dist.text, {
+      x: cx + 0.18, y: cardsY + 0.62, w: cw - 0.3, h: 0.22,
+      fontSize: 9, color: dist.muted ? C.muted : C.text, italic: dist.muted, fontFace: 'Calibri', valign: 'middle',
+    });
+    // Segmentos como chips
+    const segs = getSegmentos(c.escola);
+    const chips: any[] = [];
+    if (segs.length === 0) {
+      chips.push({ text: '—', options: { fontSize: 9, color: C.muted, fontFace: 'Calibri' } });
+    } else {
+      segs.forEach((seg, i) => {
+        if (i > 0) chips.push({ text: ' ', options: { fontSize: 8, fontFace: 'Calibri' } });
+        const ch = segChipText(seg);
+        chips.push({ text: ch.text, options: ch.options });
+      });
+    }
+    s.addText(chips, {
+      x: cx + 0.18, y: cardsY + 0.84, w: cw - 0.3, h: 0.22,
+      valign: 'middle', fontFace: 'Calibri',
+    } as any);
+    // Tipo de adoção
+    const tipo = tipoAdocaoOf(c.escola);
+    const tipoND = tipoAdocaoIsND(c.escola);
+    s.addText(tipo, {
+      x: cx + 0.18, y: cardsY + cardH - 0.30, w: cw - 0.3, h: 0.22,
+      fontSize: 8.5, color: tipoND ? C.muted : C.text, italic: tipoND,
+      fontFace: 'Calibri', valign: 'middle', shrinkText: true,
+    });
+  };
+
+  for (let i = 0; i < 4; i++) {
+    drawMini(SAFE + i * (cw + gap), top[i] ?? null);
+  }
+
+  // ---------- TABELA — DEMAIS CONCORRENTES ----------
+  const TOP_N = 10;
+  const restShown = restantes.slice(0, TOP_N);
+  const tableY = cardsY + cardH + 0.25;
+
+  const headers = ['Escola', 'Distância / Proximidade', 'Segmentos', 'Tipo de adoção'];
+  const headerRow = headers.map(h => ({
     text: h,
-    options: {
-      bold: true, color: C.white, fill: { color: C.navy },
-      fontSize: 10, fontFace: 'Calibri',
-      align: i === 1 ? 'right' : 'left',
-      valign: 'middle',
-    },
+    options: { bold: true, color: C.white, fill: { color: C.navy }, fontSize: 10, fontFace: 'Calibri', valign: 'middle' },
   }));
   const rows: any[] = [headerRow];
 
-  // Linha 0 — escola em análise (destacada)
-  {
-    const segs = getSegmentos(e);
-    const mensRaw = (e.Mensalidade || '').trim();
-    const mensTxt = (!mensRaw || mensRaw === '0') ? 'Dado não disponível' : mensRaw;
-    const fill = C.tealLight;
-    const segCells: any[] = [];
-    segs.forEach((seg, i) => {
-      if (i > 0) segCells.push({ text: ' ', options: { fontSize: 8.5, fill: { color: fill }, fontFace: 'Calibri' } });
-      const ch = segChip(seg);
-      segCells.push({ text: ch.text, options: { ...ch.opts } });
-    });
-    if (segs.length === 0) segCells.push({ text: '—', options: { fontSize: 9.5, color: C.muted, fill: { color: fill }, fontFace: 'Calibri' } });
-
-    rows.push([
-      {
-        text: [
-          { text: e.Escola, options: { bold: true, color: C.navy, fontSize: 10, fontFace: 'Calibri' } },
-          { text: '   ', options: { fontSize: 10 } },
-          { text: ' Em análise ', options: { bold: true, fontSize: 8, color: C.white, fill: { color: C.teal }, fontFace: 'Calibri' } },
-        ],
-        options: { fill: { color: fill }, valign: 'middle' },
-      },
-      { text: fmtInt(num(e['Alunado Total'])), options: { fontSize: 10, bold: true, color: C.navy, align: 'right', valign: 'middle', fill: { color: fill }, fontFace: 'Calibri' } },
-      { text: '—', options: { fontSize: 10, color: C.muted, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri' } },
-      { text: segCells, options: { fill: { color: fill }, valign: 'middle' } },
-      { text: mensTxt, options: { fontSize: 10, bold: true, color: C.navy, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri', italic: !mensRaw || mensRaw === '0' } },
-    ]);
-  }
-
-  concsShown.forEach((c: any, idx: number) => {
-    const fill = idx % 2 === 0 ? C.white : C.beige;
+  restShown.forEach((c: any, idx: number) => {
+    const ess = isEssencial(c);
+    const fill = ess ? C.tealLight : (idx % 2 === 0 ? C.white : C.beige);
     const segs = getSegmentos(c.escola);
-    const dist = c.distancia !== null
-      ? { text: fmtKm(c.distancia), color: C.text }
-      : c.proximidadeCEP
-        ? { text: 'Estimado por CEP', color: C.muted }
-        : { text: 'Sem coordenadas', color: C.muted };
-    const mensRaw = (c.escola.Mensalidade || '').trim();
-    const mensIsND = !mensRaw || mensRaw === '0';
-    const mensTxt = mensIsND ? 'Dado não disponível' : mensRaw;
+    const dist = distanciaLabel(c);
+    const tipo = tipoAdocaoOf(c.escola);
+    const tipoND = tipoAdocaoIsND(c.escola);
     const segCells: any[] = [];
-    segs.forEach((seg, i) => {
-      if (i > 0) segCells.push({ text: ' ', options: { fontSize: 8.5, fill: { color: fill }, fontFace: 'Calibri' } });
-      const ch = segChip(seg);
-      segCells.push({ text: ch.text, options: { ...ch.opts } });
-    });
-    if (segs.length === 0) segCells.push({ text: '—', options: { fontSize: 9.5, color: C.muted, fill: { color: fill }, fontFace: 'Calibri' } });
-
+    if (segs.length === 0) {
+      segCells.push({ text: '—', options: { fontSize: 9.5, color: C.muted, fill: { color: fill }, fontFace: 'Calibri' } });
+    } else {
+      segs.forEach((seg, i) => {
+        if (i > 0) segCells.push({ text: ' ', options: { fontSize: 8.5, fill: { color: fill }, fontFace: 'Calibri' } });
+        const ch = segChipText(seg);
+        segCells.push({ text: ch.text, options: { ...ch.options } });
+      });
+    }
     rows.push([
       { text: c.escola.Escola, options: { fontSize: 9.5, bold: true, color: C.navy, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri' } },
-      { text: fmtInt(num(c.escola['Alunado Total'])), options: { fontSize: 9.5, color: C.text, align: 'right', valign: 'middle', fill: { color: fill }, fontFace: 'Calibri' } },
-      { text: dist.text, options: { fontSize: 9.5, color: dist.color, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri', italic: c.distancia === null } },
+      { text: dist.text, options: { fontSize: 9.5, color: dist.muted ? C.muted : C.text, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri', italic: dist.muted } },
       { text: segCells, options: { fill: { color: fill }, valign: 'middle' } },
-      { text: mensTxt, options: { fontSize: 9.5, color: mensIsND ? C.muted : C.text, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri', italic: mensIsND } },
+      { text: tipo, options: { fontSize: 9.5, color: tipoND ? C.muted : C.text, valign: 'middle', fill: { color: fill }, fontFace: 'Calibri', italic: tipoND } },
     ]);
   });
 
+  if (restShown.length === 0) {
+    rows.push([
+      { text: 'Demais concorrentes não disponíveis — todos os elegíveis já estão destacados acima.',
+        options: { fontSize: 9.5, italic: true, color: C.muted, valign: 'middle', fontFace: 'Calibri', colspan: 4 } },
+    ] as any);
+  }
+
   s.addTable(rows, {
-    x: SAFE, y: 2.95, w: W,
-    colW: [W * 0.40, W * 0.12, W * 0.16, W * 0.16, W * 0.16],
+    x: SAFE, y: tableY, w: W,
+    colW: [W * 0.40, W * 0.20, W * 0.18, W * 0.22],
     rowH: 0.32, fontFace: 'Calibri',
     border: { type: 'solid', color: C.borderLight, pt: 0.4 },
   });
 
   // Nota se houver mais concorrentes além dos exibidos
-  if (restantes > 0) {
-    s.addText(`A análise completa considera ${totalConc} concorrentes elegíveis · ${concsShown.length} exibidos por legibilidade.`, {
+  const restantesNaoExibidos = Math.max(0, restantes.length - restShown.length);
+  if (restantesNaoExibidos > 0) {
+    s.addText(`A análise completa considera ${totalConc} concorrentes elegíveis · ${4 + restShown.length} exibidos por legibilidade.`, {
       x: SAFE, y: PPT_H - 1.32, w: W, h: 0.24,
       fontSize: 9, italic: true, color: C.muted, fontFace: 'Calibri',
     });
@@ -2589,7 +2613,7 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
   // ---------- BLOCO DE APOIO METODOLÓGICO ----------
   pptLeitura(
     s,
-    'Concorrentes selecionados com base em proximidade geográfica, segmentos em comum, faixa de mensalidade e critérios operacionais definidos na análise.',
+    'Concorrentes selecionados com base em proximidade geográfica, segmentos em comum, tipo de adoção, faixa de mensalidade e critérios operacionais definidos na análise.',
     PPT_H - 0.95, 0.42, 'METODOLOGIA',
   );
 }
