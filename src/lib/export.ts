@@ -2543,11 +2543,16 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
     // Tipo de adoção
     const tipo = tipoAdocaoOf(c.escola);
     const tipoND = tipoAdocaoIsND(c.escola);
-    s.addText(tipo, {
-      x: cx + 0.18, y: cardsY + cardH - 0.30, w: cw - 0.3, h: 0.22,
-      fontSize: 8.5, color: tipoND ? C.muted : C.text, italic: tipoND,
-      fontFace: 'Calibri', valign: 'middle', shrinkText: true,
-    });
+    s.addText(
+      [
+        { text: 'Tipo de adoção: ', options: { fontSize: 8.5, color: C.muted, fontFace: 'Calibri' } },
+        { text: tipo, options: { fontSize: 8.5, bold: !tipoND, color: tipoND ? C.muted : C.navy, italic: tipoND, fontFace: 'Calibri' } },
+      ] as any,
+      {
+        x: cx + 0.18, y: cardsY + cardH - 0.30, w: cw - 0.3, h: 0.22,
+        fontFace: 'Calibri', valign: 'middle', shrinkText: true,
+      } as any,
+    );
   };
 
   for (let i = 0; i < 4; i++) {
