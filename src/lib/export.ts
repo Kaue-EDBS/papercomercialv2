@@ -668,11 +668,8 @@ function renderPdfPanorama(page: PDFPage, font: PDFFont, bold: PDFFont, italic: 
   drawPDFHeader(d); drawPDFFooter(d);
   drawPDFTitle(d, 'Panorama Educacional da Região', `${data.a.concorrentes.length + 1} escolas · ${fmtInt(data.totalAlunos)} alunos · raio ${fmtKm(ctx.raioKm)}`);
 
-  const colors = [TEAL, NAVY, LIME, TEAL_DARK];
   const lider = data.segPanorama[0];
-  const menor = data.segPanorama[data.segPanorama.length - 1];
   const liderPct = data.totalAlunos > 0 ? (lider?.alunos ?? 0) / data.totalAlunos * 100 : 0;
-  const menorPct = data.totalAlunos > 0 ? (menor?.alunos ?? 0) / data.totalAlunos * 100 : 0;
 
   // Cards principais — líder em destaque (lime)
   const cardW = (PDF_W - 2 * M - 36) / 4;
@@ -2085,9 +2082,7 @@ function pptPanorama(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numbe
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
   pptTitle(s, 'Panorama Educacional da Região', `${data.a.concorrentes.length + 1} escolas · ${fmtInt(data.totalAlunos)} alunos · raio ${fmtKm(ctx.raioKm)}`);
   const lider = data.segPanorama[0];
-  const menor = data.segPanorama[data.segPanorama.length - 1];
   const liderPct = data.totalAlunos > 0 ? (lider?.alunos ?? 0) / data.totalAlunos * 100 : 0;
-  const menorPct = data.totalAlunos > 0 ? (menor?.alunos ?? 0) / data.totalAlunos * 100 : 0;
 
   // ===== Cards principais — destaque do líder em lime =====
   const cw = (PPT_W - 2 * PPT_M - 0.45) / 4;
