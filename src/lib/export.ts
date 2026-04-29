@@ -338,10 +338,14 @@ function buildPageData(ctx: ExportContext) {
 
 function tipoAdocaoOf(esc: any): string {
   const t = String(esc?.['Tipo de Adoção'] || '').trim();
-  return t || 'Dado não disponível';
+  if (!t) return 'Sem dados';
+  // Normaliza valores residuais como "Não", "Nao", "N/A", "-" para "Sem dados"
+  const norm = t.toLowerCase().replace(/[ãâá]/g, 'a').replace(/[õô]/g, 'o');
+  if (norm === 'nao' || norm === 'n/a' || norm === '-' || norm === 'sem dados') return 'Sem dados';
+  return t;
 }
 function tipoAdocaoIsND(esc: any): boolean {
-  return !String(esc?.['Tipo de Adoção'] || '').trim();
+  return tipoAdocaoOf(esc) === 'Sem dados';
 }
 function distanciaLabel(c: any): { text: string; muted: boolean } {
   if (c.distancia !== null && c.distancia !== undefined) {
@@ -421,8 +425,7 @@ const SLIDE_TITLES = [
   'Resumo Executivo',
   'Panorama educacional da região',
   'Concorrência',
-  'Market share geral',
-  'Market share por segmento',
+  'Market Share',
   'Mensalidade e posicionamento competitivo',
   'Perfil socioeconômico e aderência econômica',
   'Potencial de consumo educacional e comercial',
@@ -452,8 +455,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
     { render: (p, n) => renderPdfResumo(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfPanorama(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfConcorrencia(p, font, bold, italic, ctx, data, n, total) },
-    { render: (p, n) => renderPdfMarketShareGeral(p, font, bold, italic, ctx, data, n, total) },
-    { render: (p, n) => renderPdfMarketShareSegmentos(p, font, bold, italic, ctx, data, n, total) },
+    { render: (p, n) => renderPdfMarketShare(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfMensalidade(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfSocioeconomico(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfPotencial(p, font, bold, italic, ctx, data, n, total) },
@@ -954,7 +956,7 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
     // Tipo de adoção (linha de base)
     const tipo = tipoAdocaoOf(c.escola);
     const tipoND = tipoAdocaoIsND(c.escola);
-    let tipoTxt = tipo;
+    let tipoTxt = `Tipo de adoção: ${tipo}`;
     let tipoSize = 8;
     const tipoMaxW = cardW - 18;
     while (font.widthOfTextAtSize(tipoTxt, tipoSize) > tipoMaxW && tipoSize > 7) tipoSize -= 0.5;
@@ -1108,7 +1110,7 @@ function renderPdfConcorrencia(page: PDFPage, font: PDFFont, bold: PDFFont, ital
   page.drawRectangle({ x: M, y: apoioY, width: W, height: apoioH, color: TEAL_LIGHT, borderColor: BORDER_LIGHT, borderWidth: 0.5 });
   page.drawRectangle({ x: M, y: apoioY, width: 4, height: apoioH, color: TEAL });
   page.drawText('METODOLOGIA', { x: M + 14, y: apoioY + apoioH - 12, size: 8.5, font: bold, color: TEAL_DARK });
-  page.drawText('Concorrentes selecionados com base em proximidade geográfica, segmentos em comum, tipo de adoção, faixa de mensalidade e critérios operacionais definidos na análise.', {
+  page.drawText('Concorrentes priorizados por origem de seleção, proximidade geográfica, segmentos em comum, tipo de adoção e faixa de mensalidade.', {
     x: M + 14, y: apoioY + 8, size: 9, font, color: NAVY,
   });
 }
@@ -1142,145 +1144,117 @@ function wrapTextToLines(text: string, font: PDFFont, size: number, maxW: number
   return lines.length ? lines : [''];
 }
 
-// ----- 7. Market share geral
-function renderPdfMarketShareGeral(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
+// ----- 6. Market Share — slide único (unifica geral + por segmento)
+function renderPdfMarketShare(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
   const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
   drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Market Share — Visão Geral', `Participação relativa em ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`);
 
-  const ms = ctx.analysis.marketShare;
-  // KPIs principais
-  const cardW = (PDF_W - 2 * M - 48) / 5;
-  const cardY = PDF_H - CONTENT_TOP - 130;
-  const kpis = [
-    { l: 'Geral',                v: fmtPct(ms.geral),  c: TEAL },
-    { l: 'Educação Infantil',    v: fmtPct(ms.ei),     c: NAVY },
-    { l: 'Fund. AI',             v: fmtPct(ms.efi),    c: NAVY },
-    { l: 'Fund. AF',             v: fmtPct(ms.efii),   c: NAVY },
-    { l: 'Ensino Médio',         v: fmtPct(ms.em),     c: NAVY },
-  ];
-  kpis.forEach((k, i) => {
-    drawKpiCard(page, font, bold, M + i * (cardW + 12), cardY, cardW, 60, k.l, k.v, k.c);
-  });
-
-  // Ranking geral — top 10
-  const top = data.allSchoolsRanked.slice(0, 10);
+  const W = PDF_W - 2 * M;
+  const a = ctx.analysis;
+  const ms = a.marketShare;
   const universe = data.totalAlunadoArea;
-  page.drawText('RANKING DE MARKET SHARE — TOP 10', { x: M, y: cardY - 24, size: 10, font: bold, color: NAVY });
-  let y = cardY - 44;
-  const rowH = 22;
-  top.forEach((s: any) => {
-    if (y < CONTENT_BOTTOM + 50) return;
-    const pct = universe > 0 ? (s.total / universe) * 100 : 0;
-    const color = s.isTarget ? TEAL : NAVY;
-    drawHBar(page, font, M, y, PDF_W - 2 * M, 14,
-      truncate((s.isTarget ? '★ ' : '') + s.name, 36), pct, color,
-      `${fmtPct(pct)} · ${fmtInt(s.total)} alunos`, 220);
-    y -= rowH;
+
+  // ---------- TÍTULO COMPACTO COM FILETE ----------
+  page.drawText('Market Share', {
+    x: M, y: PDF_H - CONTENT_TOP - 12, size: 22, font: bold, color: NAVY,
+  });
+  page.drawRectangle({ x: M, y: PDF_H - CONTENT_TOP - 22, width: 36, height: 3, color: TEAL });
+  page.drawText('Participação de mercado da escola analisada na área de influência, com visão geral e por segmento.', {
+    x: M, y: PDF_H - CONTENT_TOP - 38, size: 10.5, font: italic, color: MUTED,
   });
 
-  // Insight rodapé
-  const top3 = data.allSchoolsRanked.slice(0, 3).reduce((s: number, x: any) => s + x.total, 0);
-  const top3Pct = universe > 0 ? (top3 / universe) * 100 : 0;
-  const txt = `As 3 maiores escolas detêm ${fmtPct(top3Pct)} do alunado da área — mercado ${top3Pct > 50 ? 'concentrado' : 'fragmentado'}. Líder local: ${data.allSchoolsRanked[0]?.name ?? '—'}.`;
-  page.drawRectangle({ x: M, y: 50, width: PDF_W - 2 * M, height: 28, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  page.drawText(truncate(txt, 145), { x: M + 12, y: 60, size: 9.5, font, color: NAVY });
-}
+  // ---------- LINHA-RESUMO ----------
+  const linhaY = PDF_H - CONTENT_TOP - 54;
+  const linha = `Raio ${fmtKm(ctx.raioKm)} · ${a.concorrentes.length} concorrentes elegíveis · ${fmtInt(universe)} alunos na área de influência`;
+  page.drawText(linha, { x: M, y: linhaY, size: 9.5, font, color: MUTED });
 
-// ----- 8. Market share por segmento + heatmap
-function renderPdfMarketShareSegmentos(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, data: any, n: number, total: number) {
-  const d: DrawCtx = { page, font, bold, italic, ctx, pageNo: n, total };
-  drawPDFHeader(d); drawPDFFooter(d);
-  drawPDFTitle(d, 'Market Share por Segmento', 'Composição do alunado e participação por nível de ensino');
-
-  const e = ctx.analysis.escola;
-  const escTotal = num(e.qt_mat_educacao_infantil) + num(e.qt_mat_ensino_fundamental_anos_iniciais) + num(e.qt_mat_ensino_fundamental_anos_finais) + num(e.qt_mat_ensino_medio);
-  const segs = [
-    { k: 'EI',   l: 'Educação Infantil', v: num(e.qt_mat_educacao_infantil), c: TEAL },
-    { k: 'EFI',  l: 'Fund. AI',          v: num(e.qt_mat_ensino_fundamental_anos_iniciais), c: NAVY },
-    { k: 'EFII', l: 'Fund. AF',          v: num(e.qt_mat_ensino_fundamental_anos_finais), c: LIME },
-    { k: 'EM',   l: 'Ensino Médio',      v: num(e.qt_mat_ensino_medio), c: TEAL_DARK },
-  ].filter(s => s.v > 0);
-
-  // Composição do alunado da escola — barra empilhada
-  const compY = PDF_H - CONTENT_TOP - 90;
-  page.drawText('COMPOSIÇÃO DO ALUNADO — ' + truncate(e.Escola, 50).toUpperCase(), { x: M, y: compY + 36, size: 9, font: bold, color: NAVY });
-  const barW = PDF_W - 2 * M;
-  const barH = 24;
-  let bx = M;
-  segs.forEach(s => {
-    const segW = escTotal > 0 ? (s.v / escTotal) * barW : 0;
-    page.drawRectangle({ x: bx, y: compY, width: segW, height: barH, color: s.c });
-    if (segW > 60) {
-      const lbl = `${s.k} · ${escTotal > 0 ? fmtPct(s.v / escTotal * 100, 0) : '—'}`;
-      page.drawText(lbl, { x: bx + 6, y: compY + 8, size: 9, font: bold, color: WHITE });
-    }
-    bx += segW;
-  });
-  // legenda
-  let lx = M;
-  segs.forEach(s => {
-    page.drawRectangle({ x: lx, y: compY - 18, width: 8, height: 8, color: s.c });
-    page.drawText(`${s.l}: ${fmtInt(s.v)} (${escTotal > 0 ? fmtPct(s.v / escTotal * 100, 0) : '—'})`, { x: lx + 12, y: compY - 17, size: 8.5, font, color: TEXT });
-    lx += font.widthOfTextAtSize(`${s.l}: ${fmtInt(s.v)} (${escTotal > 0 ? fmtPct(s.v / escTotal * 100, 0) : '—'})`, 8.5) + 30;
+  // ---------- 5 MINI CARDS ----------
+  const segShares = [
+    { l: 'Educação Infantil', v: ms.ei },
+    { l: 'Fund. AI', v: ms.efi },
+    { l: 'Fund. AF', v: ms.efii },
+    { l: 'Ensino Médio', v: ms.em },
+  ];
+  const maxSeg = Math.max(ms.ei, ms.efi, ms.efii, ms.em);
+  const cardW = (W - 4 * 12) / 5;
+  const cardH = 60;
+  const cardY = linhaY - 14 - cardH;
+  // Geral
+  drawKpiCard(page, font, bold, M, cardY, cardW, cardH, 'Geral', fmtPct(ms.geral), TEAL);
+  segShares.forEach((seg, i) => {
+    const isStrong = maxSeg > 0 && seg.v === maxSeg;
+    drawKpiCard(page, font, bold, M + (i + 1) * (cardW + 12), cardY, cardW, cardH, seg.l, fmtPct(seg.v), isStrong ? LIME : NAVY);
   });
 
-  // Heatmap — top 8 escolas × 4 segmentos
-  const heatY = compY - 60;
-  page.drawText('HEATMAP DE MARKET SHARE POR SEGMENTO', { x: M, y: heatY, size: 9, font: bold, color: NAVY });
+  // ---------- HEATMAP ----------
   const heatTop = data.allSchoolsRanked.slice(0, 8);
+  const heatTitleY = cardY - 20;
+  page.drawText('HEATMAP DE MARKET SHARE POR SEGMENTO', { x: M, y: heatTitleY, size: 9, font: bold, color: NAVY });
+
   const segKeys = [
     { k: 'qt_mat_educacao_infantil', l: 'EI' },
     { k: 'qt_mat_ensino_fundamental_anos_iniciais', l: 'EFI' },
     { k: 'qt_mat_ensino_fundamental_anos_finais', l: 'EFII' },
     { k: 'qt_mat_ensino_medio', l: 'EM' },
   ];
-  const colSegW = 60;
-  const rowLabelW = 240;
-  const tblY = heatY - 16;
-  // header
-  page.drawText('ESCOLA', { x: M, y: tblY, size: 8, font: bold, color: MUTED });
-  segKeys.forEach((s, i) => {
+  const colSegW = 70;
+  const rowLabelW = W - colSegW * 4 - 8;
+  const headerY = heatTitleY - 16;
+  page.drawText('ESCOLA', { x: M + 6, y: headerY, size: 8, font: bold, color: MUTED });
+  segKeys.forEach((sk, i) => {
     const tx = M + rowLabelW + i * colSegW + colSegW / 2;
-    page.drawText(s.l, { x: tx - 8, y: tblY, size: 8, font: bold, color: MUTED });
+    const tw = bold.widthOfTextAtSize(sk.l, 8.5);
+    page.drawText(sk.l, { x: tx - tw / 2, y: headerY, size: 8.5, font: bold, color: MUTED });
   });
-  let hy = tblY - 14;
+
+  let hy = headerY - 6;
+  const cellH = 22;
   heatTop.forEach((row: any) => {
-    page.drawText((row.isTarget ? '★ ' : '  ') + truncate(row.name, 36), { x: M, y: hy + 4, size: 9, font: row.isTarget ? bold : font, color: row.isTarget ? TEAL : TEXT });
-    segKeys.forEach((s, i) => {
-      const val = num(row.data[s.k]);
-      const segTotal = data.allSchoolsRanked.reduce((acc: number, r: any) => acc + num(r.data[s.k]), 0);
+    hy -= cellH;
+    // Linha-base: highlight da escola analisada (badge "Em análise")
+    if (row.isTarget) {
+      page.drawRectangle({ x: M, y: hy, width: rowLabelW - 4, height: cellH, color: TEAL_LIGHT });
+      page.drawRectangle({ x: M, y: hy, width: 3, height: cellH, color: TEAL });
+    }
+    const nameTxt = truncate(row.name, 38);
+    page.drawText(nameTxt, { x: M + 8, y: hy + cellH / 2 - 4, size: 9, font: row.isTarget ? bold : font, color: row.isTarget ? NAVY : TEXT });
+    if (row.isTarget) {
+      const badge = 'Em análise';
+      const bw = bold.widthOfTextAtSize(badge, 7) + 8;
+      const bx = M + rowLabelW - bw - 8;
+      page.drawRectangle({ x: bx, y: hy + cellH / 2 - 6, width: bw, height: 12, color: TEAL });
+      page.drawText(badge, { x: bx + 4, y: hy + cellH / 2 - 3, size: 7, font: bold, color: WHITE });
+    }
+    segKeys.forEach((sk, i) => {
+      const val = num(row.data[sk.k]);
+      const segTotal = data.allSchoolsRanked.reduce((acc: number, r: any) => acc + num(r.data[sk.k]), 0);
       const pct = segTotal > 0 ? (val / segTotal) * 100 : 0;
       const intensity = Math.min(pct / 30, 1);
       const cx = M + rowLabelW + i * colSegW;
-      const cy = hy;
-      // Cor com intensidade
-      const fill = row.isTarget
-        ? rgb(0.05 + (1 - intensity) * 0.5, 0.604 - intensity * 0.2, 0.588 - intensity * 0.2)
-        : rgb(0.93 - intensity * 0.55, 0.93 - intensity * 0.7, 0.95 - intensity * 0.5);
-      page.drawRectangle({ x: cx, y: cy, width: colSegW - 4, height: 18, color: fill, borderColor: BORDER_LIGHT, borderWidth: 0.3 });
+      const fill = rgb(0.93 - intensity * 0.55, 0.93 - intensity * 0.7, 0.95 - intensity * 0.5);
+      page.drawRectangle({ x: cx, y: hy + 2, width: colSegW - 4, height: cellH - 4, color: fill, borderColor: BORDER_LIGHT, borderWidth: 0.3 });
+      if (row.isTarget) {
+        page.drawRectangle({ x: cx, y: hy + 2, width: colSegW - 4, height: cellH - 4, borderColor: TEAL, borderWidth: 1.2, color: fill, opacity: 0 });
+      }
       const tt = pct > 0 ? fmtPct(pct, 0) : '—';
-      const tw = font.widthOfTextAtSize(tt, 9);
-      page.drawText(tt, { x: cx + (colSegW - 4 - tw) / 2, y: cy + 5, size: 9, font: row.isTarget ? bold : font, color: intensity > 0.6 ? WHITE : NAVY });
+      const tw = (row.isTarget ? bold : font).widthOfTextAtSize(tt, 9.5);
+      page.drawText(tt, {
+        x: cx + (colSegW - 4 - tw) / 2, y: hy + cellH / 2 - 4,
+        size: 9.5, font: row.isTarget ? bold : font,
+        color: intensity > 0.6 ? WHITE : NAVY,
+      });
     });
-    hy -= 22;
   });
 
-  // Leitura
-  page.drawRectangle({ x: M, y: 50, width: PDF_W - 2 * M, height: 28, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
-  const ms = ctx.analysis.marketShare;
-  const segShares = [
-    { l: 'Educação Infantil', v: ms.ei },
-    { l: 'Fund. AI', v: ms.efi },
-    { l: 'Fund. AF', v: ms.efii },
-    { l: 'Ensino Médio', v: ms.em },
-  ].filter(s => s.v > 0).sort((a, b) => b.v - a.v);
-  const lider = segShares[0];
-  const fraco = segShares[segShares.length - 1];
-  const txt = lider && fraco
+  // ---------- LEITURA CURTA ----------
+  const segLido = segShares.filter(s => s.v > 0).sort((a, b) => b.v - a.v);
+  const lider = segLido[0];
+  const fraco = segLido[segLido.length - 1];
+  const leitura = lider && fraco && lider.l !== fraco.l
     ? `Maior penetração em ${lider.l} (${fmtPct(lider.v)}). Segmento mais vulnerável: ${fraco.l} (${fmtPct(fraco.v)}).`
     : 'Sem dados suficientes para leitura segmentada.';
-  page.drawText(truncate(txt, 150), { x: M + 12, y: 60, size: 9.5, font, color: NAVY });
+  page.drawRectangle({ x: M, y: 50, width: W, height: 28, color: TEAL_LIGHT, borderColor: TEAL, borderWidth: 0.5 });
+  page.drawText(truncate(leitura, 150), { x: M + 12, y: 60, size: 9.5, font, color: NAVY });
 }
 
 // ----- 9. Mensalidade
@@ -1804,8 +1778,7 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
     { render: (s, n) => pptResumo(s, ctx, data, n, total) },
     { render: (s, n) => pptPanorama(s, ctx, data, n, total) },
     { render: (s, n) => pptConcorrencia(s, ctx, data, n, total) },
-    { render: (s, n) => pptMSGeral(s, ctx, data, n, total) },
-    { render: (s, n) => pptMSSeg(s, ctx, data, n, total) },
+    { render: (s, n) => pptMarketShare(s, ctx, data, n, total) },
     { render: (s, n) => pptMensalidade(s, ctx, data, n, total) },
     { render: (s, n) => pptSocio(s, ctx, data, n, total) },
     { render: (s, n) => pptPotencial(s, ctx, data, n, total) },
@@ -2539,11 +2512,16 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
     // Tipo de adoção
     const tipo = tipoAdocaoOf(c.escola);
     const tipoND = tipoAdocaoIsND(c.escola);
-    s.addText(tipo, {
-      x: cx + 0.18, y: cardsY + cardH - 0.30, w: cw - 0.3, h: 0.22,
-      fontSize: 8.5, color: tipoND ? C.muted : C.text, italic: tipoND,
-      fontFace: 'Calibri', valign: 'middle', shrinkText: true,
-    });
+    s.addText(
+      [
+        { text: 'Tipo de adoção: ', options: { fontSize: 8.5, color: C.muted, fontFace: 'Calibri' } },
+        { text: tipo, options: { fontSize: 8.5, bold: !tipoND, color: tipoND ? C.muted : C.navy, italic: tipoND, fontFace: 'Calibri' } },
+      ] as any,
+      {
+        x: cx + 0.18, y: cardsY + cardH - 0.30, w: cw - 0.3, h: 0.22,
+        fontFace: 'Calibri', valign: 'middle', shrinkText: true,
+      } as any,
+    );
   };
 
   for (let i = 0; i < 4; i++) {
@@ -2613,80 +2591,91 @@ function pptConcorrencia(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: n
   // ---------- BLOCO DE APOIO METODOLÓGICO ----------
   pptLeitura(
     s,
-    'Concorrentes selecionados com base em proximidade geográfica, segmentos em comum, tipo de adoção, faixa de mensalidade e critérios operacionais definidos na análise.',
+    'Concorrentes priorizados por origem de seleção, proximidade geográfica, segmentos em comum, tipo de adoção e faixa de mensalidade.',
     PPT_H - 0.95, 0.42, 'METODOLOGIA',
   );
 }
 
-// ----- 7. MS Geral
-function pptMSGeral(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
+// ----- 6. Market Share — slide único (unifica geral + por segmento)
+// Padrão visual alinhado a "Resumo Executivo" e "Panorama Educacional":
+// título compacto + filete teal + subtítulo italic, linha-resumo,
+// 5 mini cards (Geral + 4 segmentos) e heatmap como conteúdo principal.
+function pptMarketShare(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
   pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Participação de Mercado — Visão Geral', undefined, 'Market Share');
-  const ms = ctx.analysis.marketShare;
-  const universe = data.totalAlunadoArea;
-  const top3 = data.allSchoolsRanked.slice(0, 3).reduce((acc: number, x: any) => acc + x.total, 0);
-  const top3Pct = universe > 0 ? (top3 / universe) * 100 : 0;
 
-  // Parágrafo introdutório
+  const SAFE = 0.4;
+  const W = PPT_W - 2 * SAFE;
+  const a = ctx.analysis;
+  const ms = a.marketShare;
+  const universe = data.totalAlunadoArea;
+
+  // ---------- TÍTULO COMPACTO COM FILETE ----------
+  s.addText('Market Share', {
+    x: SAFE, y: 0.42, w: W, h: 0.7,
+    fontSize: 30, bold: true, color: C.navy, fontFace: 'Calibri', valign: 'top',
+  });
+  s.addShape('rect', { x: SAFE, y: 1.08, w: 0.5, h: 0.05, fill: { color: C.teal }, line: { color: C.teal } });
+  s.addText('Participação de mercado da escola analisada na área de influência, com visão geral e por segmento.', {
+    x: SAFE, y: 1.18, w: W, h: 0.32,
+    fontSize: 11.5, color: C.muted, fontFace: 'Calibri', italic: true, valign: 'top',
+  });
+
+  // ---------- LINHA-RESUMO ----------
   s.addText(
-    `${truncate(ctx.analysis.escola.Escola, 60)} ${data.allSchoolsRanked[0]?.isTarget ? 'lidera o mercado local' : 'compõe o cenário competitivo'}, com ${fmtPct(ms.geral)} de market share geral. As 3 maiores escolas concentram ${fmtPct(top3Pct)} do alunado — indicativo de mercado ${top3Pct > 50 ? 'concentrado' : 'fragmentado'} ${top3Pct > 50 ? '' : 'com espaço real para crescimento'}.`,
-    { x: PPT_M, y: 2.05, w: PPT_W - 2 * PPT_M, h: 0.7, fontSize: 12, color: C.text, fontFace: 'Calibri' }
+    `Raio ${fmtKm(ctx.raioKm)} · ${a.concorrentes.length} concorrentes elegíveis · ${fmtInt(universe)} alunos na área de influência`,
+    { x: SAFE, y: 1.55, w: W, h: 0.26, fontSize: 10, color: C.muted, fontFace: 'Calibri', valign: 'top' }
   );
 
-  // 5 donuts em grid 3 + 2
-  const donuts: { v: number; label: string; sub: string }[] = [
-    { v: ms.geral, label: 'Market Share Geral', sub: `Participação total no raio de ${fmtKm(ctx.raioKm)}` },
-    { v: ms.ei,    label: 'Educação Infantil',  sub: 'Segmento Educação Infantil' },
-    { v: ms.efii,  label: 'Fund. Anos Finais',  sub: 'Segmento EFII' },
-    { v: ms.efi,   label: 'Fund. Anos Iniciais',sub: 'Segmento EFI' },
-    { v: ms.em,    label: 'Ensino Médio',       sub: 'Segmento EM' },
+  // ---------- 5 MINI CARDS ----------
+  const cardsY = 1.85;
+  const cardH = 1.05;
+  const gap = 0.18;
+  const cw = (W - 4 * gap) / 5;
+  const segShares = [
+    { l: 'Educação Infantil', v: ms.ei },
+    { l: 'Fund. AI',          v: ms.efi },
+    { l: 'Fund. AF',          v: ms.efii },
+    { l: 'Ensino Médio',      v: ms.em },
   ];
-  const r = 0.75;
-  const rowY = [3.4, 5.15];
-  // Linha 1: 3 donuts
-  const cx1 = [3.0, 6.667, 10.333];
-  for (let i = 0; i < 3; i++) pptDonut(s, cx1[i], rowY[0], r, donuts[i].v, donuts[i].label, donuts[i].sub);
-  // Linha 2: 2 donuts (centralizados)
-  const cx2 = [4.667, 8.667];
-  for (let i = 0; i < 2; i++) pptDonut(s, cx2[i], rowY[1], r, donuts[i + 3].v, donuts[i + 3].label, donuts[i + 3].sub);
-
-  pptLeitura(s, `As 3 maiores escolas detêm ${fmtPct(top3Pct)} do alunado. Mercado ${top3Pct > 50 ? 'concentrado' : 'fragmentado'}. Líder local: ${data.allSchoolsRanked[0]?.name ?? '—'}.`, PPT_H - 1.0, 0.5);
-}
-
-// ----- 8. MS por segmento
-function pptMSSeg(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, total: number) {
-  pptHeader(s, ctx); pptFooter(s, ctx, n, total);
-  pptTitle(s, 'Market Share por Segmento', 'Composição do alunado e participação por nível de ensino');
-
-  const e = ctx.analysis.escola;
-  const escTotal = num(e.qt_mat_educacao_infantil) + num(e.qt_mat_ensino_fundamental_anos_iniciais) + num(e.qt_mat_ensino_fundamental_anos_finais) + num(e.qt_mat_ensino_medio);
-  const segs = [
-    { l: 'EI',   v: num(e.qt_mat_educacao_infantil), c: C.segEI },
-    { l: 'EFI',  v: num(e.qt_mat_ensino_fundamental_anos_iniciais), c: C.segEFI },
-    { l: 'EFII', v: num(e.qt_mat_ensino_fundamental_anos_finais), c: C.segEFII },
-    { l: 'EM',   v: num(e.qt_mat_ensino_medio), c: C.segEM },
-  ].filter(x => x.v > 0);
-
-  s.addText(`COMPOSIÇÃO DO ALUNADO — ${truncate(e.Escola, 60)}`, {
-    x: PPT_M, y: 1.7, w: PPT_W - 2 * PPT_M, h: 0.3, fontSize: 11, bold: true, color: C.navy, fontFace: 'Calibri',
-  });
-  // Barra empilhada manual
-  const barW = PPT_W - 2 * PPT_M;
-  const barH = 0.45;
-  let bx = PPT_M;
-  segs.forEach(seg => {
-    const w = escTotal > 0 ? (seg.v / escTotal) * barW : 0;
-    s.addShape('rect', { x: bx, y: 2.05, w, h: barH, fill: { color: seg.c }, line: { color: seg.c } });
-    if (w > 0.8) {
-      s.addText(`${seg.l} · ${escTotal > 0 ? fmtPct(seg.v / escTotal * 100, 0) : '—'}`, {
-        x: bx, y: 2.05, w, h: barH, fontSize: 11, bold: true, color: C.white, align: 'center', valign: 'middle', fontFace: 'Calibri',
-      });
-    }
-    bx += w;
+  const maxSeg = Math.max(ms.ei, ms.efi, ms.efii, ms.em);
+  const drawCard = (cx: number, label: string, value: string, accent: string, highlight = false) => {
+    s.addShape('rect', {
+      x: cx, y: cardsY, w: cw, h: cardH,
+      fill: { color: highlight ? C.tealLight : C.white },
+      line: { color: C.borderLight, width: 0.75 },
+    });
+    s.addShape('rect', { x: cx, y: cardsY, w: 0.06, h: cardH, fill: { color: accent }, line: { color: accent } });
+    s.addText(label.toUpperCase(), {
+      x: cx + 0.22, y: cardsY + 0.14, w: cw - 0.36, h: 0.26,
+      fontSize: 9, bold: true, color: C.muted, charSpacing: 1.5, fontFace: 'Calibri', valign: 'top',
+    });
+    s.addText(value, {
+      x: cx + 0.22, y: cardsY + 0.42, w: cw - 0.36, h: cardH - 0.5,
+      fontSize: 24, bold: true, color: highlight ? C.tealDark : C.navy, fontFace: 'Calibri', valign: 'top', shrinkText: true,
+    });
+  };
+  drawCard(SAFE, 'Geral', fmtPct(ms.geral), C.teal, true);
+  segShares.forEach((seg, i) => {
+    const isStrong = maxSeg > 0 && seg.v === maxSeg;
+    drawCard(SAFE + (i + 1) * (cw + gap), seg.l, fmtPct(seg.v), isStrong ? C.lime : C.navy, isStrong);
   });
 
-  // Heatmap como tabela colorida
-  const heatTop = data.allSchoolsRanked.slice(0, 8);
+  // ---------- HEATMAP — TOP 8 ESCOLAS × 4 SEGMENTOS ----------
+  const heatTitleY = cardsY + cardH + 0.22;
+  s.addText('HEATMAP DE MARKET SHARE POR SEGMENTO', {
+    x: SAFE, y: heatTitleY, w: W, h: 0.28,
+    fontSize: 10, bold: true, color: C.navy, charSpacing: 1.5, fontFace: 'Calibri',
+  });
+
+  // Ordena: escola analisada na 1ª linha, depois ranking geral
+  const ranked = [...data.allSchoolsRanked];
+  const targetIdx = ranked.findIndex((r: any) => r.isTarget);
+  if (targetIdx > 0) {
+    const [t] = ranked.splice(targetIdx, 1);
+    ranked.unshift(t);
+  }
+  const heatTop = ranked.slice(0, 8);
+
   const segKeys = [
     { k: 'qt_mat_educacao_infantil', l: 'EI' },
     { k: 'qt_mat_ensino_fundamental_anos_iniciais', l: 'EFI' },
@@ -2699,7 +2688,16 @@ function pptMSSeg(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
   ];
   const heatRows: any[] = [headerRow];
   heatTop.forEach((row: any) => {
-    const cells: any[] = [{ text: (row.isTarget ? '★ ' : '') + truncate(row.name, 36), options: { fontSize: 9.5, bold: row.isTarget, color: row.isTarget ? C.teal : C.text, fontFace: 'Calibri' } }];
+    const labelText: any[] = row.isTarget
+      ? [
+          { text: truncate(row.name, 34) + '  ', options: { fontSize: 9.5, bold: true, color: C.navy, fontFace: 'Calibri' } },
+          { text: ' Em análise ', options: { fontSize: 8, bold: true, color: C.white, fill: { color: C.teal }, fontFace: 'Calibri' } },
+        ]
+      : [{ text: truncate(row.name, 38), options: { fontSize: 9.5, color: C.text, fontFace: 'Calibri' } }];
+    const cells: any[] = [{
+      text: labelText,
+      options: { valign: 'middle', fill: { color: row.isTarget ? C.tealLight : C.white } },
+    }];
     segKeys.forEach(sk => {
       const v = num(row.data[sk.k]);
       const segTotal = data.allSchoolsRanked.reduce((acc: number, r: any) => acc + num(r.data[sk.k]), 0);
@@ -2710,27 +2708,24 @@ function pptMSSeg(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
         : interpolateColor('EBEBEF', '4F556A', intensity);
       cells.push({
         text: pct > 0 ? fmtPct(pct, 0) : '—',
-        options: { fontSize: 9.5, color: intensity > 0.6 ? C.white : C.navy, align: 'center', fill: { color: fill }, fontFace: 'Calibri', bold: row.isTarget },
+        options: { fontSize: 10, color: intensity > 0.6 ? C.white : C.navy, align: 'center', fill: { color: fill }, fontFace: 'Calibri', bold: row.isTarget, valign: 'middle' },
       });
     });
     heatRows.push(cells);
   });
   s.addTable(heatRows, {
-    x: PPT_M, y: 2.85, w: PPT_W - 2 * PPT_M,
-    colW: [5.0, 1.83, 1.83, 1.83, 1.84],
-    rowH: 0.3, fontFace: 'Calibri',
+    x: SAFE, y: heatTitleY + 0.3, w: W,
+    colW: [W * 0.46, W * 0.135, W * 0.135, W * 0.135, W * 0.135],
+    rowH: 0.34, fontFace: 'Calibri',
     border: { type: 'solid', color: C.borderLight, pt: 0.4 },
   });
 
-  const ms = ctx.analysis.marketShare;
-  const segShares = [
-    { l: 'Educação Infantil', v: ms.ei },
-    { l: 'Fund. AI', v: ms.efi },
-    { l: 'Fund. AF', v: ms.efii },
-    { l: 'Ensino Médio', v: ms.em },
-  ].filter(x => x.v > 0).sort((a, b) => b.v - a.v);
-  const txt = segShares.length > 0
-    ? `Maior penetração em ${segShares[0].l} (${fmtPct(segShares[0].v)}). Segmento mais vulnerável: ${segShares[segShares.length - 1].l} (${fmtPct(segShares[segShares.length - 1].v)}).`
+  // ---------- LEITURA CURTA ----------
+  const segLido = segShares.filter(x => x.v > 0).sort((a, b) => b.v - a.v);
+  const lider = segLido[0];
+  const fraco = segLido[segLido.length - 1];
+  const txt = lider && fraco && lider.l !== fraco.l
+    ? `Maior penetração em ${lider.l} (${fmtPct(lider.v)}). Segmento mais vulnerável: ${fraco.l} (${fmtPct(fraco.v)}).`
     : 'Sem dados suficientes para leitura segmentada.';
   pptLeitura(s, txt, PPT_H - 1.0, 0.5);
 }
