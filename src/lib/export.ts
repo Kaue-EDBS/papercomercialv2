@@ -333,6 +333,82 @@ function buildPageData(ctx: ExportContext) {
 }
 
 // ============================================================
+// CONCORRÊNCIA — helpers compartilhados PDF/PPT
+// ============================================================
+
+function tipoAdocaoOf(esc: any): string {
+  const t = String(esc?.['Tipo de Adoção'] || '').trim();
+  return t || 'Dado não disponível';
+}
+function tipoAdocaoIsND(esc: any): boolean {
+  return !String(esc?.['Tipo de Adoção'] || '').trim();
+}
+function distanciaLabel(c: any): { text: string; muted: boolean } {
+  if (c.distancia !== null && c.distancia !== undefined) {
+    return { text: fmtKm(c.distancia), muted: false };
+  }
+  if (c.proximidadeCEP) return { text: 'Estimado por CEP', muted: true };
+  return { text: 'Sem coordenadas', muted: true };
+}
+
+/**
+ * Seleciona até 4 mini cards de principais concorrentes:
+ *  1) prioridade total para os escolhidos manualmente (essenciais);
+ *  2) se faltar, completar com os melhores candidatos restantes usando:
+ *     tipo de adoção (igual ao da escola analisada) → proximidade →
+ *     segmentos em comum → mesma faixa de mensalidade → alunado.
+ */
+function selectTopConcorrentes(
+  concs: any[], escola: any, essenciaisInep: string[], targetCount = 4,
+): { top: any[]; restantes: any[]; isEssencial: (c: any) => boolean } {
+  const essSet = new Set(essenciaisInep.map(String));
+  const isEssencial = (c: any) => essSet.has(String(c?.escola?.['Código Inep']));
+
+  const escTipo = String(escola?.['Tipo de Adoção'] || '').trim().toLowerCase();
+  const escFaixa = getMensalidadeFaixa(escola?.Mensalidade);
+
+  const score = (c: any) => {
+    const tipo = String(c.escola?.['Tipo de Adoção'] || '').trim().toLowerCase();
+    const tipoMatch = escTipo && tipo && tipo === escTipo ? 1 : 0;
+    const prox = c.distancia !== null && c.distancia !== undefined ? c.distancia : (c.proximidadeCEP ? 9000 : 9999);
+    const segCount = (c.segmentosComum || []).length;
+    const faixaMatch = (escFaixa >= 0 && getMensalidadeFaixa(c.escola?.Mensalidade) === escFaixa) ? 1 : 0;
+    const alunado = num(c.escola?.['Alunado Total']);
+    return { tipoMatch, prox, segCount, faixaMatch, alunado };
+  };
+  const cmp = (a: any, b: any) => {
+    const sa = score(a), sb = score(b);
+    if (sa.tipoMatch !== sb.tipoMatch) return sb.tipoMatch - sa.tipoMatch;
+    if (sa.prox !== sb.prox) return sa.prox - sb.prox;
+    if (sa.segCount !== sb.segCount) return sb.segCount - sa.segCount;
+    if (sa.faixaMatch !== sb.faixaMatch) return sb.faixaMatch - sa.faixaMatch;
+    return sb.alunado - sa.alunado;
+  };
+
+  const ess = concs.filter(isEssencial);
+  const naoEss = concs.filter(c => !isEssencial(c));
+
+  let top: any[];
+  if (ess.length >= targetCount) {
+    // Mais de 4 essenciais: escolher 4 entre eles pelos critérios
+    top = [...ess].sort(cmp).slice(0, targetCount);
+  } else {
+    const fill = [...naoEss].sort(cmp).slice(0, targetCount - ess.length);
+    top = [...ess, ...fill];
+  }
+  const topSet = new Set(top.map(c => String(c.escola?.['Código Inep'])));
+  // Restantes ordenados pelos mesmos critérios (com essenciais primeiro entre eles)
+  const restantes = concs
+    .filter(c => !topSet.has(String(c.escola?.['Código Inep'])))
+    .sort((a, b) => {
+      const ea = isEssencial(a) ? 1 : 0, eb = isEssencial(b) ? 1 : 0;
+      if (ea !== eb) return eb - ea;
+      return cmp(a, b);
+    });
+  return { top, restantes, isEssencial };
+}
+
+// ============================================================
 // SLIDE BUILDERS — chamados tanto por PDF quanto por PPT.
 // Cada função recebe um "renderer" abstrato que sabe desenhar primitivos.
 // Para simplicidade, mantemos PDF e PPT em funções separadas mas com
