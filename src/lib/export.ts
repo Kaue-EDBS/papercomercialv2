@@ -2118,7 +2118,7 @@ function pptDonut(s: PptxGenJS.Slide, cx: number, cy: number, r: number, valuePc
 }
 
 // ----- 1. Capa
-function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext) {
+function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext, logoData?: string | null) {
   // ============================================================
   // CAPA — paper executivo 16:9 · composição central
   // Fundo navy institucional, conteúdo centralizado, hierarquia
@@ -2134,21 +2134,45 @@ function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext) {
   s.addShape('rect', { x: 0, y: 0, w: PPT_W, h: 0.06, fill: { color: C.lime }, line: { color: C.lime } });
   s.addShape('rect', { x: 0, y: PPT_H - 0.06, w: PPT_W, h: 0.06, fill: { color: C.lime }, line: { color: C.lime } });
 
-  // ---------- TOPO: marca EDB centralizada ----------
-  s.addText('EDB', {
-    x: 0, y: SAFE + 0.25, w: PPT_W, h: 0.55,
-    fontSize: 26, bold: true, color: C.white, align: 'center', fontFace: 'Calibri', charSpacing: 6,
-  });
-  s.addText('EDITORA DO BRASIL', {
-    x: 0, y: SAFE + 0.85, w: PPT_W, h: 0.3,
-    fontSize: 10, color: C.tealLight, align: 'center', fontFace: 'Calibri', charSpacing: 4,
-  });
+  // ---------- TOPO: logo oficial centralizado ----------
+  if (logoData) {
+    const logoH = 0.95;
+    const logoW = logoH; // logo é praticamente quadrado (símbolo + texto sobreposto)
+    // O arquivo é 1:1 mas com texto "Editora do Brasil" ao lado — usar proporção real
+    const ratio = 1; // ajustado abaixo via aspect natural da imagem (Pptx aceita w/h fixos)
+    s.addImage({
+      data: logoData,
+      x: cx - 1.6 / 2, y: SAFE + 0.15,
+      w: 1.6, h: 1.6,
+      sizing: { type: 'contain', w: 1.6, h: 1.6 } as any,
+    });
+  } else {
+    s.addText('EDB', {
+      x: 0, y: SAFE + 0.25, w: PPT_W, h: 0.55,
+      fontSize: 26, bold: true, color: C.white, align: 'center', fontFace: 'Calibri', charSpacing: 6,
+    });
+    s.addText('EDITORA DO BRASIL', {
+      x: 0, y: SAFE + 0.85, w: PPT_W, h: 0.3,
+      fontSize: 10, color: C.tealLight, align: 'center', fontFace: 'Calibri', charSpacing: 4,
+    });
+  }
 
   // Filete teal centralizado (separador)
   s.addShape('rect', {
-    x: cx - 0.3, y: SAFE + 1.3, w: 0.6, h: 0.04,
+    x: cx - 0.3, y: SAFE + 1.85, w: 0.6, h: 0.04,
     fill: { color: C.teal }, line: { color: C.teal },
   });
+
+  // ---------- MARCA D'ÁGUA: logo discreto no canto inferior direito ----------
+  if (logoData) {
+    s.addImage({
+      data: logoData,
+      x: PPT_W - 0.4 - 0.7, y: PPT_H - 0.4 - 0.7,
+      w: 0.7, h: 0.7,
+      transparency: 88,
+      sizing: { type: 'contain', w: 0.7, h: 0.7 } as any,
+    } as any);
+  }
 
   // ---------- BLOCO CENTRAL ----------
   // Subtítulo reforçado: "Diagnóstico Territorial · Prospecção/Renovação"
