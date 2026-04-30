@@ -17,6 +17,29 @@ import {
   findRendaByIBGE, buildMatrix, calcAderenciaEconomica, classificarAderencia,
   getFaixasAderentes, FAIXAS_RENDA,
 } from './socioeconomico';
+import logoUrl from '@/assets/ebsa_logo_official.png';
+
+// ============================================================
+// LOGO LOADER — carrega o logo oficial uma única vez por export
+// ============================================================
+let _logoBytesCache: Uint8Array | null = null;
+let _logoBase64Cache: string | null = null;
+
+async function loadLogoBytes(): Promise<Uint8Array> {
+  if (_logoBytesCache) return _logoBytesCache;
+  const res = await fetch(logoUrl);
+  const buf = await res.arrayBuffer();
+  _logoBytesCache = new Uint8Array(buf);
+  return _logoBytesCache;
+}
+async function loadLogoBase64(): Promise<string> {
+  if (_logoBase64Cache) return _logoBase64Cache;
+  const bytes = await loadLogoBytes();
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  _logoBase64Cache = `image/png;base64,${btoa(bin)}`;
+  return _logoBase64Cache;
+}
 
 // ============================================================
 // PALETA — espelho da UI
