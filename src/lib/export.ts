@@ -471,8 +471,17 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
   const data = buildPageData(ctx);
   const total = SLIDE_TITLES.length;
 
+  // Logo oficial — embutido uma vez e reutilizado em capa/encerramento/marca d'água
+  let logoImg: any = null;
+  try {
+    const logoBytes = await loadLogoBytes();
+    logoImg = await pdf.embedPng(logoBytes);
+  } catch (e) {
+    console.warn('Não foi possível carregar o logo oficial', e);
+  }
+
   const slideRenderersAll: Array<{ render: (page: PDFPage, n: number) => void; key?: string }> = [
-    { render: (p) => renderPdfCapa(p, font, bold, italic, ctx) },
+    { render: (p) => renderPdfCapa(p, font, bold, italic, ctx, logoImg) },
     { render: (p, n) => renderPdfAbertura(p, font, bold, italic, ctx, n, total) },
     { render: (p, n) => renderPdfResumo(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfPanorama(p, font, bold, italic, ctx, data, n, total) },
@@ -483,7 +492,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
     { render: (p, n) => renderPdfPotencial(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfInsights(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfAcaoComercial(p, font, bold, italic, ctx, data, n, total) },
-    { render: (p) => renderPdfEncerramento(p, font, bold, italic, ctx) },
+    { render: (p) => renderPdfEncerramento(p, font, bold, italic, ctx, logoImg) },
   ];
   const slideRenderers = slideRenderersAll.map(r => r.render);
 
