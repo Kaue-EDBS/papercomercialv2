@@ -3046,14 +3046,14 @@ function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
 
   // 3 KPIs principais — destacados
   const cw = (PPT_W - 2 * PPT_M - 0.4) / 3;
-  const cardsY = 1.7;
+  const cardsY = 1.85;
   const cardsH = 1.05;
   pptKpi(s, PPT_M + 0 * (cw + 0.2), cardsY, cw, cardsH, 'Renda Média', fmtBRL(data.rendaMedia), C.teal, 26);
   pptKpi(s, PPT_M + 1 * (cw + 0.2), cardsY, cw, cardsH, 'IDH Renda', String(data.idhRenda), C.navy, 26);
   pptKpi(s, PPT_M + 2 * (cw + 0.2), cardsY, cw, cardsH, 'IDH Educação', String(data.idhEduc), C.lime, 26);
 
   // Bloco esquerdo — distribuição etária / Bloco direito — heatmap
-  const blockY = cardsY + cardsH + 0.25;
+  const blockY = cardsY + cardsH + 0.3;
   const blockH = PPT_H - blockY - 1.0;
   const leftW = (PPT_W - 2 * PPT_M - 0.3) * 0.42;
   const rightW = (PPT_W - 2 * PPT_M - 0.3) - leftW;
