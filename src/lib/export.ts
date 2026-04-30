@@ -17,29 +17,6 @@ import {
   findRendaByIBGE, buildMatrix, calcAderenciaEconomica, classificarAderencia,
   getFaixasAderentes, FAIXAS_RENDA,
 } from './socioeconomico';
-import logoUrl from '@/assets/ebsa_logo_official.png';
-
-// ============================================================
-// LOGO LOADER — carrega o logo oficial uma única vez por export
-// ============================================================
-let _logoBytesCache: Uint8Array | null = null;
-let _logoBase64Cache: string | null = null;
-
-async function loadLogoBytes(): Promise<Uint8Array> {
-  if (_logoBytesCache) return _logoBytesCache;
-  const res = await fetch(logoUrl);
-  const buf = await res.arrayBuffer();
-  _logoBytesCache = new Uint8Array(buf);
-  return _logoBytesCache;
-}
-async function loadLogoBase64(): Promise<string> {
-  if (_logoBase64Cache) return _logoBase64Cache;
-  const bytes = await loadLogoBytes();
-  let bin = '';
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  _logoBase64Cache = `image/png;base64,${btoa(bin)}`;
-  return _logoBase64Cache;
-}
 
 // ============================================================
 // PALETA — espelho da UI
@@ -471,17 +448,8 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
   const data = buildPageData(ctx);
   const total = SLIDE_TITLES.length;
 
-  // Logo oficial — embutido uma vez e reutilizado em capa/encerramento/marca d'água
-  let logoImg: any = null;
-  try {
-    const logoBytes = await loadLogoBytes();
-    logoImg = await pdf.embedPng(logoBytes);
-  } catch (e) {
-    console.warn('Não foi possível carregar o logo oficial', e);
-  }
-
   const slideRenderersAll: Array<{ render: (page: PDFPage, n: number) => void; key?: string }> = [
-    { render: (p) => renderPdfCapa(p, font, bold, italic, ctx, logoImg) },
+    { render: (p) => renderPdfCapa(p, font, bold, italic, ctx) },
     { render: (p, n) => renderPdfAbertura(p, font, bold, italic, ctx, n, total) },
     { render: (p, n) => renderPdfResumo(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfPanorama(p, font, bold, italic, ctx, data, n, total) },
@@ -492,7 +460,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
     { render: (p, n) => renderPdfPotencial(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfInsights(p, font, bold, italic, ctx, data, n, total) },
     { render: (p, n) => renderPdfAcaoComercial(p, font, bold, italic, ctx, data, n, total) },
-    { render: (p) => renderPdfEncerramento(p, font, bold, italic, ctx, logoImg) },
+    { render: (p) => renderPdfEncerramento(p, font, bold, italic, ctx) },
   ];
   const slideRenderers = slideRenderersAll.map(r => r.render);
 
@@ -506,7 +474,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
 }
 
 // ----- 1. Capa
-function renderPdfCapa(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, logoImg?: any) {
+function renderPdfCapa(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext) {
   // ============================================================
   // CAPA PDF — composição central, alinhada ao PPT.
   // 16:9 (960x540pt). Margem 0,4" ≈ 29pt nas bordas.
@@ -523,35 +491,14 @@ function renderPdfCapa(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFF
   page.drawRectangle({ x: 0, y: PDF_H - 4, width: PDF_W, height: 4, color: LIME });
   page.drawRectangle({ x: 0, y: 0, width: PDF_W, height: 4, color: LIME });
 
-  // ---------- TOPO: logo oficial centralizado ----------
-  if (logoImg) {
-    const logoH = 64;
-    const logoW = (logoImg.width / logoImg.height) * logoH;
-    page.drawImage(logoImg, {
-      x: cx - logoW / 2,
-      y: PDF_H - SAFE - logoH - 8,
-      width: logoW, height: logoH,
-    });
-  } else {
-    const edb = 'E D B';
-    page.drawText(edb, { x: center(edb, bold, 22), y: PDF_H - SAFE - 36, size: 22, font: bold, color: WHITE });
-    const edbSub = 'EDITORA DO BRASIL';
-    page.drawText(edbSub, { x: center(edbSub, font, 9), y: PDF_H - SAFE - 56, size: 9, font, color: TEAL_LIGHT });
-  }
-  // Filete teal centralizado
-  page.drawRectangle({ x: cx - 22, y: PDF_H - SAFE - 100, width: 44, height: 2, color: TEAL });
+  // ---------- TOPO: marca ----------
+  const edb = 'E D B';
+  page.drawText(edb, { x: center(edb, bold, 22), y: PDF_H - SAFE - 36, size: 22, font: bold, color: WHITE });
+  const edbSub = 'EDITORA DO BRASIL';
+  page.drawText(edbSub, { x: center(edbSub, font, 9), y: PDF_H - SAFE - 56, size: 9, font, color: TEAL_LIGHT });
 
-  // ---------- MARCA D'ÁGUA: logo discreto no canto inferior direito ----------
-  if (logoImg) {
-    const wmH = 48;
-    const wmW = (logoImg.width / logoImg.height) * wmH;
-    page.drawImage(logoImg, {
-      x: PDF_W - SAFE - wmW,
-      y: SAFE - 4,
-      width: wmW, height: wmH,
-      opacity: 0.12,
-    });
-  }
+  // Filete teal centralizado
+  page.drawRectangle({ x: cx - 22, y: PDF_H - SAFE - 76, width: 44, height: 2, color: TEAL });
 
   // ---------- BLOCO CENTRAL ----------
   // Subtítulo: "Diagnóstico Territorial · [Tipo]"
@@ -1926,24 +1873,13 @@ function renderPdfAcaoComercial(page: PDFPage, font: PDFFont, bold: PDFFont, ita
 }
 
 // ----- 14. Encerramento
-function renderPdfEncerramento(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, logoImg?: any) {
+function renderPdfEncerramento(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext) {
   page.drawRectangle({ x: 0, y: 0, width: PDF_W, height: PDF_H, color: BEIGE });
   page.drawRectangle({ x: 0, y: 0, width: 8, height: PDF_H, color: TEAL });
 
   // Linha decorativa central
   const cx = PDF_W / 2;
-  page.drawRectangle({ x: cx - 24, y: PDF_H - 50, width: 48, height: 3, color: TEAL });
-
-  // Logo oficial centralizado no topo
-  if (logoImg) {
-    const logoH = 48;
-    const logoW = (logoImg.width / logoImg.height) * logoH;
-    page.drawImage(logoImg, {
-      x: cx - logoW / 2,
-      y: PDF_H - 110,
-      width: logoW, height: logoH,
-    });
-  }
+  page.drawRectangle({ x: cx - 24, y: PDF_H - 90, width: 48, height: 3, color: TEAL });
 
   // Título
   const title = 'Obrigado pelo seu tempo';
@@ -1980,18 +1916,6 @@ function renderPdfEncerramento(page: PDFPage, font: PDFFont, bold: PDFFont, ital
   const tag = 'Educação que transforma, parceria que constrói.';
   const tgw = font.widthOfTextAtSize(tag, 10);
   page.drawText(tag, { x: cx - tgw / 2, y: 48, size: 10, font: italic, color: MUTED });
-
-  // Marca d'água: logo discreto no canto inferior direito
-  if (logoImg) {
-    const wmH = 48;
-    const wmW = (logoImg.width / logoImg.height) * wmH;
-    page.drawImage(logoImg, {
-      x: PDF_W - 29 - wmW,
-      y: 25,
-      width: wmW, height: wmH,
-      opacity: 0.12,
-    });
-  }
 }
 
 // ============================================================
@@ -2007,12 +1931,8 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
   const data = buildPageData(ctx);
   const total = SLIDE_TITLES.length;
 
-  // Logo oficial em base64 (data URI) — usado em capa, encerramento e marca d'água
-  let logoData: string | null = null;
-  try { logoData = await loadLogoBase64(); } catch (e) { console.warn('Logo PPT não carregado', e); }
-
   const renderersAll: Array<{ render: (s: PptxGenJS.Slide, n: number) => void; key?: string }> = [
-    { render: (s) => pptCapa(s, ctx, logoData) },
+    { render: (s) => pptCapa(s, ctx) },
     { render: (s, n) => pptAbertura(s, ctx, n, total) },
     { render: (s, n) => pptResumo(s, ctx, data, n, total) },
     { render: (s, n) => pptPanorama(s, ctx, data, n, total) },
@@ -2023,7 +1943,7 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
     { render: (s, n) => pptPotencial(s, ctx, data, n, total) },
     { render: (s, n) => pptInsights(s, ctx, data, n, total) },
     { render: (s, n) => pptAcaoComercial(s, ctx, data, n, total) },
-    { render: (s) => pptEncerramento(s, ctx, logoData) },
+    { render: (s) => pptEncerramento(s, ctx) },
   ];
   const renderers = renderersAll.map(r => r.render);
 
@@ -2118,7 +2038,7 @@ function pptDonut(s: PptxGenJS.Slide, cx: number, cy: number, r: number, valuePc
 }
 
 // ----- 1. Capa
-function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext, logoData?: string | null) {
+function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext) {
   // ============================================================
   // CAPA — paper executivo 16:9 · composição central
   // Fundo navy institucional, conteúdo centralizado, hierarquia
@@ -2134,45 +2054,21 @@ function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext, logoData?: string | nul
   s.addShape('rect', { x: 0, y: 0, w: PPT_W, h: 0.06, fill: { color: C.lime }, line: { color: C.lime } });
   s.addShape('rect', { x: 0, y: PPT_H - 0.06, w: PPT_W, h: 0.06, fill: { color: C.lime }, line: { color: C.lime } });
 
-  // ---------- TOPO: logo oficial centralizado ----------
-  if (logoData) {
-    const logoH = 0.95;
-    const logoW = logoH; // logo é praticamente quadrado (símbolo + texto sobreposto)
-    // O arquivo é 1:1 mas com texto "Editora do Brasil" ao lado — usar proporção real
-    const ratio = 1; // ajustado abaixo via aspect natural da imagem (Pptx aceita w/h fixos)
-    s.addImage({
-      data: logoData,
-      x: cx - 1.6 / 2, y: SAFE + 0.15,
-      w: 1.6, h: 1.6,
-      sizing: { type: 'contain', w: 1.6, h: 1.6 } as any,
-    });
-  } else {
-    s.addText('EDB', {
-      x: 0, y: SAFE + 0.25, w: PPT_W, h: 0.55,
-      fontSize: 26, bold: true, color: C.white, align: 'center', fontFace: 'Calibri', charSpacing: 6,
-    });
-    s.addText('EDITORA DO BRASIL', {
-      x: 0, y: SAFE + 0.85, w: PPT_W, h: 0.3,
-      fontSize: 10, color: C.tealLight, align: 'center', fontFace: 'Calibri', charSpacing: 4,
-    });
-  }
+  // ---------- TOPO: marca EDB centralizada ----------
+  s.addText('EDB', {
+    x: 0, y: SAFE + 0.25, w: PPT_W, h: 0.55,
+    fontSize: 26, bold: true, color: C.white, align: 'center', fontFace: 'Calibri', charSpacing: 6,
+  });
+  s.addText('EDITORA DO BRASIL', {
+    x: 0, y: SAFE + 0.85, w: PPT_W, h: 0.3,
+    fontSize: 10, color: C.tealLight, align: 'center', fontFace: 'Calibri', charSpacing: 4,
+  });
 
   // Filete teal centralizado (separador)
   s.addShape('rect', {
-    x: cx - 0.3, y: SAFE + 1.85, w: 0.6, h: 0.04,
+    x: cx - 0.3, y: SAFE + 1.3, w: 0.6, h: 0.04,
     fill: { color: C.teal }, line: { color: C.teal },
   });
-
-  // ---------- MARCA D'ÁGUA: logo discreto no canto inferior direito ----------
-  if (logoData) {
-    s.addImage({
-      data: logoData,
-      x: PPT_W - 0.4 - 0.7, y: PPT_H - 0.4 - 0.7,
-      w: 0.7, h: 0.7,
-      transparency: 88,
-      sizing: { type: 'contain', w: 0.7, h: 0.7 } as any,
-    } as any);
-  }
 
   // ---------- BLOCO CENTRAL ----------
   // Subtítulo reforçado: "Diagnóstico Territorial · Prospecção/Renovação"
@@ -3551,7 +3447,7 @@ function pptAcaoComercial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: 
 }
 
 // ----- 14. Encerramento
-function pptEncerramento(s: PptxGenJS.Slide, ctx?: ExportContext, logoData?: string | null) {
+function pptEncerramento(s: PptxGenJS.Slide, ctx?: ExportContext) {
   // Layout split (espelha a capa): painel navy à esquerda + texto à direita em fundo branco
   s.background = { color: C.white };
   const splitX = 5.3;
@@ -3564,15 +3460,8 @@ function pptEncerramento(s: PptxGenJS.Slide, ctx?: ExportContext, logoData?: str
       fill: { type: 'none' } as any, line: { color: C.navySoft, width: 0.6 },
     });
   }
-  if (logoData) {
-    s.addImage({
-      data: logoData, x: 0.5, y: 0.55, w: 1.5, h: 1.5,
-      sizing: { type: 'contain', w: 1.5, h: 1.5 } as any,
-    });
-  } else {
-    s.addText('EDB', { x: 0.5, y: 0.6, w: 2, h: 0.5, fontSize: 22, bold: true, color: C.lavender, fontFace: 'Calibri', charSpacing: 2 });
-    s.addText('Editora do Brasil', { x: 0.5, y: 1.05, w: 4, h: 0.3, fontSize: 11, italic: true, color: C.lavender, fontFace: 'Calibri' });
-  }
+  s.addText('EDB', { x: 0.5, y: 0.6, w: 2, h: 0.5, fontSize: 22, bold: true, color: C.lavender, fontFace: 'Calibri', charSpacing: 2 });
+  s.addText('Editora do Brasil', { x: 0.5, y: 1.05, w: 4, h: 0.3, fontSize: 11, italic: true, color: C.lavender, fontFace: 'Calibri' });
 
   // Lado direito (texto)
   s.addText('Obrigado pelo Seu Tempo', { x: splitX + 0.6, y: 0.85, w: PPT_W - splitX - 1.0, h: 0.85, fontSize: 36, bold: true, color: C.navy, fontFace: 'Calibri' });
@@ -3596,17 +3485,6 @@ function pptEncerramento(s: PptxGenJS.Slide, ctx?: ExportContext, logoData?: str
     s.addText(`${ctx.session.nome} · ${ctx.session.codigo}`, { x: splitX + 0.85, y: cy + 1.12, w: PPT_W - splitX - 1.5, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
   }
   s.addText('Educação que transforma, parceria que constrói.', { x: splitX + 0.6, y: PPT_H - 0.55, w: PPT_W - splitX - 1.0, h: 0.3, fontSize: 11, italic: true, color: C.muted, fontFace: 'Calibri' });
-
-  // Marca d'água: logo discreto no canto inferior direito
-  if (logoData) {
-    s.addImage({
-      data: logoData,
-      x: PPT_W - 0.4 - 0.7, y: PPT_H - 0.4 - 0.7,
-      w: 0.7, h: 0.7,
-      transparency: 85,
-      sizing: { type: 'contain', w: 0.7, h: 0.7 } as any,
-    } as any);
-  }
 }
 
 // ============================================================
