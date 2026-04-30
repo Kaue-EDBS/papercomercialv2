@@ -1983,8 +1983,10 @@ function pptChip(s: PptxGenJS.Slide, x: number, y: number, label: string) {
 function pptTitle(s: PptxGenJS.Slide, title: string, subtitle?: string, chip?: string) {
   let yCursor = 0.55;
   if (chip) { pptChip(s, PPT_M, yCursor, chip); yCursor += 0.45; }
-  s.addText(title, { x: PPT_M, y: yCursor, w: PPT_W - 2 * PPT_M, h: 0.85, fontSize: 32, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true });
-  if (subtitle) s.addText(subtitle, { x: PPT_M, y: yCursor + 0.85, w: PPT_W - 2 * PPT_M, h: 0.45, fontSize: 12, color: C.text, fontFace: 'Calibri' });
+  s.addText(title, { x: PPT_M, y: yCursor, w: PPT_W - 2 * PPT_M, h: 0.6, fontSize: 28, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true });
+  // Barrinha verde abaixo do título (padrão visual do projeto)
+  s.addShape('rect', { x: PPT_M, y: yCursor + 0.62, w: 0.7, h: 0.06, fill: { color: C.teal }, line: { color: C.teal } });
+  if (subtitle) s.addText(subtitle, { x: PPT_M, y: yCursor + 0.74, w: PPT_W - 2 * PPT_M, h: 0.36, fontSize: 11, italic: true, color: C.muted, fontFace: 'Calibri' });
 }
 
 // KPI estilo Santa Mônica: card lavanda discreto, label cinza pequeno, valor grande navy
