@@ -1926,13 +1926,24 @@ function renderPdfAcaoComercial(page: PDFPage, font: PDFFont, bold: PDFFont, ita
 }
 
 // ----- 14. Encerramento
-function renderPdfEncerramento(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext) {
+function renderPdfEncerramento(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, logoImg?: any) {
   page.drawRectangle({ x: 0, y: 0, width: PDF_W, height: PDF_H, color: BEIGE });
   page.drawRectangle({ x: 0, y: 0, width: 8, height: PDF_H, color: TEAL });
 
   // Linha decorativa central
   const cx = PDF_W / 2;
   page.drawRectangle({ x: cx - 24, y: PDF_H - 90, width: 48, height: 3, color: TEAL });
+
+  // Logo oficial centralizado no topo
+  if (logoImg) {
+    const logoH = 56;
+    const logoW = (logoImg.width / logoImg.height) * logoH;
+    page.drawImage(logoImg, {
+      x: cx - logoW / 2,
+      y: PDF_H - 70 - logoH,
+      width: logoW, height: logoH,
+    });
+  }
 
   // Título
   const title = 'Obrigado pelo seu tempo';
@@ -1969,6 +1980,18 @@ function renderPdfEncerramento(page: PDFPage, font: PDFFont, bold: PDFFont, ital
   const tag = 'Educação que transforma, parceria que constrói.';
   const tgw = font.widthOfTextAtSize(tag, 10);
   page.drawText(tag, { x: cx - tgw / 2, y: 48, size: 10, font: italic, color: MUTED });
+
+  // Marca d'água: logo discreto no canto inferior direito
+  if (logoImg) {
+    const wmH = 48;
+    const wmW = (logoImg.width / logoImg.height) * wmH;
+    page.drawImage(logoImg, {
+      x: PDF_W - 29 - wmW,
+      y: 25,
+      width: wmW, height: wmH,
+      opacity: 0.12,
+    });
+  }
 }
 
 // ============================================================
