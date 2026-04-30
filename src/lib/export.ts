@@ -1983,8 +1983,10 @@ function pptChip(s: PptxGenJS.Slide, x: number, y: number, label: string) {
 function pptTitle(s: PptxGenJS.Slide, title: string, subtitle?: string, chip?: string) {
   let yCursor = 0.55;
   if (chip) { pptChip(s, PPT_M, yCursor, chip); yCursor += 0.45; }
-  s.addText(title, { x: PPT_M, y: yCursor, w: PPT_W - 2 * PPT_M, h: 0.85, fontSize: 32, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true });
-  if (subtitle) s.addText(subtitle, { x: PPT_M, y: yCursor + 0.85, w: PPT_W - 2 * PPT_M, h: 0.45, fontSize: 12, color: C.text, fontFace: 'Calibri' });
+  s.addText(title, { x: PPT_M, y: yCursor, w: PPT_W - 2 * PPT_M, h: 0.6, fontSize: 28, bold: true, color: C.navy, fontFace: 'Calibri', shrinkText: true });
+  // Barrinha verde abaixo do título (padrão visual do projeto)
+  s.addShape('rect', { x: PPT_M, y: yCursor + 0.62, w: 0.7, h: 0.06, fill: { color: C.teal }, line: { color: C.teal } });
+  if (subtitle) s.addText(subtitle, { x: PPT_M, y: yCursor + 0.74, w: PPT_W - 2 * PPT_M, h: 0.36, fontSize: 11, italic: true, color: C.muted, fontFace: 'Calibri' });
 }
 
 // KPI estilo Santa Mônica: card lavanda discreto, label cinza pequeno, valor grande navy
@@ -3044,14 +3046,14 @@ function pptSocio(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: number, 
 
   // 3 KPIs principais — destacados
   const cw = (PPT_W - 2 * PPT_M - 0.4) / 3;
-  const cardsY = 1.7;
+  const cardsY = 1.85;
   const cardsH = 1.05;
   pptKpi(s, PPT_M + 0 * (cw + 0.2), cardsY, cw, cardsH, 'Renda Média', fmtBRL(data.rendaMedia), C.teal, 26);
   pptKpi(s, PPT_M + 1 * (cw + 0.2), cardsY, cw, cardsH, 'IDH Renda', String(data.idhRenda), C.navy, 26);
   pptKpi(s, PPT_M + 2 * (cw + 0.2), cardsY, cw, cardsH, 'IDH Educação', String(data.idhEduc), C.lime, 26);
 
   // Bloco esquerdo — distribuição etária / Bloco direito — heatmap
-  const blockY = cardsY + cardsH + 0.25;
+  const blockY = cardsY + cardsH + 0.3;
   const blockH = PPT_H - blockY - 1.0;
   const leftW = (PPT_W - 2 * PPT_M - 0.3) * 0.42;
   const rightW = (PPT_W - 2 * PPT_M - 0.3) - leftW;
@@ -3141,14 +3143,14 @@ function pptPotencial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numb
   if (!data.potencial) {
     // Fallback: painel proxy
     s.addShape('rect', { x: PPT_M, y: 1.7, w: PPT_W - 2 * PPT_M, h: 0.7, fill: { color: C.beige }, line: { color: C.border, width: 0.5 } });
-    s.addText('Pyxis Potencial de Consumo não publicado para este município.', { x: PPT_M + 0.2, y: 1.78, w: PPT_W - 2 * PPT_M - 0.4, h: 0.3, fontSize: 12, italic: true, color: C.navy, fontFace: 'Calibri' });
-    s.addText('Apresentamos proxies socioeconômicos do município para sustentar a leitura comercial.', { x: PPT_M + 0.2, y: 2.05, w: PPT_W - 2 * PPT_M - 0.4, h: 0.3, fontSize: 10, color: C.muted, fontFace: 'Calibri' });
+    s.addText('Pyxis Potencial de Consumo não publicado para este município.', { x: PPT_M + 0.2, y: 1.93, w: PPT_W - 2 * PPT_M - 0.4, h: 0.3, fontSize: 12, italic: true, color: C.navy, fontFace: 'Calibri' });
+    s.addText('Apresentamos proxies socioeconômicos do município para sustentar a leitura comercial.', { x: PPT_M + 0.2, y: 2.20, w: PPT_W - 2 * PPT_M - 0.4, h: 0.3, fontSize: 10, color: C.muted, fontFace: 'Calibri' });
     if (data.d) {
       const cw0 = (PPT_W - 2 * PPT_M - 0.45) / 4;
-      pptKpi(s, PPT_M + 0 * (cw0 + 0.15), 2.65, cw0, 0.85, 'Renda Média', fmtBRL(data.rendaMedia), C.teal);
-      pptKpi(s, PPT_M + 1 * (cw0 + 0.15), 2.65, cw0, 0.85, 'IDH Renda', String(data.idhRenda), C.navy);
-      pptKpi(s, PPT_M + 2 * (cw0 + 0.15), 2.65, cw0, 0.85, 'IDH Educação', String(data.idhEduc), C.lime);
-      pptKpi(s, PPT_M + 3 * (cw0 + 0.15), 2.65, cw0, 0.85, 'Pop. 0–19', fmtInt(data.pop0_19), C.teal);
+      pptKpi(s, PPT_M + 0 * (cw0 + 0.15), 2.80, cw0, 0.85, 'Renda Média', fmtBRL(data.rendaMedia), C.teal);
+      pptKpi(s, PPT_M + 1 * (cw0 + 0.15), 2.80, cw0, 0.85, 'IDH Renda', String(data.idhRenda), C.navy);
+      pptKpi(s, PPT_M + 2 * (cw0 + 0.15), 2.80, cw0, 0.85, 'IDH Educação', String(data.idhEduc), C.lime);
+      pptKpi(s, PPT_M + 3 * (cw0 + 0.15), 2.80, cw0, 0.85, 'Pop. 0–19', fmtInt(data.pop0_19), C.teal);
     }
     pptLeitura(s, 'Sem proxy direto de consumo educacional — use renda média e IDH como referência de capacidade de pagamento da região.', PPT_H - 1.0, 0.5, 'LEITURA COMERCIAL');
     return;
@@ -3160,10 +3162,10 @@ function pptPotencial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numb
   const totEd = matriculas + livros;
 
   const cw = (PPT_W - 2 * PPT_M - 0.45) / 4;
-  pptKpi(s, PPT_M + 0 * (cw + 0.15), 1.7, cw, 0.85, 'Matrículas/Mensalidades', fmtBRL(matriculas, true), C.teal);
-  pptKpi(s, PPT_M + 1 * (cw + 0.15), 1.7, cw, 0.85, 'Livros e Material Escolar', fmtBRL(livros, true), C.navy);
-  pptKpi(s, PPT_M + 2 * (cw + 0.15), 1.7, cw, 0.85, 'Livros Didáticos', fmtBRL(didaticos, true), C.lime);
-  pptKpi(s, PPT_M + 3 * (cw + 0.15), 1.7, cw, 0.85, 'Total Educacional', fmtBRL(totEd, true), C.teal);
+  pptKpi(s, PPT_M + 0 * (cw + 0.15), 1.85, cw, 0.85, 'Matrículas/Mensalidades', fmtBRL(matriculas, true), C.teal);
+  pptKpi(s, PPT_M + 1 * (cw + 0.15), 1.85, cw, 0.85, 'Livros e Material Escolar', fmtBRL(livros, true), C.navy);
+  pptKpi(s, PPT_M + 2 * (cw + 0.15), 1.85, cw, 0.85, 'Livros Didáticos', fmtBRL(didaticos, true), C.lime);
+  pptKpi(s, PPT_M + 3 * (cw + 0.15), 1.85, cw, 0.85, 'Total Educacional', fmtBRL(totEd, true), C.teal);
 
   const totalRenda = FAIXAS_RENDA.reduce((sum, c) => sum + (p.renda_classe[c] || 0), 0);
   const classData = FAIXAS_RENDA.map(c => {
@@ -3172,10 +3174,12 @@ function pptPotencial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numb
   });
   const chartData = [{ name: 'Potencial', labels: classData.map(c => c.classe), values: classData.map(c => Math.round(c.pot)) }];
   s.addChart(pptxgenChartType('bar'), chartData, {
-    x: PPT_M, y: 2.85, w: 7.8, h: 2.7,
+    x: PPT_M, y: 3.00, w: 7.8, h: 2.6,
     showTitle: true, title: 'Distribuição do Consumo Educacional por Classe', titleFontFace: 'Calibri', titleFontSize: 11, titleColor: C.navy,
     barDir: 'col', chartColors: [C.teal],
     showValue: false, catAxisLabelFontFace: 'Calibri', catAxisLabelFontSize: 10, valAxisLabelFontSize: 9,
+    catGridLine: { style: 'none' }, valGridLine: { style: 'none' },
+    showValAxisTitle: false, valAxisHidden: true,
     showLegend: false,
   });
 
@@ -3190,7 +3194,7 @@ function pptPotencial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: numb
     { text: fmtInt(c.dom), options: { fontSize: 10, color: C.text, align: 'right', fontFace: 'Calibri' } },
     { text: `${c.pct.toFixed(0)}%`, options: { fontSize: 10, bold: true, color: C.navy, align: 'right', fontFace: 'Calibri' } },
   ])];
-  s.addTable(tblRows, { x: 8.55, y: 2.85, w: 4.4, colW: [1.0, 1.9, 1.5], rowH: 0.27, fontFace: 'Calibri', border: { type: 'solid', color: C.borderLight, pt: 0.4 } });
+  s.addTable(tblRows, { x: 8.55, y: 3.00, w: 4.4, colW: [1.0, 1.9, 1.5], rowH: 0.27, fontFace: 'Calibri', border: { type: 'solid', color: C.borderLight, pt: 0.4 } });
 
   const altaRenda = classData.filter(c => ['A++', 'A+', 'B1'].includes(c.classe)).reduce((sum, c) => sum + c.pct, 0);
   const baixaRenda = classData.filter(c => ['D', 'E'].includes(c.classe)).reduce((sum, c) => sum + c.pct, 0);
