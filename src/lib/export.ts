@@ -1932,15 +1932,15 @@ function renderPdfEncerramento(page: PDFPage, font: PDFFont, bold: PDFFont, ital
 
   // Linha decorativa central
   const cx = PDF_W / 2;
-  page.drawRectangle({ x: cx - 24, y: PDF_H - 90, width: 48, height: 3, color: TEAL });
+  page.drawRectangle({ x: cx - 24, y: PDF_H - 50, width: 48, height: 3, color: TEAL });
 
   // Logo oficial centralizado no topo
   if (logoImg) {
-    const logoH = 56;
+    const logoH = 48;
     const logoW = (logoImg.width / logoImg.height) * logoH;
     page.drawImage(logoImg, {
       x: cx - logoW / 2,
-      y: PDF_H - 70 - logoH,
+      y: PDF_H - 110,
       width: logoW, height: logoH,
     });
   }
