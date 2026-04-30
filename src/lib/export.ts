@@ -506,7 +506,7 @@ export async function exportPDF(ctx: ExportContext): Promise<Blob> {
 }
 
 // ----- 1. Capa
-function renderPdfCapa(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext) {
+function renderPdfCapa(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFFont, ctx: ExportContext, logoImg?: any) {
   // ============================================================
   // CAPA PDF — composição central, alinhada ao PPT.
   // 16:9 (960x540pt). Margem 0,4" ≈ 29pt nas bordas.
@@ -523,14 +523,35 @@ function renderPdfCapa(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFF
   page.drawRectangle({ x: 0, y: PDF_H - 4, width: PDF_W, height: 4, color: LIME });
   page.drawRectangle({ x: 0, y: 0, width: PDF_W, height: 4, color: LIME });
 
-  // ---------- TOPO: marca ----------
-  const edb = 'E D B';
-  page.drawText(edb, { x: center(edb, bold, 22), y: PDF_H - SAFE - 36, size: 22, font: bold, color: WHITE });
-  const edbSub = 'EDITORA DO BRASIL';
-  page.drawText(edbSub, { x: center(edbSub, font, 9), y: PDF_H - SAFE - 56, size: 9, font, color: TEAL_LIGHT });
-
+  // ---------- TOPO: logo oficial centralizado ----------
+  if (logoImg) {
+    const logoH = 64;
+    const logoW = (logoImg.width / logoImg.height) * logoH;
+    page.drawImage(logoImg, {
+      x: cx - logoW / 2,
+      y: PDF_H - SAFE - logoH - 8,
+      width: logoW, height: logoH,
+    });
+  } else {
+    const edb = 'E D B';
+    page.drawText(edb, { x: center(edb, bold, 22), y: PDF_H - SAFE - 36, size: 22, font: bold, color: WHITE });
+    const edbSub = 'EDITORA DO BRASIL';
+    page.drawText(edbSub, { x: center(edbSub, font, 9), y: PDF_H - SAFE - 56, size: 9, font, color: TEAL_LIGHT });
+  }
   // Filete teal centralizado
-  page.drawRectangle({ x: cx - 22, y: PDF_H - SAFE - 76, width: 44, height: 2, color: TEAL });
+  page.drawRectangle({ x: cx - 22, y: PDF_H - SAFE - 100, width: 44, height: 2, color: TEAL });
+
+  // ---------- MARCA D'ÁGUA: logo discreto no canto inferior direito ----------
+  if (logoImg) {
+    const wmH = 48;
+    const wmW = (logoImg.width / logoImg.height) * wmH;
+    page.drawImage(logoImg, {
+      x: PDF_W - SAFE - wmW,
+      y: SAFE - 4,
+      width: wmW, height: wmH,
+      opacity: 0.12,
+    });
+  }
 
   // ---------- BLOCO CENTRAL ----------
   // Subtítulo: "Diagnóstico Territorial · [Tipo]"
