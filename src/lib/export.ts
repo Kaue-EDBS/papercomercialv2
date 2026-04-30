@@ -2007,8 +2007,12 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
   const data = buildPageData(ctx);
   const total = SLIDE_TITLES.length;
 
+  // Logo oficial em base64 (data URI) — usado em capa, encerramento e marca d'água
+  let logoData: string | null = null;
+  try { logoData = await loadLogoBase64(); } catch (e) { console.warn('Logo PPT não carregado', e); }
+
   const renderersAll: Array<{ render: (s: PptxGenJS.Slide, n: number) => void; key?: string }> = [
-    { render: (s) => pptCapa(s, ctx) },
+    { render: (s) => pptCapa(s, ctx, logoData) },
     { render: (s, n) => pptAbertura(s, ctx, n, total) },
     { render: (s, n) => pptResumo(s, ctx, data, n, total) },
     { render: (s, n) => pptPanorama(s, ctx, data, n, total) },
@@ -2019,7 +2023,7 @@ export async function exportPPTX(ctx: ExportContext): Promise<Blob> {
     { render: (s, n) => pptPotencial(s, ctx, data, n, total) },
     { render: (s, n) => pptInsights(s, ctx, data, n, total) },
     { render: (s, n) => pptAcaoComercial(s, ctx, data, n, total) },
-    { render: (s) => pptEncerramento(s, ctx) },
+    { render: (s) => pptEncerramento(s, ctx, logoData) },
   ];
   const renderers = renderersAll.map(r => r.render);
 
