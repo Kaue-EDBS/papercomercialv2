@@ -3551,7 +3551,7 @@ function pptAcaoComercial(s: PptxGenJS.Slide, ctx: ExportContext, data: any, n: 
 }
 
 // ----- 14. Encerramento
-function pptEncerramento(s: PptxGenJS.Slide, ctx?: ExportContext) {
+function pptEncerramento(s: PptxGenJS.Slide, ctx?: ExportContext, logoData?: string | null) {
   // Layout split (espelha a capa): painel navy à esquerda + texto à direita em fundo branco
   s.background = { color: C.white };
   const splitX = 5.3;
@@ -3564,8 +3564,15 @@ function pptEncerramento(s: PptxGenJS.Slide, ctx?: ExportContext) {
       fill: { type: 'none' } as any, line: { color: C.navySoft, width: 0.6 },
     });
   }
-  s.addText('EDB', { x: 0.5, y: 0.6, w: 2, h: 0.5, fontSize: 22, bold: true, color: C.lavender, fontFace: 'Calibri', charSpacing: 2 });
-  s.addText('Editora do Brasil', { x: 0.5, y: 1.05, w: 4, h: 0.3, fontSize: 11, italic: true, color: C.lavender, fontFace: 'Calibri' });
+  if (logoData) {
+    s.addImage({
+      data: logoData, x: 0.5, y: 0.55, w: 1.5, h: 1.5,
+      sizing: { type: 'contain', w: 1.5, h: 1.5 } as any,
+    });
+  } else {
+    s.addText('EDB', { x: 0.5, y: 0.6, w: 2, h: 0.5, fontSize: 22, bold: true, color: C.lavender, fontFace: 'Calibri', charSpacing: 2 });
+    s.addText('Editora do Brasil', { x: 0.5, y: 1.05, w: 4, h: 0.3, fontSize: 11, italic: true, color: C.lavender, fontFace: 'Calibri' });
+  }
 
   // Lado direito (texto)
   s.addText('Obrigado pelo Seu Tempo', { x: splitX + 0.6, y: 0.85, w: PPT_W - splitX - 1.0, h: 0.85, fontSize: 36, bold: true, color: C.navy, fontFace: 'Calibri' });
@@ -3589,6 +3596,17 @@ function pptEncerramento(s: PptxGenJS.Slide, ctx?: ExportContext) {
     s.addText(`${ctx.session.nome} · ${ctx.session.codigo}`, { x: splitX + 0.85, y: cy + 1.12, w: PPT_W - splitX - 1.5, h: 0.3, fontSize: 11, color: C.muted, fontFace: 'Calibri' });
   }
   s.addText('Educação que transforma, parceria que constrói.', { x: splitX + 0.6, y: PPT_H - 0.55, w: PPT_W - splitX - 1.0, h: 0.3, fontSize: 11, italic: true, color: C.muted, fontFace: 'Calibri' });
+
+  // Marca d'água: logo discreto no canto inferior direito
+  if (logoData) {
+    s.addImage({
+      data: logoData,
+      x: PPT_W - 0.4 - 0.7, y: PPT_H - 0.4 - 0.7,
+      w: 0.7, h: 0.7,
+      transparency: 85,
+      sizing: { type: 'contain', w: 0.7, h: 0.7 } as any,
+    } as any);
+  }
 }
 
 // ============================================================
