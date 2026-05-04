@@ -155,13 +155,26 @@ export default function PageCarteira({ session, onPickEscola, onBack, censoData 
     else {
       // Segundo fallback: procura na setorização 2026 pelo COD_PROTHEUS.
       // A setorização possui dados análogos ao censo (matrículas, mensalidade,
-      // coords, perfil socioeconômico) e basta para gerar o paper.
+      // coords, perfil socioeconômico) e basta para gerar o paper — mesmo
+      // sem Código INEP. Nesse caso, usamos o próprio COD_PROTHEUS como
+      // identificador da escola foco no fluxo (`PROT-<codigo>`).
       const setRow = findInSetorizacao(setorRows, {
         protheus: confirmEscola['COD_PROTHEUS'] as string | number | undefined,
       });
-      const setInep = setRow ? String(setRow['COD_INEP'] ?? '').trim() : '';
-      if (setInep) { setResolvedInep(setInep); setResolveError(null); }
-      else { setResolvedInep(null); setResolveError('Não foi possível localizar esta escola no censo nem na setorização 2026 a partir do Código Protheus.'); }
+      if (setRow) {
+        const setInep = String(setRow['COD_INEP'] ?? '').trim();
+        if (setInep && setInep !== '-' && setInep !== '0') {
+          setResolvedInep(setInep);
+        } else {
+          // Sem INEP em lugar nenhum — usa COD_PROTHEUS como identificador.
+          const prot = String(confirmEscola['COD_PROTHEUS'] ?? '').trim().toUpperCase();
+          setResolvedInep(prot ? `PROT-${prot}` : null);
+        }
+        setResolveError(null);
+      } else {
+        setResolvedInep(null);
+        setResolveError('Não foi possível localizar esta escola na setorização 2026 a partir do Código Protheus.');
+      }
     }
   }, [confirmEscola, censoData, setorRows]);
 
