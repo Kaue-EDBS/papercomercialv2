@@ -145,9 +145,10 @@ export default function PageCarteira({ session, onPickEscola, onBack, censoData 
       codMunicipio: confirmEscola['COD MUNICIPIO'] as string | number | undefined,
       latitude: confirmEscola['LATITUDE'] as string | number | undefined,
       longitude: confirmEscola['LONGITUDE'] as string | number | undefined,
+      codProtheus: confirmEscola['COD_PROTHEUS'] as string | number | undefined,
     }, censoData);
     if (inep) { setResolvedInep(inep); setResolveError(null); }
-    else { setResolvedInep(null); setResolveError('Não localizamos esta escola no censo automaticamente.'); }
+    else { setResolvedInep(null); setResolveError('Não foi possível localizar esta escola no censo a partir do Código Protheus.'); }
   }, [confirmEscola, censoData]);
 
   const selectedRow = selectedIdx !== null ? filteredSorted[selectedIdx] : null;
