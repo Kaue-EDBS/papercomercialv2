@@ -3,6 +3,8 @@ import { ConsultorSession, EscolaData } from '@/lib/types';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
 import { useCarteira, CarteiraFile } from '@/hooks/useCarteira';
 import { resolveInepFromCarteira } from '@/lib/analysis';
+import { findInSetorizacao } from '@/lib/analysis';
+import { useSetorizacao } from '@/hooks/useSetorizacao';
 import { useLatLongProtheus } from '@/hooks/useLatLongProtheus';
 import { ArrowUp, ArrowDown, Settings2, X, Search, AlertTriangle } from 'lucide-react';
 
@@ -33,6 +35,8 @@ type Row = CarteiraFile['rows'][number];
 export default function PageCarteira({ session, onPickEscola, onBack, censoData }: Props) {
   const { findByCodigo, findByNome, loading: loadingManifest } = useCarteiraManifest();
   const { lookup: lookupLatLong } = useLatLongProtheus();
+  // Setorização 2026 como fonte alternativa quando o censo não tem a escola.
+  const { rows: setorRows } = useSetorizacao(true);
   const entry = useMemo(
     () => findByCodigo(session.codigo) || findByNome(session.nome),
     [session, findByCodigo, findByNome],
@@ -148,8 +152,18 @@ export default function PageCarteira({ session, onPickEscola, onBack, censoData 
       codProtheus: confirmEscola['COD_PROTHEUS'] as string | number | undefined,
     }, censoData);
     if (inep) { setResolvedInep(inep); setResolveError(null); }
-    else { setResolvedInep(null); setResolveError('Não foi possível localizar esta escola no censo a partir do Código Protheus.'); }
-  }, [confirmEscola, censoData]);
+    else {
+      // Segundo fallback: procura na setorização 2026 pelo COD_PROTHEUS.
+      // A setorização possui dados análogos ao censo (matrículas, mensalidade,
+      // coords, perfil socioeconômico) e basta para gerar o paper.
+      const setRow = findInSetorizacao(setorRows, {
+        protheus: confirmEscola['COD_PROTHEUS'] as string | number | undefined,
+      });
+      const setInep = setRow ? String(setRow['COD_INEP'] ?? '').trim() : '';
+      if (setInep) { setResolvedInep(setInep); setResolveError(null); }
+      else { setResolvedInep(null); setResolveError('Não foi possível localizar esta escola no censo nem na setorização 2026 a partir do Código Protheus.'); }
+    }
+  }, [confirmEscola, censoData, setorRows]);
 
   const selectedRow = selectedIdx !== null ? filteredSorted[selectedIdx] : null;
 

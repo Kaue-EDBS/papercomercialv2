@@ -1,4 +1,4 @@
-import { EscolaData, DemograficaData, AnalysisResult, ConcorrenteInfo, MarketShareData } from './types';
+import { EscolaData, DemograficaData, AnalysisResult, ConcorrenteInfo, MarketShareData, SetorizacaoRow } from './types';
 
 const MENSALIDADE_ORDER: Record<string, number> = {
   '0': 0,
@@ -465,4 +465,91 @@ export function resolveInepFromCarteira(
   // Limiar mínimo para evitar match espúrio
   if (!best || best.score < 45) return null;
   return String(best.e['Código Inep']);
+}
+
+/* ------------------------------------------------------------------ */
+/* Adapter: Setorização 2026 → EscolaData                              */
+/*                                                                     */
+/* Quando uma escola não está no censo_escolar mas está na setorização */
+/* 2026 (que tem matrículas, mensalidade, endereço e coordenadas),     */
+/* convertemos a linha em EscolaData para alimentar runAnalysis sem    */
+/* depender do censo escolar para a escola foco.                       */
+/* ------------------------------------------------------------------ */
+
+function pickMensalidade(row: SetorizacaoRow): string {
+  // Os campos da setorização para mensalidade têm rótulos por segmento
+  // (EI / EF1 / EF2 / EM) e um agregado "> ALTO". Usamos o mais alto disponível.
+  const candidates = ['> ALTO', 'EM (2)', 'EF2', 'EF1', 'EI (2)'];
+  for (const c of candidates) {
+    const v = row[c];
+    if (v != null && String(v).trim() !== '' && String(v).trim() !== '-') {
+      // Padrão: "4. R$1.400 a R$2.399" → extrai a faixa textual usada no censo.
+      const s = String(v);
+      if (/2\.?400/.test(s)) return 'acima de R$ 2.400';
+      if (/1\.?400/.test(s)) return '1.400 a 2.399';
+      if (/800/.test(s)) return '800 a 1.399';
+      if (/400/.test(s)) return '400 a 799';
+      if (/399/.test(s) || /at[ée]/i.test(s)) return 'até 399';
+    }
+  }
+  return '';
+}
+
+/**
+ * Converte uma linha da setorização 2026 em uma EscolaData "sintética"
+ * que pode ser injetada no array de censo para alimentar runAnalysis.
+ */
+export function setorizacaoRowToEscolaData(row: SetorizacaoRow): EscolaData | null {
+  const inep = String(row['COD_INEP'] ?? '').trim();
+  const nome = String(row['NOME ESCOLA'] ?? '').trim();
+  if (!inep || !nome) return null;
+  const adotaBrasil = String(row['ADOTA BRASIL?'] ?? '').toLowerCase().includes('sim') ? 'Sim' : 'Não';
+  return {
+    Ano: '2026',
+    UF: String(row['UF'] ?? ''),
+    Município: String(row['MUNICIPIO'] ?? ''),
+    'Código Município': String(row['COD MUNICIPIO'] ?? ''),
+    Escola: nome,
+    'Código Inep': inep,
+    Latitude: String(row['LATITUDE'] ?? ''),
+    Longitude: String(row['LONGITUDE'] ?? ''),
+    'Tipo de Adoção': String(row['TIPO ADOÇÃO'] ?? ''),
+    Mensalidade: pickMensalidade(row),
+    'Perfil Socioeconômico': String(row['CLUSTER SOCIOECONOMICO'] ?? ''),
+    Endereço: String(row['ENDEREÇO'] ?? ''),
+    Número: String(row['NUMERO'] ?? ''),
+    Complemento: String(row['COMPLEMENTO'] ?? ''),
+    Bairro: String(row['BAIRRO'] ?? ''),
+    CEP: String(row['CEP'] ?? ''),
+    qt_mat_educacao_infantil: String(row['EI'] ?? '0'),
+    qt_mat_ensino_fundamental_anos_iniciais: String(row['F1'] ?? '0'),
+    qt_mat_ensino_fundamental_anos_finais: String(row['F2'] ?? '0'),
+    qt_mat_ensino_medio: String(row['EM'] ?? '0'),
+    'Alunado Total': String(row['TOTAL'] ?? '0'),
+    'Adota Brasil': adotaBrasil,
+  };
+}
+
+/**
+ * Procura uma escola na setorização 2026 por Código Protheus OU Código Inep.
+ * Retorna a linha bruta (com todos os campos da setorização).
+ */
+export function findInSetorizacao(
+  setor: SetorizacaoRow[],
+  opts: { protheus?: string | number | null; inep?: string | number | null },
+): SetorizacaoRow | null {
+  if (!setor?.length) return null;
+  const p = opts.protheus != null ? String(opts.protheus).trim().toUpperCase() : '';
+  const i = opts.inep != null ? String(opts.inep).trim() : '';
+  for (const r of setor) {
+    if (p) {
+      const rp = r['COD_PROTHEUS'];
+      if (rp != null && String(rp).trim().toUpperCase() === p) return r;
+    }
+    if (i) {
+      const ri = r['COD_INEP'];
+      if (ri != null && String(ri).trim() === i) return r;
+    }
+  }
+  return null;
 }
