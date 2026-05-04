@@ -1,4 +1,4 @@
-import { EscolaData, DemograficaData, AnalysisResult, ConcorrenteInfo, MarketShareData } from './types';
+import { EscolaData, DemograficaData, AnalysisResult, ConcorrenteInfo, MarketShareData, SetorizacaoRow } from './types';
 
 const MENSALIDADE_ORDER: Record<string, number> = {
   '0': 0,
