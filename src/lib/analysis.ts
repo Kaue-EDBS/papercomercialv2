@@ -401,18 +401,23 @@ export interface CarteiraEscolaHint {
   codMunicipio?: string | number;
   latitude?: number | string;
   longitude?: number | string;
+  /** Código Protheus — usado para rastreabilidade quando o INEP está ausente. */
+  codProtheus?: string | number;
 }
 
 /**
  * Tenta localizar a escola no censo a partir dos dados da carteira (Protheus).
- * Útil quando o COD_INEP está vazio. Retorna o Código Inep ou null.
+ * REGRA: sempre que uma escola não tiver Código INEP, este resolver usa os dados
+ * vinculados ao Código Protheus da carteira (nome, município, UF, coords) para
+ * localizá-la no censo e devolver o INEP correspondente. Retorna null se não
+ * houver match confiável.
  */
 export function resolveInepFromCarteira(
   hint: CarteiraEscolaHint,
   censoData: EscolaData[],
 ): string | null {
   const target = normalizeName(hint.nome);
-  if (!target) return null;
+  if (!target && !hint.codProtheus) return null;
   const ufHint = String(hint.uf || '').trim().toUpperCase();
   const munHint = normalizeName(hint.municipio || '');
   const codMun = hint.codMunicipio != null ? String(hint.codMunicipio).replace(/\D/g, '') : '';
