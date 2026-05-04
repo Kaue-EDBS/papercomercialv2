@@ -3,6 +3,7 @@ import { Search, ArrowLeft, Check } from 'lucide-react';
 import { EscolaData, ConsultorSession } from '@/lib/types';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
 import { useCarteira } from '@/hooks/useCarteira';
+import { resolveInepFromCarteira } from '@/lib/analysis';
 
 interface Props {
   censoData: EscolaData[];
@@ -43,8 +44,23 @@ export default function PagePaperBusca({ censoData, onConfirm, onBack, session }
     });
     if (!row) return null;
     const inep = row['COD_INEP'];
-    if (inep == null || String(inep).trim() === '') return null;
-    return { inep: String(inep).trim(), nomeEscola: String(row['NOME ESCOLA'] || '') };
+    const direto = inep != null ? String(inep).trim() : '';
+    if (direto && direto !== '-') {
+      return { inep: direto, nomeEscola: String(row['NOME ESCOLA'] || '') };
+    }
+    // Fallback: a linha da carteira tem o Protheus mas não tem INEP.
+    // Tentamos resolver pelo censo a partir dos demais campos (nome, município, UF, coords).
+    const resolved = resolveInepFromCarteira({
+      nome: String(row['NOME ESCOLA'] ?? ''),
+      municipio: String(row['MUNICIPIO'] ?? ''),
+      uf: String(row['UF'] ?? ''),
+      codMunicipio: row['COD MUNICIPIO'] as string | number | undefined,
+      latitude: row['LATITUDE'] as string | number | undefined,
+      longitude: row['LONGITUDE'] as string | number | undefined,
+      codProtheus: row['COD_PROTHEUS'] as string | number | undefined,
+    }, censoData);
+    if (resolved) return { inep: resolved, nomeEscola: String(row['NOME ESCOLA'] || '') };
+    return null;
   };
 
   const matches = useMemo(() => {
@@ -95,7 +111,7 @@ export default function PagePaperBusca({ censoData, onConfirm, onBack, session }
     if (hit) { onConfirm(hit.inep); return; }
     // 3) Numérico curto sem match — provável Protheus inexistente
     if (/^[A-Za-z0-9]+$/.test(q) && session) {
-      setProtheusErr(`Não encontramos o código "${q}" como Inep nem como Protheus na sua carteira.`);
+      setProtheusErr(`Não encontramos o código "${q}" como INEP nem foi possível localizar a escola no censo a partir do Protheus na sua carteira.`);
       return;
     }
     if (/^\d+$/.test(q)) onConfirm(q);
