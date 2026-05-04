@@ -119,26 +119,28 @@ export default function Index() {
     setError('');
     const cod = codigo.trim();
     let result = runAnalysis(cod, censo, demo, coordsOverride ?? null);
-    // Fallback: escola não está no censo escolar, mas pode estar na setorização 2026
-    // (caso típico de busca por COD_PROTHEUS sem INEP cadastrado no censo).
+    // Fallback: escola não localizada pelo INEP no censo. Como escolas sem INEP
+    // não terão INEP em lugar nenhum, tratamos o código informado também como
+    // COD_PROTHEUS na setorização 2026 e geramos a escola foco a partir dela
+    // (descartando o censo escolar para essa escola).
     if (!result && setorRows.length) {
-      const isNumericInep = /^\d{6,}$/.test(cod);
       const setRow = findInSetorizacao(setorRows, {
-        protheus: isNumericInep ? null : cod,
+        protheus: cod,
         inep: cod,
       });
       if (setRow) {
         const sintetica = setorizacaoRowToEscolaData(setRow);
         if (sintetica) {
-          // Injeta a escola virtual no censo e re-roda — a análise de
-          // concorrência segue usando o censo normal para os concorrentes.
+          // Injeta a escola virtual (com INEP real ou sintético "PROT-...") no
+          // censo e re-roda. A análise de concorrência continua usando o censo
+          // normal para os concorrentes do município.
           const censoAumentado = [sintetica, ...censo.filter(e => String(e['Código Inep']) !== sintetica['Código Inep'])];
           result = runAnalysis(sintetica['Código Inep'], censoAumentado, demo, coordsOverride ?? null);
         }
       }
     }
     if (!result) {
-      setError(`Não encontramos a escola para o Código Inep "${codigo}". Confira o número e tente de novo.`);
+      setError(`Não encontramos a escola para o código "${codigo}". Verifique se é um Código INEP válido ou um Código Protheus presente na setorização 2026.`);
       return;
     }
     setAnalysis(result);

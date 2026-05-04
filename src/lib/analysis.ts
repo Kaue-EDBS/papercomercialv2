@@ -500,9 +500,16 @@ function pickMensalidade(row: SetorizacaoRow): string {
  * que pode ser injetada no array de censo para alimentar runAnalysis.
  */
 export function setorizacaoRowToEscolaData(row: SetorizacaoRow): EscolaData | null {
-  const inep = String(row['COD_INEP'] ?? '').trim();
   const nome = String(row['NOME ESCOLA'] ?? '').trim();
-  if (!inep || !nome) return null;
+  if (!nome) return null;
+  const inepRaw = String(row['COD_INEP'] ?? '').trim();
+  const protheus = String(row['COD_PROTHEUS'] ?? '').trim();
+  // Escolas sem INEP usam um identificador virtual baseado no COD_PROTHEUS,
+  // para que o fluxo (que indexa pelo "Código Inep") continue funcionando.
+  const inep = inepRaw && inepRaw !== '-' && inepRaw !== '0'
+    ? inepRaw
+    : (protheus ? `PROT-${protheus.toUpperCase()}` : '');
+  if (!inep) return null;
   const adotaBrasil = String(row['ADOTA BRASIL?'] ?? '').toLowerCase().includes('sim') ? 'Sim' : 'Não';
   return {
     Ano: '2026',

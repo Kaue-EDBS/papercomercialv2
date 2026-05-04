@@ -112,8 +112,16 @@ export default function PageCarteira({ session, onPickEscola, onBack, censoData 
     if (!confirmEscola) return;
     const inepDireto = String(confirmEscola['COD_INEP'] ?? '').trim();
     const nome = String(confirmEscola['NOME ESCOLA'] ?? '').trim();
-    const inepFinal = inepDireto && inepDireto !== '-' ? inepDireto : (resolvedInep ?? '');
+    let inepFinal = inepDireto && inepDireto !== '-' ? inepDireto : (resolvedInep ?? '');
     if (!inepFinal) return;
+    // Se a escola não tem INEP (nem no cadastro, nem no censo, nem na
+    // setorização), `resolvedInep` virá como "PROT-<codigo>". Nesse caso,
+    // mandamos o COD_PROTHEUS bruto — `handleSearch` cuidará do match na
+    // setorização 2026.
+    if (inepFinal.startsWith('PROT-')) {
+      const prot = String(confirmEscola['COD_PROTHEUS'] ?? '').trim();
+      if (prot) inepFinal = prot;
+    }
     // Fallback de lat/long: se a escola no censo não tiver coords mas a carteira/lookup tiver,
     // propaga como override (será aplicado em runAnalysis SOMENTE se faltar no censo).
     const escCenso = censoData.find(e => String(e['Código Inep']) === String(inepFinal));
@@ -155,13 +163,26 @@ export default function PageCarteira({ session, onPickEscola, onBack, censoData 
     else {
       // Segundo fallback: procura na setorização 2026 pelo COD_PROTHEUS.
       // A setorização possui dados análogos ao censo (matrículas, mensalidade,
-      // coords, perfil socioeconômico) e basta para gerar o paper.
+      // coords, perfil socioeconômico) e basta para gerar o paper — mesmo
+      // sem Código INEP. Nesse caso, usamos o próprio COD_PROTHEUS como
+      // identificador da escola foco no fluxo (`PROT-<codigo>`).
       const setRow = findInSetorizacao(setorRows, {
         protheus: confirmEscola['COD_PROTHEUS'] as string | number | undefined,
       });
-      const setInep = setRow ? String(setRow['COD_INEP'] ?? '').trim() : '';
-      if (setInep) { setResolvedInep(setInep); setResolveError(null); }
-      else { setResolvedInep(null); setResolveError('Não foi possível localizar esta escola no censo nem na setorização 2026 a partir do Código Protheus.'); }
+      if (setRow) {
+        const setInep = String(setRow['COD_INEP'] ?? '').trim();
+        if (setInep && setInep !== '-' && setInep !== '0') {
+          setResolvedInep(setInep);
+        } else {
+          // Sem INEP em lugar nenhum — usa COD_PROTHEUS como identificador.
+          const prot = String(confirmEscola['COD_PROTHEUS'] ?? '').trim().toUpperCase();
+          setResolvedInep(prot ? `PROT-${prot}` : null);
+        }
+        setResolveError(null);
+      } else {
+        setResolvedInep(null);
+        setResolveError('Não foi possível localizar esta escola na setorização 2026 a partir do Código Protheus.');
+      }
     }
   }, [confirmEscola, censoData, setorRows]);
 
