@@ -2,7 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDataLoader } from '@/hooks/useDataLoader';
 import { prefetchPotencialConsumo } from '@/hooks/usePotencialConsumo';
-import { runAnalysis, rebuildConcorrentes, pickReplacement } from '@/lib/analysis';
+import { runAnalysis, rebuildConcorrentes, pickReplacement, findInSetorizacao, setorizacaoRowToEscolaData } from '@/lib/analysis';
+import { useSetorizacao } from '@/hooks/useSetorizacao';
 import { AppPage, PresentationType, AnalysisResult, ConsultorSession } from '@/lib/types';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -38,6 +39,9 @@ const SESSION_KEY = 'consultor:session:v1';
 
 export default function Index() {
   const { censo, demo, loading } = useDataLoader();
+  // Setorização 2026 — usada como fonte alternativa quando a escola não está no censo
+  // (ex.: busca por COD_PROTHEUS de uma escola sem cadastro no censo escolar).
+  const { rows: setorRows } = useSetorizacao(true);
   const [page, setPage] = useState<AppPage>('login');
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [presentationType, setPresentationType] = useState<PresentationType | null>(null);
@@ -113,7 +117,26 @@ export default function Index() {
 
   const handleSearch = useCallback((codigo: string, coordsOverride?: { lat: number; lng: number } | null) => {
     setError('');
-    const result = runAnalysis(codigo.trim(), censo, demo, coordsOverride ?? null);
+    const cod = codigo.trim();
+    let result = runAnalysis(cod, censo, demo, coordsOverride ?? null);
+    // Fallback: escola não está no censo escolar, mas pode estar na setorização 2026
+    // (caso típico de busca por COD_PROTHEUS sem INEP cadastrado no censo).
+    if (!result && setorRows.length) {
+      const isNumericInep = /^\d{6,}$/.test(cod);
+      const setRow = findInSetorizacao(setorRows, {
+        protheus: isNumericInep ? null : cod,
+        inep: cod,
+      });
+      if (setRow) {
+        const sintetica = setorizacaoRowToEscolaData(setRow);
+        if (sintetica) {
+          // Injeta a escola virtual no censo e re-roda — a análise de
+          // concorrência segue usando o censo normal para os concorrentes.
+          const censoAumentado = [sintetica, ...censo.filter(e => String(e['Código Inep']) !== sintetica['Código Inep'])];
+          result = runAnalysis(sintetica['Código Inep'], censoAumentado, demo, coordsOverride ?? null);
+        }
+      }
+    }
     if (!result) {
       setError(`Não encontramos a escola para o Código Inep "${codigo}". Confira o número e tente de novo.`);
       return;
@@ -127,7 +150,7 @@ export default function Index() {
     setExcluidosInep([]);
     setPresentationType(null);
     setPage('concEssenciais');
-  }, [censo, demo]);
+  }, [censo, demo, setorRows]);
 
   const handleCompare = useCallback((c1: string, c2: string) => {
     setError('');
