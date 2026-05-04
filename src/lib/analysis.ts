@@ -477,21 +477,18 @@ export function resolveInepFromCarteira(
 /* ------------------------------------------------------------------ */
 
 function pickMensalidade(row: SetorizacaoRow): string {
-  // Os campos da setorização para mensalidade têm rótulos por segmento
-  // (EI / EF1 / EF2 / EM) e um agregado "> ALTO". Usamos o mais alto disponível.
-  const candidates = ['> ALTO', 'EM (2)', 'EF2', 'EF1', 'EI (2)'];
-  for (const c of candidates) {
-    const v = row[c];
-    if (v != null && String(v).trim() !== '' && String(v).trim() !== '-') {
-      // Padrão: "4. R$1.400 a R$2.399" → extrai a faixa textual usada no censo.
-      const s = String(v);
-      if (/2\.?400/.test(s)) return 'acima de R$ 2.400';
-      if (/1\.?400/.test(s)) return '1.400 a 2.399';
-      if (/800/.test(s)) return '800 a 1.399';
-      if (/400/.test(s)) return '400 a 799';
-      if (/399/.test(s) || /at[ée]/i.test(s)) return 'até 399';
-    }
-  }
+  // REGRA: a faixa de mensalidade é extraída EXCLUSIVAMENTE da coluna BC
+  // do arquivo de Setorização 2026, que corresponde ao campo "> ALTO".
+  const v = row['> ALTO'];
+  if (v == null) return '';
+  const s = String(v).trim();
+  if (!s || s === '-') return '';
+  // Padrão: "4. R$1.400 a R$2.399" → mapeia para a faixa textual usada no censo.
+  if (/2\.?400/.test(s)) return 'acima de R$ 2.400';
+  if (/1\.?400/.test(s)) return '1.400 a 2.399';
+  if (/800/.test(s)) return '800 a 1.399';
+  if (/400/.test(s)) return '400 a 799';
+  if (/399/.test(s) || /at[ée]/i.test(s)) return 'até 399';
   return '';
 }
 
