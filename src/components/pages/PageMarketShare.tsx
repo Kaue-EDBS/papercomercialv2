@@ -204,20 +204,26 @@ export default function PageMarketShare({ analysis }: Props) {
       {heatmapData.length > 1 && (
         <div className="bg-card rounded-xl border p-4 sm:p-5 overflow-x-auto">
           <h3 className="font-semibold mb-3 sm:mb-4 text-xs sm:text-sm" style={{ color: 'hsl(var(--navy))' }}>Heatmap — Market Share por Segmento</h3>
-          <table className="w-full text-[10px] sm:text-xs min-w-[400px]">
+          <table className="w-full text-[10px] sm:text-xs min-w-[400px] table-fixed">
+            <colgroup>
+              <col style={{ width: '60%' }} />
+              {SEGMENT_KEYS.map(s => (
+                <col key={s.key} style={{ width: `${40 / SEGMENT_KEYS.length}%` }} />
+              ))}
+            </colgroup>
             <thead>
               <tr>
                 <th className="text-left py-1.5 px-2 font-semibold" style={{ color: 'hsl(var(--navy))' }}>Escola</th>
                 {SEGMENT_KEYS.map(s => (
-                  <th key={s.key} className="text-center py-1.5 px-2 font-semibold" style={{ color: 'hsl(var(--navy))' }}>{s.label.replace('Ens. ', '')}</th>
+                  <th key={s.key} className="text-center py-1.5 px-1 font-semibold" style={{ color: 'hsl(var(--navy))' }}>{s.label.replace('Ens. ', '')}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {heatmapData.map((row, ri) => (
                 <tr key={ri} className={row.isTarget ? 'font-semibold' : ''}>
-                  <td className="py-1.5 px-2 truncate max-w-[140px]" style={row.isTarget ? { color: 'hsl(174, 62%, 35%)' } : {}}>
-                    {row.name.length > 22 ? row.name.slice(0, 19) + '...' : row.name}
+                  <td className="py-1.5 px-2 break-words leading-tight" style={row.isTarget ? { color: 'hsl(174, 62%, 35%)' } : {}}>
+                    {row.name}
                   </td>
                   {row.segments.map(seg => {
                     const intensity = Math.min(seg.share / 30, 1); // normalize to ~30% max
@@ -225,7 +231,7 @@ export default function PageMarketShare({ analysis }: Props) {
                       ? `hsl(174, 62%, ${90 - intensity * 55}%)`
                       : `hsl(220, 50%, ${92 - intensity * 52}%)`;
                     return (
-                      <td key={seg.key} className="text-center py-1.5 px-2 rounded" style={{ background: bgColor }}>
+                      <td key={seg.key} className="text-center py-1.5 px-1 rounded" style={{ background: bgColor }}>
                         {seg.share > 0 ? formatPercent(seg.share) : '—'}
                       </td>
                     );
