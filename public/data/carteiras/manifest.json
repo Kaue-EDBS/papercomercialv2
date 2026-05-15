@@ -523,12 +523,5 @@
     "totalEscolas": 281,
     "gerente": "Carlos Augusto",
     "codConsultor": 19599
-  },
-  "kaue_pastrello": {
-    "arquivo": "kaue_pastrello.json",
-    "consultor": "Kaue Pastrello",
-    "totalEscolas": 16,
-    "gerente": "Vinicius Moraes",
-    "codConsultor": "DEMO001"
   }
 }
