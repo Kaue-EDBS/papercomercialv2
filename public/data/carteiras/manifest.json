@@ -272,6 +272,13 @@
     "gerente": "Carlos Augusto",
     "codConsultor": 669080
   },
+  "kaue_pastrello": {
+    "arquivo": "kaue_pastrello.json",
+    "consultor": "Kaue Pastrello",
+    "totalEscolas": 16,
+    "gerente": "Vinicius Moraes",
+    "codConsultor": "DEMO001"
+  },
   "joao_leite_de_souza": {
     "arquivo": "joao_leite_de_souza.json",
     "consultor": "Joao Leite de Souza",
