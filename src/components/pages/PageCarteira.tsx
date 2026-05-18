@@ -17,13 +17,14 @@ interface Props {
 
 const STORAGE_KEY = 'carteira:cols:v2';
 // Por enquanto, só estas 5 colunas são exibidas e filtráveis. Demais ficam ocultas até serem lapidadas.
-const ALLOWED_COLS = ['COD_PROTHEUS', 'COD_INEP', 'NOME ESCOLA', 'MUNICIPIO', 'UF'];
+const ALLOWED_COLS = ['COD_PROTHEUS', 'COD_INEP', 'CNPJ PROTHEUS', 'NOME ESCOLA', 'MUNICIPIO', 'UF'];
 const PRIORITY_COLS = ALLOWED_COLS;
 const DEFAULT_COLS = ALLOWED_COLS;
 const FILTERABLE_COLS = new Set(ALLOWED_COLS);
 const COL_LABELS: Record<string, string> = {
   'COD_PROTHEUS': 'Protheus',
   'COD_INEP': 'INEP',
+  'CNPJ PROTHEUS': 'CNPJ',
   'NOME ESCOLA': 'Escola',
   'MUNICIPIO': 'Município',
   'UF': 'UF',
