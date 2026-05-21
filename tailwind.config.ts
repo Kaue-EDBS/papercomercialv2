@@ -55,11 +55,20 @@ export default {
         lime: {
           DEFAULT: "hsl(var(--lime))",
           light: "hsl(var(--lime-light))",
+          deep: "hsl(var(--lime-deep))",
         },
         navy: {
           DEFAULT: "hsl(var(--navy))",
           light: "hsl(var(--navy-light))",
+          deep: "hsl(var(--navy-deep))",
+          soft: "hsl(var(--navy-soft))",
         },
+        turquoise: {
+          DEFAULT: "hsl(var(--turquoise))",
+          soft: "hsl(var(--turquoise-soft))",
+        },
+        "gray-soft": "hsl(var(--gray-soft))",
+        "gray-line": "hsl(var(--gray-line))",
         beige: {
           DEFAULT: "hsl(var(--beige))",
           dark: "hsl(var(--beige-dark))",

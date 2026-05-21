@@ -46,6 +46,16 @@
     --beige: 40 33% 96%;
     --beige-dark: 40 20% 88%;
 
+    /* Intelligent Compare palette (HSL approximations of oklch source) */
+    --navy-deep: 222 60% 18%;
+    --navy-soft: 220 30% 45%;
+    --lime-ic: 78 75% 60%;
+    --lime-deep: 80 65% 50%;
+    --turquoise: 188 55% 60%;
+    --turquoise-soft: 188 50% 85%;
+    --gray-soft: 220 15% 97%;
+    --gray-line: 220 12% 90%;
+
     --sidebar-background: 220 70% 18%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 174 62% 35%;
@@ -273,4 +283,13 @@
   .raio-slider:focus-visible::-webkit-slider-thumb {
     box-shadow: 0 0 0 4px hsl(174 62% 35% / 0.25), 0 2px 8px hsl(174 62% 35% / 0.4);
   }
+}
+
+@layer utilities {
+  .ic-gradient-navy {
+    background-image: linear-gradient(135deg, hsl(var(--navy-deep)) 0%, hsl(var(--navy)) 60%, hsl(var(--navy-soft)) 100%);
+  }
+  .ic-text-balance { text-wrap: balance; }
+  .ic-scrollbar-thin::-webkit-scrollbar { width: 6px; }
+  .ic-scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--gray-line)); border-radius: 3px; }
 }
