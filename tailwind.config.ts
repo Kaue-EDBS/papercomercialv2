@@ -55,6 +55,7 @@ export default {
         lime: {
           DEFAULT: "hsl(var(--lime))",
           light: "hsl(var(--lime-light))",
+          deep: "hsl(var(--lime-deep))",
         },
         navy: {
           DEFAULT: "hsl(var(--navy))",
