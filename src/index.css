@@ -46,6 +46,16 @@
     --beige: 40 33% 96%;
     --beige-dark: 40 20% 88%;
 
+    /* Intelligent Compare palette (HSL approximations of oklch source) */
+    --navy-deep: 222 60% 18%;
+    --navy-soft: 220 30% 45%;
+    --lime-ic: 78 75% 60%;
+    --lime-deep: 80 65% 50%;
+    --turquoise: 188 55% 60%;
+    --turquoise-soft: 188 50% 85%;
+    --gray-soft: 220 15% 97%;
+    --gray-line: 220 12% 90%;
+
     --sidebar-background: 220 70% 18%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 174 62% 35%;
