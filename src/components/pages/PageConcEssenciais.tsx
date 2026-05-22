@@ -53,13 +53,12 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
 
   // Sobe o aviso de mensalidade ao abrir a etapa, exceto se já foi dispensado para esta escola.
   useEffect(() => {
-    if (!semMensalidade) return;
     try {
       const dismissed = localStorage.getItem(MENSALIDADE_PROMPT_KEY);
       if (dismissed === inepKey) return;
     } catch { /* noop */ }
     setShowMensModal(true);
-  }, [semMensalidade, inepKey]);
+  }, [inepKey]);
 
   const closeMensModal = (persist: boolean) => {
     if (persist) {
