@@ -329,7 +329,7 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
                   <AlertTriangle className="w-5 h-5" style={{ color: 'hsl(40 80% 35%)' }} />
                 </div>
                 <h3 id="mens-modal-title" className="font-bold text-lg" style={{ color: 'hsl(var(--navy))' }}>
-                  Sem dado de mensalidade
+                  {semMensalidade ? 'Sem dado de mensalidade' : 'Confirmar faixa de mensalidade'}
                 </h3>
               </div>
               <button
@@ -342,12 +342,25 @@ export default function PageConcEssenciais({ escola, censoData, initialEssenciai
             </div>
 
             <div className="text-sm text-foreground space-y-2">
-              <p>
-                A base do censo não traz a mensalidade de <strong style={{ color: 'hsl(var(--navy))' }}>{escola.Escola}</strong>.
-              </p>
-              <p className="text-muted-foreground text-xs">
-                Se você souber a faixa praticada, selecione abaixo. Isso será usado nas comparações de mensalidade e posicionamento competitivo. Caso contrário, pode pular — a apresentação seguirá indicando "Dado não disponível".
-              </p>
+              {semMensalidade ? (
+                <>
+                  <p>
+                    A base do censo não traz a mensalidade de <strong style={{ color: 'hsl(var(--navy))' }}>{escola.Escola}</strong>.
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Se você souber a faixa praticada, selecione abaixo. Isso será usado nas comparações de mensalidade e posicionamento competitivo. Caso contrário, pode pular — a apresentação seguirá indicando "Dado não disponível".
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    Temos a faixa <strong style={{ color: 'hsl(var(--navy))' }}>{String(escola.Mensalidade)}</strong> registrada para <strong style={{ color: 'hsl(var(--navy))' }}>{escola.Escola}</strong>.
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Se quiser ajustar a faixa para enriquecer a apresentação, selecione abaixo. Caso contrário, pode pular e seguimos com a faixa atual.
+                  </p>
+                </>
+              )}
             </div>
 
             <div className="space-y-2">
