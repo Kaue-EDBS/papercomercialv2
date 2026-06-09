@@ -301,7 +301,15 @@ export default function PageAdmin() {
       <section>
         <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
           <h2 className="font-bold" style={{ color: 'hsl(var(--navy))' }}>Cadastros</h2>
-          <div className="relative">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => { setNewDraft({ cod_protheus: '', nome: '', gestor: '', cargo: 'consultor', email: '' }); setShowNew(true); }}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white"
+              style={{ background: 'hsl(var(--teal))' }}
+            >
+              <UserPlus className="w-4 h-4" /> Novo cadastro
+            </button>
+            <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               placeholder="Buscar por código, nome ou gestor"
@@ -309,6 +317,7 @@ export default function PageAdmin() {
               onChange={e => setQuery(e.target.value)}
               className="pl-9 pr-3 py-2 rounded-lg border bg-card text-sm w-72 max-w-full"
             />
+            </div>
           </div>
         </div>
 
@@ -469,7 +478,14 @@ export default function PageAdmin() {
                           )}
                         </div>
                       ) : (
-                        <span className="text-xs text-muted-foreground">aguardando 1º acesso</span>
+                        <button
+                          disabled={creating}
+                          onClick={() => void provision({ cod_protheus: r.cod_protheus, nome: r.nome, gestor: r.gestor, cargo: r.cargo })}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs hover:bg-accent disabled:opacity-50"
+                          title="Pré-criar conta (gera senha temporária)"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" /> Cadastrar
+                        </button>
                       )}
                     </td>
                   </tr>
