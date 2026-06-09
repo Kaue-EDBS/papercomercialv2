@@ -1,13 +1,5 @@
 import { EscolaData, DemograficaData, AnalysisResult, ConcorrenteInfo, MarketShareData, SetorizacaoRow } from './types';
-
-const MENSALIDADE_ORDER: Record<string, number> = {
-  '0': 0,
-  'até 399': 1,
-  '400 a 799': 2,
-  '800 a 1.399': 3,
-  '1.400 a 2.399': 4,
-  'acima de R$ 2.400': 5,
-};
+import { MENSALIDADE_ORDER, getMensalidadeFaixa, isMensalidadeCompativel } from './mensalidade';
 
 function parseBrNumber(val: string): number {
   if (!val) return 0;
@@ -38,17 +30,6 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function getMensalidadeFaixa(m: string): number {
-  return MENSALIDADE_ORDER[m] ?? -1;
-}
-
-function isMensalidadeCompativel(escolaM: string, concM: string): boolean {
-  const eF = getMensalidadeFaixa(escolaM);
-  const cF = getMensalidadeFaixa(concM);
-  if (eF < 0 || cF < 0) return true; // if unknown, include
-  return Math.abs(eF - cF) <= 1;
-}
-
 function calcDensidadeEscolar(escolasMunicipio: number, areaKm2: number): number {
   if (areaKm2 <= 0) return 0;
   return escolasMunicipio / areaKm2;
@@ -60,6 +41,29 @@ function calcRaioOperacional(densidade: number): number {
   if (densidade >= 2) return 6;
   if (densidade >= 0.8) return 8;
   return 10;
+}
+
+/**
+ * (#9) Cálculo de market share — antes duplicado em runAnalysis e rebuildConcorrentes.
+ * Centralizado para garantir que qualquer mudança na fórmula seja aplicada uma única vez.
+ */
+function computeMarketShare(escola: EscolaData, concorrentes: ConcorrenteInfo[]): MarketShareData {
+  const escolaTotal = num(escola['Alunado Total']);
+  const concTotal = concorrentes.reduce((s, c) => s + num(c.escola['Alunado Total']), 0);
+  const universo = escolaTotal + concTotal;
+  const calcMS = (field: keyof EscolaData) => {
+    const ev = num(escola[field] as string);
+    const cv = concorrentes.reduce((s, c) => s + num(c.escola[field] as string), 0);
+    const t = ev + cv;
+    return t > 0 ? (ev / t) * 100 : 0;
+  };
+  return {
+    geral: universo > 0 ? (escolaTotal / universo) * 100 : 0,
+    ei: calcMS('qt_mat_educacao_infantil'),
+    efi: calcMS('qt_mat_ensino_fundamental_anos_iniciais'),
+    efii: calcMS('qt_mat_ensino_fundamental_anos_finais'),
+    em: calcMS('qt_mat_ensino_medio'),
+  };
 }
 
 /**
@@ -160,28 +164,36 @@ export function rebuildConcorrentes(
     escola: c.escola, distancia: c.distancia, proximidadeCEP: c.proximidadeCEP, segmentosComum: c.segmentosComum,
   }));
 
-  // Recalcula market share
-  const escolaTotal = num(escola['Alunado Total']);
-  const concTotal = concorrentes.reduce((s, c) => s + num(c.escola['Alunado Total']), 0);
-  const universo = escolaTotal + concTotal;
-  const calcMS = (field: keyof EscolaData) => {
-    const ev = num(escola[field] as string);
-    const cv = concorrentes.reduce((s, c) => s + num(c.escola[field] as string), 0);
-    const t = ev + cv;
-    return t > 0 ? (ev / t) * 100 : 0;
-  };
-  const marketShare: MarketShareData = {
-    geral: universo > 0 ? (escolaTotal / universo) * 100 : 0,
-    ei: calcMS('qt_mat_educacao_infantil'),
-    efi: calcMS('qt_mat_ensino_fundamental_anos_iniciais'),
-    efii: calcMS('qt_mat_ensino_fundamental_anos_finais'),
-    em: calcMS('qt_mat_ensino_medio'),
-  };
+  const marketShare = computeMarketShare(escola, concorrentes);
 
   return { ...base, concorrentes, raioOperacional: raio, marketShare };
 }
 
 export function runAnalysis(
+  codigoInep: string,
+  censoData: EscolaData[],
+  demoData: DemograficaData[],
+  coordsOverride?: { lat: number; lng: number } | null,
+): AnalysisResult | null {
+  // (#3) Cache em memória — runAnalysis é determinístico por (inep, dataset).
+  // Usamos o tamanho dos arrays como proxy de versão (suficiente em runtime).
+  // Pula o cache quando há coordsOverride (caso específico do Protheus fallback).
+  if (!coordsOverride) {
+    const key = `${codigoInep}|${censoData.length}|${demoData.length}`;
+    const hit = ANALYSIS_CACHE.get(key);
+    if (hit) return hit;
+    const result = runAnalysisCore(codigoInep, censoData, demoData, null);
+    if (result) ANALYSIS_CACHE.set(key, result);
+    return result;
+  }
+  return runAnalysisCore(codigoInep, censoData, demoData, coordsOverride);
+}
+
+// Cache do resultado (#3) e da densidade por município (#2).
+const ANALYSIS_CACHE = new Map<string, AnalysisResult>();
+const DENSIDADE_CACHE = new Map<string, number>();
+
+function runAnalysisCore(
   codigoInep: string,
   censoData: EscolaData[],
   demoData: DemograficaData[],
@@ -213,8 +225,15 @@ export function runAnalysis(
     return ibge6 === cod6;
   }) || null;
 
-  const areaKm2 = demografica ? parseBrNumber(demografica['Área KM²']) : 0;
-  const densidadeEscolar = calcDensidadeEscolar(escolasMunicipio.length, areaKm2);
+  // (#2) Densidade por município é cara de recalcular quando há muitas escolas;
+  // usamos um cache por código do município + número de escolas (proxy de versão).
+  const densKey = `${codMun}|${escolasMunicipio.length}`;
+  let densidadeEscolar = DENSIDADE_CACHE.get(densKey);
+  if (densidadeEscolar === undefined) {
+    const areaKm2 = demografica ? parseBrNumber(demografica['Área KM²']) : 0;
+    densidadeEscolar = calcDensidadeEscolar(escolasMunicipio.length, areaKm2);
+    DENSIDADE_CACHE.set(densKey, densidadeEscolar);
+  }
   const raioOperacional = calcRaioOperacional(densidadeEscolar);
 
   // Get school segments and mensalidade
@@ -294,25 +313,7 @@ export function runAnalysis(
     segmentosComum: c.segmentosComum,
   }));
 
-  // Calculate market share
-  const escolaTotal = num(escola['Alunado Total']);
-  const concTotal = concorrentes.reduce((sum, c) => sum + num(c.escola['Alunado Total']), 0);
-  const universo = escolaTotal + concTotal;
-
-  const calcMS = (field: keyof EscolaData) => {
-    const escolaVal = num(escola[field] as string);
-    const concVal = concorrentes.reduce((s, c) => s + num(c.escola[field] as string), 0);
-    const total = escolaVal + concVal;
-    return total > 0 ? (escolaVal / total) * 100 : 0;
-  };
-
-  const marketShare: MarketShareData = {
-    geral: universo > 0 ? (escolaTotal / universo) * 100 : 0,
-    ei: calcMS('qt_mat_educacao_infantil'),
-    efi: calcMS('qt_mat_ensino_fundamental_anos_iniciais'),
-    efii: calcMS('qt_mat_ensino_fundamental_anos_finais'),
-    em: calcMS('qt_mat_ensino_medio'),
-  };
+  const marketShare = computeMarketShare(escola, concorrentes);
 
   return {
     escola,
@@ -341,7 +342,8 @@ export function getSegmentosLabel(e: EscolaData): string {
   return getSegmentos(e).join(', ') || 'Nenhum';
 }
 
-export { getSegmentos, num, parseBrNumber, getMensalidadeFaixa };
+export { getSegmentos, num, parseBrNumber };
+export { getMensalidadeFaixa, isMensalidadeCompativel, MENSALIDADE_ORDER } from './mensalidade';
 
 /**
  * Devolve o próximo concorrente elegível para preencher uma vaga liberada,
