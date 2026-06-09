@@ -17,6 +17,7 @@ export type Database = {
       profiles: {
         Row: {
           arquivo_carteira: string | null
+          cargo: string
           cod_protheus: string
           created_at: string
           gestor: string | null
@@ -27,6 +28,7 @@ export type Database = {
         }
         Insert: {
           arquivo_carteira?: string | null
+          cargo?: string
           cod_protheus: string
           created_at?: string
           gestor?: string | null
@@ -37,6 +39,7 @@ export type Database = {
         }
         Update: {
           arquivo_carteira?: string | null
+          cargo?: string
           cod_protheus?: string
           created_at?: string
           gestor?: string | null
