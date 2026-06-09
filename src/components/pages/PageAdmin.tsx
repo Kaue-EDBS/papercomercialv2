@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
-import { KeyRound, RefreshCcw, Search, BarChart3, Users, AlertTriangle, Trash2 } from 'lucide-react';
+import { KeyRound, RefreshCcw, Search, BarChart3, Users, AlertTriangle, Trash2, Pencil, Save, X } from 'lucide-react';
 
 interface ProfileRow {
   id: string;
@@ -10,6 +10,7 @@ interface ProfileRow {
   gestor: string | null;
   arquivo_carteira: string | null;
   must_change_password: boolean;
+  cargo: string;
   created_at: string;
   updated_at: string;
 }
@@ -29,6 +30,8 @@ export default function PageAdmin() {
   const [query, setQuery] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<{ cod_protheus: string; nome: string; gestor: string; cargo: string }>({ cod_protheus: '', nome: '', gestor: '', cargo: 'consultor' });
 
   const showToast = (kind: 'ok' | 'err', msg: string) => {
     setToast({ kind, msg });
@@ -44,7 +47,7 @@ export default function PageAdmin() {
         .select('user_id,type,created_at')
         .gte('created_at', new Date(Date.now() - 1000 * 60 * 60 * 24 * 56).toISOString()),
     ]);
-    if (pRes.data) setProfiles(pRes.data as ProfileRow[]);
+    if (pRes.data) setProfiles(pRes.data as unknown as ProfileRow[]);
 
     // agrega por semana (segunda-feira)
     const buckets = new Map<string, { events: number; users: Set<string>; errors: number }>();
@@ -77,15 +80,16 @@ export default function PageAdmin() {
       cod_protheus: string;
       nome: string;
       gestor: string | null;
+      cargo: string;
       profile: ProfileRow | null;
     }> = [];
     profiles.forEach(p => {
-      all.push({ cod_protheus: p.cod_protheus, nome: p.nome, gestor: p.gestor, profile: p });
+      all.push({ cod_protheus: p.cod_protheus, nome: p.nome, gestor: p.gestor, cargo: p.cargo || 'consultor', profile: p });
     });
     consultores.forEach(c => {
       const cod = String(c.codConsultor).toUpperCase();
       if (!byCod.has(cod)) {
-        all.push({ cod_protheus: cod, nome: c.consultor, gestor: c.gerente ?? null, profile: null });
+        all.push({ cod_protheus: cod, nome: c.consultor, gestor: c.gerente ?? null, cargo: 'consultor', profile: null });
       }
     });
     const q = query.trim().toLowerCase();
@@ -93,6 +97,43 @@ export default function PageAdmin() {
       .filter(r => !q || r.cod_protheus.toLowerCase().includes(q) || r.nome.toLowerCase().includes(q) || (r.gestor || '').toLowerCase().includes(q))
       .sort((a, b) => a.nome.localeCompare(b.nome));
   }, [profiles, consultores, query]);
+
+  const startEdit = (p: ProfileRow) => {
+    setEditingId(p.id);
+    setEditDraft({
+      cod_protheus: p.cod_protheus,
+      nome: p.nome,
+      gestor: p.gestor ?? '',
+      cargo: p.cargo || 'consultor',
+    });
+  };
+
+  const cancelEdit = () => { setEditingId(null); };
+
+  const saveEdit = async (id: string) => {
+    setBusyId(id);
+    try {
+      const payload = {
+        cod_protheus: editDraft.cod_protheus.trim().toUpperCase(),
+        nome: editDraft.nome.trim(),
+        gestor: editDraft.gestor.trim() || null,
+        cargo: editDraft.cargo.trim() || 'consultor',
+      };
+      if (!payload.cod_protheus || !payload.nome) {
+        showToast('err', 'Código e nome são obrigatórios.');
+        return;
+      }
+      const { error } = await supabase.from('profiles').update(payload).eq('id', id);
+      if (error) throw error;
+      setEditingId(null);
+      showToast('ok', 'Cadastro atualizado.');
+      await load();
+    } catch (e) {
+      showToast('err', String((e as Error)?.message ?? e));
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const adminCall = async (action: 'reset_password' | 'delete_user', target_user_id: string) => {
     setBusyId(target_user_id);
@@ -181,7 +222,7 @@ export default function PageAdmin() {
       {/* Consultores */}
       <section>
         <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-          <h2 className="font-bold" style={{ color: 'hsl(var(--navy))' }}>Consultores</h2>
+          <h2 className="font-bold" style={{ color: 'hsl(var(--navy))' }}>Cadastros</h2>
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -201,15 +242,16 @@ export default function PageAdmin() {
                 <th className="py-2 px-3">Nome</th>
                 <th className="py-2 px-3">Gestor</th>
                 <th className="py-2 px-3">Status</th>
+                <th className="py-2 px-3">Cargo</th>
                 <th className="py-2 px-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
               {(loading || manifestLoading) && (
-                <tr><td colSpan={5} className="py-6 text-center text-muted-foreground">Carregando…</td></tr>
+                <tr><td colSpan={6} className="py-6 text-center text-muted-foreground">Carregando…</td></tr>
               )}
               {!loading && rows.length === 0 && (
-                <tr><td colSpan={5} className="py-6 text-center text-muted-foreground">Nenhum consultor encontrado.</td></tr>
+                <tr><td colSpan={6} className="py-6 text-center text-muted-foreground">Nenhum cadastro encontrado.</td></tr>
               )}
               {rows.map(r => {
                 const status = !r.profile
@@ -218,19 +260,62 @@ export default function PageAdmin() {
                     ? { label: 'Deve trocar senha', color: 'hsl(38,92%,40%)', bg: 'hsl(38,92%,93%)' }
                     : { label: 'Ativo', color: 'hsl(142,71%,30%)', bg: 'hsl(142,71%,93%)' };
                 const busy = r.profile && busyId === r.profile.id;
+                const isEditing = r.profile && editingId === r.profile.id;
                 return (
                   <tr key={r.cod_protheus} className="border-b last:border-0">
-                    <td className="py-2 px-3 font-mono">{r.cod_protheus}</td>
-                    <td className="py-2 px-3">{r.nome}</td>
-                    <td className="py-2 px-3 text-muted-foreground">{r.gestor || '—'}</td>
+                    <td className="py-2 px-3 font-mono">
+                      {isEditing ? (
+                        <input value={editDraft.cod_protheus} onChange={e => setEditDraft(d => ({ ...d, cod_protheus: e.target.value }))} className="w-24 px-2 py-1 rounded border bg-background text-xs font-mono" />
+                      ) : r.cod_protheus}
+                    </td>
+                    <td className="py-2 px-3">
+                      {isEditing ? (
+                        <input value={editDraft.nome} onChange={e => setEditDraft(d => ({ ...d, nome: e.target.value }))} className="w-full px-2 py-1 rounded border bg-background text-xs" />
+                      ) : r.nome}
+                    </td>
+                    <td className="py-2 px-3 text-muted-foreground">
+                      {isEditing ? (
+                        <input value={editDraft.gestor} onChange={e => setEditDraft(d => ({ ...d, gestor: e.target.value }))} className="w-full px-2 py-1 rounded border bg-background text-xs" />
+                      ) : (r.gestor || '—')}
+                    </td>
                     <td className="py-2 px-3">
                       <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: status.bg, color: status.color }}>
                         {status.label}
                       </span>
                     </td>
+                    <td className="py-2 px-3">
+                      {isEditing ? (
+                        <select value={editDraft.cargo} onChange={e => setEditDraft(d => ({ ...d, cargo: e.target.value }))} className="px-2 py-1 rounded border bg-background text-xs">
+                          <option value="consultor">Consultor</option>
+                          <option value="gerente">Gerente</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      ) : (
+                        <span className="text-xs capitalize">{r.cargo}</span>
+                      )}
+                    </td>
                     <td className="py-2 px-3 text-right">
                       {r.profile ? (
                         <div className="inline-flex gap-2">
+                          {isEditing ? (
+                            <>
+                              <button disabled={!!busy} onClick={() => void saveEdit(r.profile!.id)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs hover:bg-accent disabled:opacity-50" style={{ color: 'hsl(142,71%,30%)', borderColor: 'hsl(142,71%,80%)' }}>
+                                <Save className="w-3.5 h-3.5" /> Salvar
+                              </button>
+                              <button disabled={!!busy} onClick={cancelEdit} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs hover:bg-accent disabled:opacity-50">
+                                <X className="w-3.5 h-3.5" /> Cancelar
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                          <button
+                            disabled={!!busy}
+                            onClick={() => startEdit(r.profile!)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs hover:bg-accent disabled:opacity-50"
+                            title="Editar cadastro"
+                          >
+                            <Pencil className="w-3.5 h-3.5" /> Editar
+                          </button>
                           <button
                             disabled={!!busy}
                             onClick={() => void adminCall('reset_password', r.profile!.id)}
@@ -248,6 +333,8 @@ export default function PageAdmin() {
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Remover
                           </button>
+                            </>
+                          )}
                         </div>
                       ) : (
                         <span className="text-xs text-muted-foreground">aguardando 1º acesso</span>
