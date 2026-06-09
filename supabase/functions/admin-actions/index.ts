@@ -1,6 +1,9 @@
 // Ações administrativas — exigem usuário autenticado COM role 'admin'.
 // Ações suportadas:
-//   - reset_password: gera senha temporária para um consultor, marca must_change_password=true
+//   - list_emails: devolve {user_id: email} de todos os usuários do Auth
+//   - reset_password: gera senha temporária para um consultor
+//   - set_password: admin define uma senha específica para o consultor
+//   - update_email: admin altera o e-mail de login do consultor
 //   - delete_user: remove um consultor (auth + profile cascateia)
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
