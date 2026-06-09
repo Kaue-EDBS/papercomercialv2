@@ -44,6 +44,29 @@ function calcRaioOperacional(densidade: number): number {
 }
 
 /**
+ * (#9) Cálculo de market share — antes duplicado em runAnalysis e rebuildConcorrentes.
+ * Centralizado para garantir que qualquer mudança na fórmula seja aplicada uma única vez.
+ */
+function computeMarketShare(escola: EscolaData, concorrentes: ConcorrenteInfo[]): MarketShareData {
+  const escolaTotal = num(escola['Alunado Total']);
+  const concTotal = concorrentes.reduce((s, c) => s + num(c.escola['Alunado Total']), 0);
+  const universo = escolaTotal + concTotal;
+  const calcMS = (field: keyof EscolaData) => {
+    const ev = num(escola[field] as string);
+    const cv = concorrentes.reduce((s, c) => s + num(c.escola[field] as string), 0);
+    const t = ev + cv;
+    return t > 0 ? (ev / t) * 100 : 0;
+  };
+  return {
+    geral: universo > 0 ? (escolaTotal / universo) * 100 : 0,
+    ei: calcMS('qt_mat_educacao_infantil'),
+    efi: calcMS('qt_mat_ensino_fundamental_anos_iniciais'),
+    efii: calcMS('qt_mat_ensino_fundamental_anos_finais'),
+    em: calcMS('qt_mat_ensino_medio'),
+  };
+}
+
+/**
  * Reconstrói a lista de concorrentes para uma escola, permitindo:
  * - injeção de "concorrentes essenciais" (selecionados manualmente pelo usuário) que SEMPRE entram;
  * - completar até 15 vagas com candidatos elegíveis priorizados por:
@@ -141,23 +164,7 @@ export function rebuildConcorrentes(
     escola: c.escola, distancia: c.distancia, proximidadeCEP: c.proximidadeCEP, segmentosComum: c.segmentosComum,
   }));
 
-  // Recalcula market share
-  const escolaTotal = num(escola['Alunado Total']);
-  const concTotal = concorrentes.reduce((s, c) => s + num(c.escola['Alunado Total']), 0);
-  const universo = escolaTotal + concTotal;
-  const calcMS = (field: keyof EscolaData) => {
-    const ev = num(escola[field] as string);
-    const cv = concorrentes.reduce((s, c) => s + num(c.escola[field] as string), 0);
-    const t = ev + cv;
-    return t > 0 ? (ev / t) * 100 : 0;
-  };
-  const marketShare: MarketShareData = {
-    geral: universo > 0 ? (escolaTotal / universo) * 100 : 0,
-    ei: calcMS('qt_mat_educacao_infantil'),
-    efi: calcMS('qt_mat_ensino_fundamental_anos_iniciais'),
-    efii: calcMS('qt_mat_ensino_fundamental_anos_finais'),
-    em: calcMS('qt_mat_ensino_medio'),
-  };
+  const marketShare = computeMarketShare(escola, concorrentes);
 
   return { ...base, concorrentes, raioOperacional: raio, marketShare };
 }
@@ -306,25 +313,7 @@ function runAnalysisCore(
     segmentosComum: c.segmentosComum,
   }));
 
-  // Calculate market share
-  const escolaTotal = num(escola['Alunado Total']);
-  const concTotal = concorrentes.reduce((sum, c) => sum + num(c.escola['Alunado Total']), 0);
-  const universo = escolaTotal + concTotal;
-
-  const calcMS = (field: keyof EscolaData) => {
-    const escolaVal = num(escola[field] as string);
-    const concVal = concorrentes.reduce((s, c) => s + num(c.escola[field] as string), 0);
-    const total = escolaVal + concVal;
-    return total > 0 ? (escolaVal / total) * 100 : 0;
-  };
-
-  const marketShare: MarketShareData = {
-    geral: universo > 0 ? (escolaTotal / universo) * 100 : 0,
-    ei: calcMS('qt_mat_educacao_infantil'),
-    efi: calcMS('qt_mat_ensino_fundamental_anos_iniciais'),
-    efii: calcMS('qt_mat_ensino_fundamental_anos_finais'),
-    em: calcMS('qt_mat_ensino_medio'),
-  };
+  const marketShare = computeMarketShare(escola, concorrentes);
 
   return {
     escola,
