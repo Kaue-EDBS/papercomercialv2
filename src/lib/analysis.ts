@@ -1,13 +1,5 @@
 import { EscolaData, DemograficaData, AnalysisResult, ConcorrenteInfo, MarketShareData, SetorizacaoRow } from './types';
-
-const MENSALIDADE_ORDER: Record<string, number> = {
-  '0': 0,
-  'até 399': 1,
-  '400 a 799': 2,
-  '800 a 1.399': 3,
-  '1.400 a 2.399': 4,
-  'acima de R$ 2.400': 5,
-};
+import { MENSALIDADE_ORDER, getMensalidadeFaixa, isMensalidadeCompativel } from './mensalidade';
 
 function parseBrNumber(val: string): number {
   if (!val) return 0;
@@ -36,17 +28,6 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function getMensalidadeFaixa(m: string): number {
-  return MENSALIDADE_ORDER[m] ?? -1;
-}
-
-function isMensalidadeCompativel(escolaM: string, concM: string): boolean {
-  const eF = getMensalidadeFaixa(escolaM);
-  const cF = getMensalidadeFaixa(concM);
-  if (eF < 0 || cF < 0) return true; // if unknown, include
-  return Math.abs(eF - cF) <= 1;
 }
 
 function calcDensidadeEscolar(escolasMunicipio: number, areaKm2: number): number {
