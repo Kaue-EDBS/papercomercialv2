@@ -189,9 +189,13 @@ export default function PageAdmin() {
     };
     const withCod = consultores.filter(c => String(c.codConsultor || '').trim());
     const noCod = consultores.filter(c => !String(c.codConsultor || '').trim());
+    const seenCods = new Set<string>();
     withCod.forEach(c => {
       const cod = String(c.codConsultor).toUpperCase().trim();
-      if (byCod.has(cod) || byCod.has(normalize(cod))) return;
+      const key = normalize(cod);
+      if (byCod.has(cod) || byCod.has(key)) return;
+      if (seenCods.has(key)) return;
+      seenCods.add(key);
       all.push({ cod_protheus: cod, nome: c.consultor, gestor: c.gerente ?? null, cargo: 'consultor', profile: null });
     });
     noCod.forEach(c => {
