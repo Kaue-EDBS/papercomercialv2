@@ -353,7 +353,8 @@ export function getSegmentosLabel(e: EscolaData): string {
   return getSegmentos(e).join(', ') || 'Nenhum';
 }
 
-export { getSegmentos, num, parseBrNumber, getMensalidadeFaixa };
+export { getSegmentos, num, parseBrNumber };
+export { getMensalidadeFaixa, isMensalidadeCompativel, MENSALIDADE_ORDER } from './mensalidade';
 
 /**
  * Devolve o próximo concorrente elegível para preencher uma vaga liberada,
