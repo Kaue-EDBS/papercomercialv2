@@ -330,11 +330,13 @@ export default function PageAdmin() {
                 <tr><td colSpan={7} className="py-6 text-center text-muted-foreground">Nenhum cadastro encontrado.</td></tr>
               )}
               {rows.map(r => {
+                const emailAtual = r.profile ? (emails[r.profile.id] ?? '') : '';
+                const temEmailReal = !!emailAtual && !emailAtual.endsWith('@ebsa.local');
                 const status = !r.profile
                   ? { label: 'Sem 1º acesso', color: 'hsl(38,92%,40%)', bg: 'hsl(38,92%,93%)' }
-                  : r.profile.must_change_password
-                    ? { label: 'Deve trocar senha', color: 'hsl(38,92%,40%)', bg: 'hsl(38,92%,93%)' }
-                    : { label: 'Ativo', color: 'hsl(142,71%,30%)', bg: 'hsl(142,71%,93%)' };
+                  : !temEmailReal
+                    ? { label: 'Sem e-mail', color: 'hsl(0,84%,40%)', bg: 'hsl(0,84%,93%)' }
+                    : { label: 'E-mail ok', color: 'hsl(142,71%,30%)', bg: 'hsl(142,71%,93%)' };
                 const busy = r.profile && busyId === r.profile.id;
                 const isEditing = r.profile && editingId === r.profile.id;
                 return (
