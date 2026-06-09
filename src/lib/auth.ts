@@ -12,7 +12,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { CarteiraManifestEntry } from '@/hooks/useCarteiraManifest';
 
-export const DEFAULT_CONSULTOR_PASSWORD = 'codprotheus123';
 export const ADMIN_CODIGO = 'ADMIN';
 const DOMAIN = 'ebsa.local';
 
@@ -37,14 +36,12 @@ export function isAdminCodigo(codigo: string): boolean {
 }
 
 /**
- * Login. Para consultor, se a conta ainda não existir e a senha digitada for a default,
- * cria a conta automaticamente (cadastro sob demanda).
- * Retorna `{ profile }` em sucesso, ou `{ error }` em falha.
+ * Login simples. NÃO cria contas — o consultor precisa usar o fluxo
+ * "Primeiro acesso" antes (ver `firstAccessSignup`).
  */
 export async function signInWithCodigo(
   codigoRaw: string,
   senha: string,
-  manifestEntry: CarteiraManifestEntry | null,
 ): Promise<{ profile?: UserProfile; error?: string }> {
   const codigo = codigoRaw.trim();
   if (!codigo) return { error: 'Informe seu código.' };
@@ -53,44 +50,59 @@ export async function signInWithCodigo(
   const isAdmin = isAdminCodigo(codigo);
   const email = isAdmin ? `admin@${DOMAIN}` : codigoToEmail(codigo);
 
-  // Tentativa 1: login direto
-  let { error: signInErr } = await supabase.auth.signInWithPassword({ email, password: senha });
-
+  const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password: senha });
   if (signInErr) {
-    if (isAdmin) {
-      return { error: 'Senha de administrador incorreta.' };
-    }
-    // Consultor: se senha digitada é a default e a conta não existe, criamos.
-    if (senha === DEFAULT_CONSULTOR_PASSWORD) {
-      if (!manifestEntry) {
-        return { error: `Código "${codigo}" não consta na base de consultores.` };
-      }
-      const { error: signUpErr } = await supabase.auth.signUp({
-        email,
-        password: senha,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: {
-            cod_protheus: codigo.toUpperCase(),
-            nome: manifestEntry.consultor,
-            gestor: manifestEntry.gerente ?? null,
-            arquivo_carteira: manifestEntry.arquivo ?? null,
-            role: 'consultor',
-            must_change_password: true,
-          },
-        },
-      });
-      if (signUpErr) return { error: signUpErr.message };
-      // Após signUp, tenta logar de novo
-      const r2 = await supabase.auth.signInWithPassword({ email, password: senha });
-      if (r2.error) return { error: r2.error.message };
-    } else {
-      return { error: 'Código ou senha incorretos.' };
-    }
+    if (isAdmin) return { error: 'Senha de administrador incorreta.' };
+    return { error: 'Código ou senha incorretos. Se é seu 1º acesso, use o botão "Primeiro acesso".' };
   }
 
   const profile = await fetchCurrentProfile();
   if (!profile) return { error: 'Conta autenticada, mas perfil não encontrado.' };
+  return { profile };
+}
+
+/**
+ * Cria a conta do consultor no 1º acesso. O próprio consultor escolhe a senha,
+ * portanto `must_change_password` já fica `false`.
+ */
+export async function firstAccessSignup(
+  codigoRaw: string,
+  novaSenha: string,
+  manifestEntry: CarteiraManifestEntry | null,
+): Promise<{ profile?: UserProfile; error?: string }> {
+  const codigo = codigoRaw.trim();
+  if (!codigo) return { error: 'Informe seu código Protheus.' };
+  if (isAdminCodigo(codigo)) return { error: 'O administrador não usa o fluxo de primeiro acesso.' };
+  if (!manifestEntry) return { error: `Código "${codigo}" não consta na base de consultores.` };
+  if (!novaSenha || novaSenha.length < 8) return { error: 'A senha precisa ter ao menos 8 caracteres.' };
+
+  const email = codigoToEmail(codigo);
+  const { error: signUpErr } = await supabase.auth.signUp({
+    email,
+    password: novaSenha,
+    options: {
+      emailRedirectTo: window.location.origin,
+      data: {
+        cod_protheus: codigo.toUpperCase(),
+        nome: manifestEntry.consultor,
+        gestor: manifestEntry.gerente ?? null,
+        arquivo_carteira: manifestEntry.arquivo ?? null,
+        role: 'consultor',
+        must_change_password: false,
+      },
+    },
+  });
+  if (signUpErr) {
+    if (/already registered|already exists/i.test(signUpErr.message)) {
+      return { error: 'Já existe uma conta para este código. Faça login normalmente ou use "Esqueci a senha".' };
+    }
+    return { error: signUpErr.message };
+  }
+  // Tenta logar imediatamente
+  const r2 = await supabase.auth.signInWithPassword({ email, password: novaSenha });
+  if (r2.error) return { error: r2.error.message };
+  const profile = await fetchCurrentProfile();
+  if (!profile) return { error: 'Conta criada, mas perfil não encontrado.' };
   return { profile };
 }
 
@@ -121,7 +133,6 @@ export async function fetchCurrentProfile(): Promise<UserProfile | null> {
 
 export async function changeOwnPassword(novaSenha: string): Promise<{ error?: string }> {
   if (!novaSenha || novaSenha.length < 8) return { error: 'A senha precisa ter ao menos 8 caracteres.' };
-  if (novaSenha === DEFAULT_CONSULTOR_PASSWORD) return { error: 'Escolha uma senha diferente da padrão.' };
   const { error } = await supabase.auth.updateUser({ password: novaSenha });
   if (error) return { error: error.message };
   const { data: userRes } = await supabase.auth.getUser();
