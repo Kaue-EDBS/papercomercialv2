@@ -439,7 +439,7 @@ export default function Index() {
           <ComparativeModule a1={compA1} a2={compA2} />
         ) : (
           <>
-            {page === 'login' && <PageLogin onConfirm={handleLogin} />}
+            {page === 'login' && <PageLogin onLoggedIn={() => setPage('modo')} onForgot={() => setShowForgot(true)} />}
             {page === 'modo' && session && <PageModo session={session} onSelect={handleSelectModo} />}
             {page === 'carteira' && session && (
               <PageCarteira

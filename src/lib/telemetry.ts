@@ -25,6 +25,8 @@ interface TelemetryEvent {
 const KEY_BUFFER = 'telemetry:buffer:v1';
 const KEY_SESSION = 'telemetry:sid:v1';
 const MAX_EVENTS = 200;
+const FLUSH_BATCH = 20;
+const FLUSH_INTERVAL_MS = 30_000;
 
 function getSessionId(): string {
   try {
@@ -68,6 +70,50 @@ function push(ev: TelemetryEvent): void {
       else fetch(endpoint, { method: 'POST', body: blob, keepalive: true }).catch(() => {});
     } catch { /* best-effort */ }
   }
+  // Tenta flush para Lovable Cloud se temos lote suficiente
+  if (buf.length >= FLUSH_BATCH) void flushToCloud();
+}
+
+/**
+ * Envia eventos em buffer para a tabela `telemetry_events` no Lovable Cloud.
+ * Best-effort: requer usuário autenticado (RLS); falha em silêncio se offline.
+ */
+let flushing = false;
+export async function flushToCloud(): Promise<void> {
+  if (flushing) return;
+  flushing = true;
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data: userRes } = await supabase.auth.getUser();
+    const userId = userRes.user?.id ?? null;
+    const buf = readBuffer();
+    if (!buf.length) return;
+    const rows = buf.map(ev => ({
+      user_id: userId,
+      session_id: ev.sessionId ?? null,
+      type: ev.type,
+      name: ev.name ?? null,
+      url: ev.url ?? null,
+      payload: { message: ev.message, stack: ev.stack, context: ev.context, severity: ev.severity },
+      user_agent: ev.ua ?? null,
+      created_at: ev.ts,
+    }));
+    const { error } = await supabase.from('telemetry_events').insert(rows);
+    if (!error) writeBuffer([]);
+  } catch {
+    /* offline / sem auth — mantém buffer local */
+  } finally {
+    flushing = false;
+  }
+}
+
+/** Liga flush periódico (chamar 1x no boot). */
+let flushTimerStarted = false;
+export function startTelemetryFlush(): void {
+  if (flushTimerStarted || typeof window === 'undefined') return;
+  flushTimerStarted = true;
+  setInterval(() => { void flushToCloud(); }, FLUSH_INTERVAL_MS);
+  window.addEventListener('beforeunload', () => { void flushToCloud(); });
 }
 
 function baseFields(): Pick<TelemetryEvent, 'ts' | 'url' | 'ua' | 'sessionId'> {
@@ -142,5 +188,6 @@ export function installGlobalErrorHandlers(): void {
     clear: clearTelemetryBuffer,
     download: downloadTelemetry,
     track: trackEvent,
+    flush: flushToCloud,
   };
 }
