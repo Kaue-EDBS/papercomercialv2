@@ -94,7 +94,7 @@ export async function flushToCloud(): Promise<void> {
       type: ev.type,
       name: ev.name ?? null,
       url: ev.url ?? null,
-      payload: { message: ev.message, stack: ev.stack, context: ev.context, severity: ev.severity },
+      payload: JSON.parse(JSON.stringify({ message: ev.message, stack: ev.stack, context: ev.context, severity: ev.severity })) as never,
       user_agent: ev.ua ?? null,
       created_at: ev.ts,
     }));
