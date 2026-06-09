@@ -54,8 +54,11 @@ export default function PageAdmin() {
     if (pRes.data) setProfiles(pRes.data as unknown as ProfileRow[]);
 
     // Busca e-mails reais do Auth (via edge function admin)
+    // target_user_id dummy mantém compatibilidade com versão antiga da função
     try {
-      const { data: emailsRes } = await supabase.functions.invoke('admin-actions', { body: { action: 'list_emails' } });
+      const { data: emailsRes } = await supabase.functions.invoke('admin-actions', {
+        body: { action: 'list_emails', target_user_id: '00000000-0000-0000-0000-000000000000' },
+      });
       if (emailsRes?.emails) setEmails(emailsRes.emails as Record<string, string>);
     } catch { /* opcional */ }
 
