@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS cargo TEXT NOT NULL DEFAULT 'consultor';
