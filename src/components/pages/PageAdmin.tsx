@@ -206,7 +206,20 @@ export default function PageAdmin() {
       all.push({ cod_protheus: '—', nome: c.consultor, gestor: c.gerente ?? null, cargo: 'consultor', profile: null });
     });
     const q = query.trim().toLowerCase();
-    return all
+    // Dedup final defensivo por múltiplas chaves (código, nome+gestor).
+    const seenKeys = new Set<string>();
+    const deduped = all.filter(r => {
+      const codKey = r.cod_protheus && r.cod_protheus !== '—'
+        ? `cod:${normalize(r.cod_protheus)}`
+        : '';
+      const nameKey = `name:${stripAccents(r.nome.trim().toLowerCase())}|${stripAccents((r.gestor || '').trim().toLowerCase())}`;
+      if (codKey && seenKeys.has(codKey)) return false;
+      if (seenKeys.has(nameKey)) return false;
+      if (codKey) seenKeys.add(codKey);
+      seenKeys.add(nameKey);
+      return true;
+    });
+    return deduped
       .filter(r => !q || r.cod_protheus.toLowerCase().includes(q) || r.nome.toLowerCase().includes(q) || (r.gestor || '').toLowerCase().includes(q))
       .sort((a, b) => a.nome.localeCompare(b.nome));
   }, [profiles, consultores, query]);
