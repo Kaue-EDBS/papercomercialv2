@@ -141,7 +141,12 @@ export default function PageAdmin() {
 
   /** Une perfis (com conta criada) + consultores do manifest (sem conta ainda). */
   const rows = useMemo(() => {
-    const byCod = new Map(profiles.map(p => [p.cod_protheus.toUpperCase(), p]));
+    const normalize = (s: string) => s.toUpperCase().replace(/^0+/, '');
+    const byCod = new Map<string, ProfileRow>();
+    profiles.forEach(p => {
+      byCod.set(p.cod_protheus.toUpperCase(), p);
+      byCod.set(normalize(p.cod_protheus), p);
+    });
     const all: Array<{
       cod_protheus: string;
       nome: string;
@@ -154,7 +159,7 @@ export default function PageAdmin() {
     });
     consultores.forEach(c => {
       const cod = String(c.codConsultor).toUpperCase();
-      if (!byCod.has(cod)) {
+      if (!byCod.has(cod) && !byCod.has(normalize(cod))) {
         all.push({ cod_protheus: cod, nome: c.consultor, gestor: c.gerente ?? null, cargo: 'consultor', profile: null });
       }
     });
