@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
-import { KeyRound, RefreshCcw, Search, BarChart3, Users, AlertTriangle, Trash2, Pencil, Save, X, Eye, EyeOff, Mail, UserPlus, Sparkles } from 'lucide-react';
+import { KeyRound, RefreshCcw, Search, BarChart3, Users, AlertTriangle, Trash2, Pencil, Save, X, Mail, UserPlus, Sparkles } from 'lucide-react';
 
 interface ProfileRow {
   id: string;
@@ -34,8 +34,6 @@ export default function PageAdmin() {
   const [editDraft, setEditDraft] = useState<{ cod_protheus: string; nome: string; gestor: string; cargo: string }>({ cod_protheus: '', nome: '', gestor: '', cargo: 'consultor' });
   const [emails, setEmails] = useState<Record<string, string>>({});
   const [emailDraft, setEmailDraft] = useState<Record<string, string>>({});
-  const [pwdDraft, setPwdDraft] = useState<Record<string, string>>({});
-  const [pwdVisible, setPwdVisible] = useState<Record<string, boolean>>({});
   const [showNew, setShowNew] = useState(false);
   const [newDraft, setNewDraft] = useState({ cod_protheus: '', nome: '', gestor: '', cargo: 'consultor', email: '' });
   const [creating, setCreating] = useState(false);
@@ -111,16 +109,6 @@ export default function PageAdmin() {
     if (!v) { showToast('err', 'Informe um e-mail.'); return; }
     const ok = await adminCallGeneric({ action: 'update_email', target_user_id: id, new_email: v }, 'E-mail atualizado.', id);
     if (ok) setEmailDraft(d => { const { [id]: _, ...rest } = d; return rest; });
-  };
-
-  const setPassword = async (id: string) => {
-    const v = pwdDraft[id] ?? '';
-    if (v.length < 8) { showToast('err', 'A senha precisa ter ao menos 8 caracteres.'); return; }
-    const ok = await adminCallGeneric({ action: 'set_password', target_user_id: id, new_password: v }, 'Senha definida com sucesso.', id);
-    if (ok) {
-      setPwdDraft(d => { const { [id]: _, ...rest } = d; return rest; });
-      setPwdVisible(d => ({ ...d, [id]: false }));
-    }
   };
 
   /** Pré-cria conta para uma linha do manifest (ou novo cadastro avulso). */
@@ -329,7 +317,6 @@ export default function PageAdmin() {
                 <th className="py-2 px-3">Nome</th>
                 <th className="py-2 px-3">Gestor</th>
                 <th className="py-2 px-3">E-mail</th>
-                <th className="py-2 px-3">Senha</th>
                 <th className="py-2 px-3">Status</th>
                 <th className="py-2 px-3">Cargo</th>
                 <th className="py-2 px-3 text-right">Ações</th>
@@ -337,10 +324,10 @@ export default function PageAdmin() {
             </thead>
             <tbody>
               {(loading || manifestLoading) && (
-                <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">Carregando…</td></tr>
+                <tr><td colSpan={7} className="py-6 text-center text-muted-foreground">Carregando…</td></tr>
               )}
               {!loading && rows.length === 0 && (
-                <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">Nenhum cadastro encontrado.</td></tr>
+                <tr><td colSpan={7} className="py-6 text-center text-muted-foreground">Nenhum cadastro encontrado.</td></tr>
               )}
               {rows.map(r => {
                 const status = !r.profile
@@ -375,6 +362,7 @@ export default function PageAdmin() {
                             type="email"
                             value={emailDraft[r.profile.id] ?? emails[r.profile.id] ?? ''}
                             onChange={e => setEmailDraft(d => ({ ...d, [r.profile!.id]: e.target.value }))}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void saveEmail(r.profile!.id); } }}
                             placeholder="email@dominio.com"
                             className="w-48 px-2 py-1 rounded border bg-background text-xs"
                           />
@@ -385,36 +373,6 @@ export default function PageAdmin() {
                             title="Salvar e-mail"
                           >
                             <Mail className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ) : <span className="text-xs text-muted-foreground">—</span>}
-                    </td>
-                    {/* Senha (definir nova) */}
-                    <td className="py-2 px-3">
-                      {r.profile ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            type={pwdVisible[r.profile.id] ? 'text' : 'password'}
-                            value={pwdDraft[r.profile.id] ?? ''}
-                            onChange={e => setPwdDraft(d => ({ ...d, [r.profile!.id]: e.target.value }))}
-                            placeholder="Nova senha (mín. 8)"
-                            className="w-36 px-2 py-1 rounded border bg-background text-xs"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setPwdVisible(v => ({ ...v, [r.profile!.id]: !v[r.profile!.id] }))}
-                            className="inline-flex items-center justify-center w-7 h-7 rounded border hover:bg-accent"
-                            title={pwdVisible[r.profile.id] ? 'Ocultar' : 'Mostrar'}
-                          >
-                            {pwdVisible[r.profile.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
-                          <button
-                            disabled={!!busy || (pwdDraft[r.profile.id] ?? '').length < 8}
-                            onClick={() => void setPassword(r.profile!.id)}
-                            className="inline-flex items-center justify-center w-7 h-7 rounded border hover:bg-accent disabled:opacity-30"
-                            title="Aplicar nova senha"
-                          >
-                            <Save className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       ) : <span className="text-xs text-muted-foreground">—</span>}
