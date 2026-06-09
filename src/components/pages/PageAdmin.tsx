@@ -157,11 +157,31 @@ export default function PageAdmin() {
     profiles.forEach(p => {
       all.push({ cod_protheus: p.cod_protheus, nome: p.nome, gestor: p.gestor, cargo: p.cargo || 'consultor', profile: p });
     });
+    // Dedup do manifest: mesmo 1º nome + mesmo gestor → mesma pessoa.
+    // Mantém o registro que tem código Protheus (se houver).
+    const stripAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const nameKey = (nome: string, gestor: string | null | undefined) => {
+      const first = stripAccents(nome.trim().toLowerCase()).split(/\s+/)[0] || '';
+      const g = stripAccents((gestor || '').trim().toLowerCase());
+      return `${first}|${g}`;
+    };
+    const manifestDedup = new Map<string, { cod: string; nome: string; gestor: string | null }>();
     consultores.forEach(c => {
-      const cod = String(c.codConsultor).toUpperCase();
-      if (!byCod.has(cod) && !byCod.has(normalize(cod))) {
-        all.push({ cod_protheus: cod, nome: c.consultor, gestor: c.gerente ?? null, cargo: 'consultor', profile: null });
+      const cod = String(c.codConsultor || '').toUpperCase().trim();
+      const k = nameKey(c.consultor, c.gerente);
+      const cur = manifestDedup.get(k);
+      if (!cur) {
+        manifestDedup.set(k, { cod, nome: c.consultor, gestor: c.gerente ?? null });
+      } else if (!cur.cod && cod) {
+        // prefere o que tem código; mantém o nome mais longo (mais completo)
+        manifestDedup.set(k, { cod, nome: c.consultor.length > cur.nome.length ? c.consultor : cur.nome, gestor: cur.gestor ?? c.gerente ?? null });
+      } else if (cod && c.consultor.length > cur.nome.length) {
+        manifestDedup.set(k, { ...cur, nome: c.consultor });
       }
+    });
+    manifestDedup.forEach(({ cod, nome, gestor }) => {
+      if (cod && (byCod.has(cod) || byCod.has(normalize(cod)))) return;
+      all.push({ cod_protheus: cod || '—', nome, gestor, cargo: 'consultor', profile: null });
     });
     const q = query.trim().toLowerCase();
     return all
