@@ -218,8 +218,15 @@ function runAnalysisCore(
     return ibge6 === cod6;
   }) || null;
 
-  const areaKm2 = demografica ? parseBrNumber(demografica['Área KM²']) : 0;
-  const densidadeEscolar = calcDensidadeEscolar(escolasMunicipio.length, areaKm2);
+  // (#2) Densidade por município é cara de recalcular quando há muitas escolas;
+  // usamos um cache por código do município + número de escolas (proxy de versão).
+  const densKey = `${codMun}|${escolasMunicipio.length}`;
+  let densidadeEscolar = DENSIDADE_CACHE.get(densKey);
+  if (densidadeEscolar === undefined) {
+    const areaKm2 = demografica ? parseBrNumber(demografica['Área KM²']) : 0;
+    densidadeEscolar = calcDensidadeEscolar(escolasMunicipio.length, areaKm2);
+    DENSIDADE_CACHE.set(densKey, densidadeEscolar);
+  }
   const raioOperacional = calcRaioOperacional(densidadeEscolar);
 
   // Get school segments and mensalidade
