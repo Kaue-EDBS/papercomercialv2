@@ -38,7 +38,7 @@ export default function AdminRoute() {
     return (
       <div className="flex flex-col min-h-screen">
         <Header />
-        <main className="flex-1"><PageLogin onLogin={() => { /* useAuth atualiza sozinho */ }} onForgotPassword={() => {}} /></main>
+        <main className="flex-1"><PageLogin onLoggedIn={() => { /* useAuth atualiza sozinho */ }} onForgot={() => {}} /></main>
         <Footer />
       </div>
     );
