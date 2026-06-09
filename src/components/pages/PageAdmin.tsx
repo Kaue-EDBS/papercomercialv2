@@ -495,6 +495,53 @@ export default function PageAdmin() {
           </table>
         </div>
       </section>
+
+      {showNew && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !creating && setShowNew(false)}>
+          <div className="bg-card rounded-xl border w-full max-w-md p-5 space-y-3" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg" style={{ color: 'hsl(var(--navy))' }}>Novo cadastro</h3>
+              <button onClick={() => setShowNew(false)} className="p-1 rounded hover:bg-accent" disabled={creating}><X className="w-4 h-4" /></button>
+            </div>
+            <p className="text-xs text-muted-foreground">A conta é criada com senha temporária e aguarda o 1º acesso do usuário para definir a senha definitiva.</p>
+            <label className="block text-xs">
+              <span className="text-muted-foreground">Código Protheus *</span>
+              <input value={newDraft.cod_protheus} onChange={e => setNewDraft(d => ({ ...d, cod_protheus: e.target.value }))} className="mt-1 w-full px-2 py-1.5 rounded border bg-background text-sm font-mono uppercase" />
+            </label>
+            <label className="block text-xs">
+              <span className="text-muted-foreground">Nome *</span>
+              <input value={newDraft.nome} onChange={e => setNewDraft(d => ({ ...d, nome: e.target.value }))} className="mt-1 w-full px-2 py-1.5 rounded border bg-background text-sm" />
+            </label>
+            <label className="block text-xs">
+              <span className="text-muted-foreground">Gestor</span>
+              <input value={newDraft.gestor} onChange={e => setNewDraft(d => ({ ...d, gestor: e.target.value }))} className="mt-1 w-full px-2 py-1.5 rounded border bg-background text-sm" />
+            </label>
+            <label className="block text-xs">
+              <span className="text-muted-foreground">Cargo</span>
+              <select value={newDraft.cargo} onChange={e => setNewDraft(d => ({ ...d, cargo: e.target.value }))} className="mt-1 w-full px-2 py-1.5 rounded border bg-background text-sm">
+                <option value="consultor">Consultor</option>
+                <option value="gerente">Gerente</option>
+                <option value="admin">Admin</option>
+              </select>
+            </label>
+            <label className="block text-xs">
+              <span className="text-muted-foreground">E-mail (opcional — se vazio, usa {`{codigo}@ebsa.local`})</span>
+              <input type="email" value={newDraft.email} onChange={e => setNewDraft(d => ({ ...d, email: e.target.value }))} className="mt-1 w-full px-2 py-1.5 rounded border bg-background text-sm" />
+            </label>
+            <div className="flex justify-end gap-2 pt-2">
+              <button disabled={creating} onClick={() => setShowNew(false)} className="px-3 py-1.5 rounded-lg border text-sm hover:bg-accent disabled:opacity-50">Cancelar</button>
+              <button
+                disabled={creating || !newDraft.cod_protheus.trim() || !newDraft.nome.trim()}
+                onClick={async () => { const ok = await provision(newDraft); if (ok) setShowNew(false); }}
+                className="px-3 py-1.5 rounded-lg text-sm text-white disabled:opacity-50"
+                style={{ background: 'hsl(var(--teal))' }}
+              >
+                {creating ? 'Cadastrando…' : 'Cadastrar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
