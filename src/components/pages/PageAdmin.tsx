@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
-import { KeyRound, RefreshCcw, Search, BarChart3, Users, AlertTriangle, Trash2, Pencil, Save, X } from 'lucide-react';
+import { KeyRound, RefreshCcw, Search, BarChart3, Users, AlertTriangle, Trash2, Pencil, Save, X, Eye, EyeOff, Mail } from 'lucide-react';
 
 interface ProfileRow {
   id: string;
@@ -32,6 +32,10 @@ export default function PageAdmin() {
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<{ cod_protheus: string; nome: string; gestor: string; cargo: string }>({ cod_protheus: '', nome: '', gestor: '', cargo: 'consultor' });
+  const [emails, setEmails] = useState<Record<string, string>>({});
+  const [emailDraft, setEmailDraft] = useState<Record<string, string>>({});
+  const [pwdDraft, setPwdDraft] = useState<Record<string, string>>({});
+  const [pwdVisible, setPwdVisible] = useState<Record<string, boolean>>({});
 
   const showToast = (kind: 'ok' | 'err', msg: string) => {
     setToast({ kind, msg });
@@ -48,6 +52,12 @@ export default function PageAdmin() {
         .gte('created_at', new Date(Date.now() - 1000 * 60 * 60 * 24 * 56).toISOString()),
     ]);
     if (pRes.data) setProfiles(pRes.data as unknown as ProfileRow[]);
+
+    // Busca e-mails reais do Auth (via edge function admin)
+    try {
+      const { data: emailsRes } = await supabase.functions.invoke('admin-actions', { body: { action: 'list_emails' } });
+      if (emailsRes?.emails) setEmails(emailsRes.emails as Record<string, string>);
+    } catch { /* opcional */ }
 
     // agrega por semana (segunda-feira)
     const buckets = new Map<string, { events: number; users: Set<string>; errors: number }>();
@@ -72,6 +82,40 @@ export default function PageAdmin() {
   };
 
   useEffect(() => { void load(); }, []);
+
+  const adminCallGeneric = async (payload: Record<string, unknown>, okMsg: string, targetId: string) => {
+    setBusyId(targetId);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-actions', { body: payload });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      showToast('ok', okMsg);
+      await load();
+      return true;
+    } catch (e) {
+      showToast('err', String((e as Error)?.message ?? e));
+      return false;
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const saveEmail = async (id: string) => {
+    const v = (emailDraft[id] ?? '').trim();
+    if (!v) { showToast('err', 'Informe um e-mail.'); return; }
+    const ok = await adminCallGeneric({ action: 'update_email', target_user_id: id, new_email: v }, 'E-mail atualizado.', id);
+    if (ok) setEmailDraft(d => { const { [id]: _, ...rest } = d; return rest; });
+  };
+
+  const setPassword = async (id: string) => {
+    const v = pwdDraft[id] ?? '';
+    if (v.length < 8) { showToast('err', 'A senha precisa ter ao menos 8 caracteres.'); return; }
+    const ok = await adminCallGeneric({ action: 'set_password', target_user_id: id, new_password: v }, 'Senha definida com sucesso.', id);
+    if (ok) {
+      setPwdDraft(d => { const { [id]: _, ...rest } = d; return rest; });
+      setPwdVisible(d => ({ ...d, [id]: false }));
+    }
+  };
 
   /** Une perfis (com conta criada) + consultores do manifest (sem conta ainda). */
   const rows = useMemo(() => {
