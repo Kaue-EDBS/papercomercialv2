@@ -9,10 +9,15 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 interface Body {
-  action: 'reset_password' | 'delete_user' | 'set_password' | 'update_email' | 'list_emails';
+  action: 'reset_password' | 'delete_user' | 'set_password' | 'update_email' | 'list_emails' | 'create_user';
   target_user_id?: string;
   new_password?: string;
   new_email?: string;
+  cod_protheus?: string;
+  nome?: string;
+  gestor?: string | null;
+  cargo?: string;
+  email?: string;
 }
 
 function randomPassword(len = 12): string {
@@ -71,6 +76,38 @@ Deno.serve(async (req) => {
         if (page > 20) break;
       }
       return json({ ok: true, emails: out });
+    }
+
+    if (body.action === 'create_user') {
+      const cod = (body.cod_protheus ?? '').trim().toUpperCase();
+      const nome = (body.nome ?? '').trim();
+      const gestor = (body.gestor ?? '') ? String(body.gestor).trim() : null;
+      const cargo = (body.cargo ?? 'consultor').trim() || 'consultor';
+      const emailIn = (body.email ?? '').trim().toLowerCase();
+      if (!cod) return json({ error: 'Código Protheus obrigatório.' }, 400);
+      if (!nome) return json({ error: 'Nome obrigatório.' }, 400);
+      const email = emailIn || `${cod.toLowerCase()}@ebsa.local`;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'E-mail inválido.' }, 400);
+      const tempPass = randomPassword(12);
+      const { data: created, error: createErr } = await admin.auth.admin.createUser({
+        email,
+        password: tempPass,
+        email_confirm: true,
+        user_metadata: {
+          cod_protheus: cod,
+          nome,
+          gestor,
+          role: 'consultor',
+          must_change_password: true,
+        },
+      });
+      if (createErr) throw createErr;
+      const newId = created.user?.id;
+      if (newId) {
+        // O trigger handle_new_user cria o profile; ajustamos cargo/gestor depois.
+        await admin.from('profiles').update({ cargo, gestor }).eq('id', newId);
+      }
+      return json({ ok: true, user_id: newId, temp_password: tempPass });
     }
 
     if (!body.target_user_id) return json({ error: 'target_user_id obrigatório' }, 400);
