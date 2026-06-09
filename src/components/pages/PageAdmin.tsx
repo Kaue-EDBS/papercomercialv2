@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
-import { KeyRound, RefreshCcw, Search, BarChart3, Users, AlertTriangle, Trash2, Pencil, Save, X, Eye, EyeOff, Mail } from 'lucide-react';
+import { KeyRound, RefreshCcw, Search, BarChart3, Users, AlertTriangle, Trash2, Pencil, Save, X, Eye, EyeOff, Mail, UserPlus, Sparkles } from 'lucide-react';
 
 interface ProfileRow {
   id: string;
@@ -36,6 +36,9 @@ export default function PageAdmin() {
   const [emailDraft, setEmailDraft] = useState<Record<string, string>>({});
   const [pwdDraft, setPwdDraft] = useState<Record<string, string>>({});
   const [pwdVisible, setPwdVisible] = useState<Record<string, boolean>>({});
+  const [showNew, setShowNew] = useState(false);
+  const [newDraft, setNewDraft] = useState({ cod_protheus: '', nome: '', gestor: '', cargo: 'consultor', email: '' });
+  const [creating, setCreating] = useState(false);
 
   const showToast = (kind: 'ok' | 'err', msg: string) => {
     setToast({ kind, msg });
@@ -117,6 +120,34 @@ export default function PageAdmin() {
     if (ok) {
       setPwdDraft(d => { const { [id]: _, ...rest } = d; return rest; });
       setPwdVisible(d => ({ ...d, [id]: false }));
+    }
+  };
+
+  /** Pré-cria conta para uma linha do manifest (ou novo cadastro avulso). */
+  const provision = async (input: { cod_protheus: string; nome: string; gestor?: string | null; cargo?: string; email?: string }) => {
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-actions', {
+        body: {
+          action: 'create_user',
+          cod_protheus: input.cod_protheus,
+          nome: input.nome,
+          gestor: input.gestor ?? null,
+          cargo: input.cargo ?? 'consultor',
+          email: input.email ?? '',
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      try { if (data?.temp_password) await navigator.clipboard.writeText(data.temp_password); } catch { /* ignore */ }
+      showToast('ok', `Cadastrado. Senha temporária: ${data?.temp_password} (copiada). Conta aguardará 1º acesso.`);
+      await load();
+      return true;
+    } catch (e) {
+      showToast('err', String((e as Error)?.message ?? e));
+      return false;
+    } finally {
+      setCreating(false);
     }
   };
 
