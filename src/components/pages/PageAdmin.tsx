@@ -285,6 +285,8 @@ export default function PageAdmin() {
                 <th className="py-2 px-3">Código</th>
                 <th className="py-2 px-3">Nome</th>
                 <th className="py-2 px-3">Gestor</th>
+                <th className="py-2 px-3">E-mail</th>
+                <th className="py-2 px-3">Senha</th>
                 <th className="py-2 px-3">Status</th>
                 <th className="py-2 px-3">Cargo</th>
                 <th className="py-2 px-3 text-right">Ações</th>
