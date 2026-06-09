@@ -294,10 +294,10 @@ export default function PageAdmin() {
             </thead>
             <tbody>
               {(loading || manifestLoading) && (
-                <tr><td colSpan={6} className="py-6 text-center text-muted-foreground">Carregando…</td></tr>
+                <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">Carregando…</td></tr>
               )}
               {!loading && rows.length === 0 && (
-                <tr><td colSpan={6} className="py-6 text-center text-muted-foreground">Nenhum cadastro encontrado.</td></tr>
+                <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">Nenhum cadastro encontrado.</td></tr>
               )}
               {rows.map(r => {
                 const status = !r.profile
@@ -323,6 +323,58 @@ export default function PageAdmin() {
                       {isEditing ? (
                         <input value={editDraft.gestor} onChange={e => setEditDraft(d => ({ ...d, gestor: e.target.value }))} className="w-full px-2 py-1 rounded border bg-background text-xs" />
                       ) : (r.gestor || '—')}
+                    </td>
+                    {/* E-mail (real do Auth) */}
+                    <td className="py-2 px-3">
+                      {r.profile ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="email"
+                            value={emailDraft[r.profile.id] ?? emails[r.profile.id] ?? ''}
+                            onChange={e => setEmailDraft(d => ({ ...d, [r.profile!.id]: e.target.value }))}
+                            placeholder="email@dominio.com"
+                            className="w-48 px-2 py-1 rounded border bg-background text-xs"
+                          />
+                          <button
+                            disabled={!!busy || (emailDraft[r.profile.id] ?? emails[r.profile.id] ?? '') === (emails[r.profile.id] ?? '')}
+                            onClick={() => void saveEmail(r.profile!.id)}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded border hover:bg-accent disabled:opacity-30"
+                            title="Salvar e-mail"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : <span className="text-xs text-muted-foreground">—</span>}
+                    </td>
+                    {/* Senha (definir nova) */}
+                    <td className="py-2 px-3">
+                      {r.profile ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type={pwdVisible[r.profile.id] ? 'text' : 'password'}
+                            value={pwdDraft[r.profile.id] ?? ''}
+                            onChange={e => setPwdDraft(d => ({ ...d, [r.profile!.id]: e.target.value }))}
+                            placeholder="Nova senha (mín. 8)"
+                            className="w-36 px-2 py-1 rounded border bg-background text-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPwdVisible(v => ({ ...v, [r.profile!.id]: !v[r.profile!.id] }))}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded border hover:bg-accent"
+                            title={pwdVisible[r.profile.id] ? 'Ocultar' : 'Mostrar'}
+                          >
+                            {pwdVisible[r.profile.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            disabled={!!busy || (pwdDraft[r.profile.id] ?? '').length < 8}
+                            onClick={() => void setPassword(r.profile!.id)}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded border hover:bg-accent disabled:opacity-30"
+                            title="Aplicar nova senha"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : <span className="text-xs text-muted-foreground">—</span>}
                     </td>
                     <td className="py-2 px-3">
                       <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: status.bg, color: status.color }}>
