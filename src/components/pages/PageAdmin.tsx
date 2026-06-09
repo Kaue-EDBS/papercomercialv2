@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
-import { KeyRound, RefreshCcw, Search, BarChart3, Users, AlertTriangle, Trash2, Pencil, Save, X } from 'lucide-react';
+import { KeyRound, RefreshCcw, Search, BarChart3, Users, AlertTriangle, Trash2, Pencil, Save, X, Eye, EyeOff, Mail } from 'lucide-react';
 
 interface ProfileRow {
   id: string;
@@ -32,6 +32,10 @@ export default function PageAdmin() {
   const [toast, setToast] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<{ cod_protheus: string; nome: string; gestor: string; cargo: string }>({ cod_protheus: '', nome: '', gestor: '', cargo: 'consultor' });
+  const [emails, setEmails] = useState<Record<string, string>>({});
+  const [emailDraft, setEmailDraft] = useState<Record<string, string>>({});
+  const [pwdDraft, setPwdDraft] = useState<Record<string, string>>({});
+  const [pwdVisible, setPwdVisible] = useState<Record<string, boolean>>({});
 
   const showToast = (kind: 'ok' | 'err', msg: string) => {
     setToast({ kind, msg });
@@ -48,6 +52,12 @@ export default function PageAdmin() {
         .gte('created_at', new Date(Date.now() - 1000 * 60 * 60 * 24 * 56).toISOString()),
     ]);
     if (pRes.data) setProfiles(pRes.data as unknown as ProfileRow[]);
+
+    // Busca e-mails reais do Auth (via edge function admin)
+    try {
+      const { data: emailsRes } = await supabase.functions.invoke('admin-actions', { body: { action: 'list_emails' } });
+      if (emailsRes?.emails) setEmails(emailsRes.emails as Record<string, string>);
+    } catch { /* opcional */ }
 
     // agrega por semana (segunda-feira)
     const buckets = new Map<string, { events: number; users: Set<string>; errors: number }>();
@@ -72,6 +82,40 @@ export default function PageAdmin() {
   };
 
   useEffect(() => { void load(); }, []);
+
+  const adminCallGeneric = async (payload: Record<string, unknown>, okMsg: string, targetId: string) => {
+    setBusyId(targetId);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-actions', { body: payload });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      showToast('ok', okMsg);
+      await load();
+      return true;
+    } catch (e) {
+      showToast('err', String((e as Error)?.message ?? e));
+      return false;
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const saveEmail = async (id: string) => {
+    const v = (emailDraft[id] ?? '').trim();
+    if (!v) { showToast('err', 'Informe um e-mail.'); return; }
+    const ok = await adminCallGeneric({ action: 'update_email', target_user_id: id, new_email: v }, 'E-mail atualizado.', id);
+    if (ok) setEmailDraft(d => { const { [id]: _, ...rest } = d; return rest; });
+  };
+
+  const setPassword = async (id: string) => {
+    const v = pwdDraft[id] ?? '';
+    if (v.length < 8) { showToast('err', 'A senha precisa ter ao menos 8 caracteres.'); return; }
+    const ok = await adminCallGeneric({ action: 'set_password', target_user_id: id, new_password: v }, 'Senha definida com sucesso.', id);
+    if (ok) {
+      setPwdDraft(d => { const { [id]: _, ...rest } = d; return rest; });
+      setPwdVisible(d => ({ ...d, [id]: false }));
+    }
+  };
 
   /** Une perfis (com conta criada) + consultores do manifest (sem conta ainda). */
   const rows = useMemo(() => {
@@ -241,6 +285,8 @@ export default function PageAdmin() {
                 <th className="py-2 px-3">Código</th>
                 <th className="py-2 px-3">Nome</th>
                 <th className="py-2 px-3">Gestor</th>
+                <th className="py-2 px-3">E-mail</th>
+                <th className="py-2 px-3">Senha</th>
                 <th className="py-2 px-3">Status</th>
                 <th className="py-2 px-3">Cargo</th>
                 <th className="py-2 px-3 text-right">Ações</th>
@@ -248,10 +294,10 @@ export default function PageAdmin() {
             </thead>
             <tbody>
               {(loading || manifestLoading) && (
-                <tr><td colSpan={6} className="py-6 text-center text-muted-foreground">Carregando…</td></tr>
+                <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">Carregando…</td></tr>
               )}
               {!loading && rows.length === 0 && (
-                <tr><td colSpan={6} className="py-6 text-center text-muted-foreground">Nenhum cadastro encontrado.</td></tr>
+                <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">Nenhum cadastro encontrado.</td></tr>
               )}
               {rows.map(r => {
                 const status = !r.profile
@@ -277,6 +323,58 @@ export default function PageAdmin() {
                       {isEditing ? (
                         <input value={editDraft.gestor} onChange={e => setEditDraft(d => ({ ...d, gestor: e.target.value }))} className="w-full px-2 py-1 rounded border bg-background text-xs" />
                       ) : (r.gestor || '—')}
+                    </td>
+                    {/* E-mail (real do Auth) */}
+                    <td className="py-2 px-3">
+                      {r.profile ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="email"
+                            value={emailDraft[r.profile.id] ?? emails[r.profile.id] ?? ''}
+                            onChange={e => setEmailDraft(d => ({ ...d, [r.profile!.id]: e.target.value }))}
+                            placeholder="email@dominio.com"
+                            className="w-48 px-2 py-1 rounded border bg-background text-xs"
+                          />
+                          <button
+                            disabled={!!busy || (emailDraft[r.profile.id] ?? emails[r.profile.id] ?? '') === (emails[r.profile.id] ?? '')}
+                            onClick={() => void saveEmail(r.profile!.id)}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded border hover:bg-accent disabled:opacity-30"
+                            title="Salvar e-mail"
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : <span className="text-xs text-muted-foreground">—</span>}
+                    </td>
+                    {/* Senha (definir nova) */}
+                    <td className="py-2 px-3">
+                      {r.profile ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type={pwdVisible[r.profile.id] ? 'text' : 'password'}
+                            value={pwdDraft[r.profile.id] ?? ''}
+                            onChange={e => setPwdDraft(d => ({ ...d, [r.profile!.id]: e.target.value }))}
+                            placeholder="Nova senha (mín. 8)"
+                            className="w-36 px-2 py-1 rounded border bg-background text-xs"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPwdVisible(v => ({ ...v, [r.profile!.id]: !v[r.profile!.id] }))}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded border hover:bg-accent"
+                            title={pwdVisible[r.profile.id] ? 'Ocultar' : 'Mostrar'}
+                          >
+                            {pwdVisible[r.profile.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            disabled={!!busy || (pwdDraft[r.profile.id] ?? '').length < 8}
+                            onClick={() => void setPassword(r.profile!.id)}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded border hover:bg-accent disabled:opacity-30"
+                            title="Aplicar nova senha"
+                          >
+                            <Save className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : <span className="text-xs text-muted-foreground">—</span>}
                     </td>
                     <td className="py-2 px-3">
                       <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: status.bg, color: status.color }}>
