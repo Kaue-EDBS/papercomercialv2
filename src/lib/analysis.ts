@@ -168,6 +168,30 @@ export function runAnalysis(
   demoData: DemograficaData[],
   coordsOverride?: { lat: number; lng: number } | null,
 ): AnalysisResult | null {
+  // (#3) Cache em memória — runAnalysis é determinístico por (inep, dataset).
+  // Usamos o tamanho dos arrays como proxy de versão (suficiente em runtime).
+  // Pula o cache quando há coordsOverride (caso específico do Protheus fallback).
+  if (!coordsOverride) {
+    const key = `${codigoInep}|${censoData.length}|${demoData.length}`;
+    const hit = ANALYSIS_CACHE.get(key);
+    if (hit) return hit;
+    const result = runAnalysisCore(codigoInep, censoData, demoData, null);
+    if (result) ANALYSIS_CACHE.set(key, result);
+    return result;
+  }
+  return runAnalysisCore(codigoInep, censoData, demoData, coordsOverride);
+}
+
+// Cache do resultado (#3) e da densidade por município (#2).
+const ANALYSIS_CACHE = new Map<string, AnalysisResult>();
+const DENSIDADE_CACHE = new Map<string, number>();
+
+function runAnalysisCore(
+  codigoInep: string,
+  censoData: EscolaData[],
+  demoData: DemograficaData[],
+  coordsOverride?: { lat: number; lng: number } | null,
+): AnalysisResult | null {
   const found = censoData.find(e => String(e['Código Inep']) === String(codigoInep));
   if (!found) return null;
   // Aplica fallback de coordenadas (origem: lookup por Protheus) APENAS se faltarem no censo.
