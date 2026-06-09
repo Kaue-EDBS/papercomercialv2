@@ -11,6 +11,7 @@ import NavigationBar from '@/components/NavigationBar';
 import PageLogin from '@/components/pages/PageLogin';
 import PageChangePassword from '@/components/pages/PageChangePassword';
 import PageForgotPassword from '@/components/pages/PageForgotPassword';
+import PageAdmin from '@/components/pages/PageAdmin';
 import PageModo from '@/components/pages/PageModo';
 import PageCarteira from '@/components/pages/PageCarteira';
 import PageCapa from '@/components/pages/PageCapa';
@@ -367,6 +368,17 @@ export default function Index() {
       <div className="flex flex-col min-h-screen">
         <Header />
         <main className="flex-1"><PageForgotPassword onBack={() => setShowForgot(false)} /></main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Painel admin substitui todo o fluxo de consultor.
+  if (profile?.role === 'admin') {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Header session={session} onLogout={handleLogout} />
+        <main className="flex-1"><PageAdmin /></main>
         <Footer />
       </div>
     );

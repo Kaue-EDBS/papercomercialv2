@@ -1,33 +1,50 @@
 import { useState } from 'react';
 import logo from '@/assets/ebsa_logo.png';
 import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
-import { signInWithCodigo, isAdminCodigo, DEFAULT_CONSULTOR_PASSWORD } from '@/lib/auth';
+import { signInWithCodigo, firstAccessSignup, isAdminCodigo } from '@/lib/auth';
 import { prefetchCarteira } from '@/hooks/useCarteira';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, UserPlus } from 'lucide-react';
 
 interface Props {
   onLoggedIn: () => void;
   onForgot: () => void;
 }
 
+type Mode = 'login' | 'first';
+
 export default function PageLogin({ onLoggedIn, onForgot }: Props) {
   const { findByCodigo, loading: manifestLoading } = useCarteiraManifest();
+  const [mode, setMode] = useState<Mode>('login');
   const [codigo, setCodigo] = useState('');
   const [senha, setSenha] = useState('');
+  const [senha2, setSenha2] = useState('');
   const [showSenha, setShowSenha] = useState(false);
   const [erro, setErro] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const reset = () => { setSenha(''); setSenha2(''); setErro(''); setShowSenha(false); };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErro('');
-    setSubmitting(true);
-    const codTrim = codigo.trim();
-    const entry = isAdminCodigo(codTrim) ? null : findByCodigo(codTrim);
-    const { profile, error } = await signInWithCodigo(codTrim, senha, entry);
+    setErro(''); setSubmitting(true);
+    const { profile, error } = await signInWithCodigo(codigo.trim(), senha);
     setSubmitting(false);
     if (error || !profile) { setErro(error || 'Falha no login.'); return; }
-    if (entry?.arquivo) prefetchCarteira(entry.arquivo);
+    if (profile.arquivo_carteira) prefetchCarteira(profile.arquivo_carteira);
+    onLoggedIn();
+  };
+
+  const handleFirstAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErro('');
+    if (senha !== senha2) { setErro('As senhas digitadas não são iguais.'); return; }
+    setSubmitting(true);
+    const cod = codigo.trim();
+    const entry = isAdminCodigo(cod) ? null : findByCodigo(cod);
+    const { profile, error } = await firstAccessSignup(cod, senha, entry);
+    setSubmitting(false);
+    if (error || !profile) { setErro(error || 'Falha ao criar conta.'); return; }
+    if (profile.arquivo_carteira) prefetchCarteira(profile.arquivo_carteira);
     onLoggedIn();
   };
 
@@ -36,10 +53,12 @@ export default function PageLogin({ onLoggedIn, onForgot }: Props) {
       <img src={logo} alt="Editora do Brasil" className="h-16 sm:h-24 object-contain" />
       <div className="text-center">
         <h1 className="page-title text-2xl sm:text-3xl">Portal do Consultor Comercial</h1>
-        <p className="page-subtitle mt-1 sm:mt-2 text-sm">Faça login para acessar sua carteira</p>
+        <p className="page-subtitle mt-1 sm:mt-2 text-sm">
+          {mode === 'login' ? 'Faça login para acessar sua carteira' : 'Crie sua conta — primeiro acesso'}
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
+      <form onSubmit={mode === 'login' ? handleLogin : handleFirstAccess} className="w-full max-w-md space-y-4">
         <div>
           <label htmlFor="login-user" className="block text-sm font-semibold mb-1.5" style={{ color: 'hsl(var(--navy))' }}>
             Usuário (Código Protheus)
@@ -48,7 +67,7 @@ export default function PageLogin({ onLoggedIn, onForgot }: Props) {
             id="login-user"
             type="text"
             autoComplete="username"
-            placeholder="Ex.: 11882 ou ADMIN"
+            placeholder={mode === 'login' ? 'Ex.: 11882 ou ADMIN' : 'Seu código Protheus'}
             value={codigo}
             onChange={e => { setCodigo(e.target.value); setErro(''); }}
             disabled={submitting || manifestLoading}
@@ -58,14 +77,14 @@ export default function PageLogin({ onLoggedIn, onForgot }: Props) {
 
         <div>
           <label htmlFor="login-pass" className="block text-sm font-semibold mb-1.5" style={{ color: 'hsl(var(--navy))' }}>
-            Senha
+            {mode === 'login' ? 'Senha' : 'Nova senha'}
           </label>
           <div className="relative">
             <input
               id="login-pass"
               type={showSenha ? 'text' : 'password'}
-              autoComplete="current-password"
-              placeholder="Sua senha"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              placeholder={mode === 'login' ? 'Sua senha' : 'Mínimo 8 caracteres'}
               value={senha}
               onChange={e => { setSenha(e.target.value); setErro(''); }}
               disabled={submitting}
@@ -80,10 +99,25 @@ export default function PageLogin({ onLoggedIn, onForgot }: Props) {
               {showSenha ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
-          <p className="text-xs text-muted-foreground mt-1.5">
-            1º acesso de consultor: senha padrão é <code className="px-1 rounded bg-muted">{DEFAULT_CONSULTOR_PASSWORD}</code>.
-          </p>
         </div>
+
+        {mode === 'first' && (
+          <div>
+            <label htmlFor="login-pass2" className="block text-sm font-semibold mb-1.5" style={{ color: 'hsl(var(--navy))' }}>
+              Confirme a nova senha
+            </label>
+            <input
+              id="login-pass2"
+              type={showSenha ? 'text' : 'password'}
+              autoComplete="new-password"
+              placeholder="Repita a senha"
+              value={senha2}
+              onChange={e => { setSenha2(e.target.value); setErro(''); }}
+              disabled={submitting}
+              className="w-full px-4 py-3 rounded-xl border bg-card text-foreground text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            />
+          </div>
+        )}
 
         {erro && (
           <div role="alert" className="p-3 rounded-lg text-sm border" style={{ background: 'hsl(0,84%,95%)', color: 'hsl(0,84%,40%)', borderColor: 'hsl(0,84%,85%)' }}>
@@ -96,16 +130,36 @@ export default function PageLogin({ onLoggedIn, onForgot }: Props) {
           disabled={submitting || manifestLoading}
           className="w-full py-3.5 rounded-xl font-semibold text-base text-primary-foreground bg-primary hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition disabled:opacity-50"
         >
-          {submitting ? 'Entrando…' : 'Entrar'}
+          {submitting ? (mode === 'login' ? 'Entrando…' : 'Criando conta…') : (mode === 'login' ? 'Entrar' : 'Criar conta e entrar')}
         </button>
 
-        <button
-          type="button"
-          onClick={onForgot}
-          className="w-full text-sm text-center underline text-muted-foreground hover:text-foreground"
-        >
-          Esqueci a senha
-        </button>
+        {mode === 'login' ? (
+          <>
+            <button
+              type="button"
+              onClick={() => { setMode('first'); reset(); }}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm border-2 hover:bg-accent transition"
+              style={{ borderColor: 'hsl(var(--primary))', color: 'hsl(var(--primary))' }}
+            >
+              <UserPlus className="w-4 h-4" /> Primeiro acesso
+            </button>
+            <button
+              type="button"
+              onClick={onForgot}
+              className="w-full text-sm text-center underline text-muted-foreground hover:text-foreground"
+            >
+              Esqueci a senha
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setMode('login'); reset(); }}
+            className="w-full text-sm text-center underline text-muted-foreground hover:text-foreground"
+          >
+            Já tenho conta — voltar ao login
+          </button>
+        )}
       </form>
     </div>
   );
