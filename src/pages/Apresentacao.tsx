@@ -125,7 +125,7 @@ export default function Apresentacao({ inepFixo, presentationType = 'prospeccao'
       <div data-presentation-hide><Header /></div>
       <div data-presentation-hide><NavigationBar currentPage={page} onNavigate={setPage} /></div>
       <JumpToSlideOverlay total={PAGE_ORDER.length} onJump={(n) => setPage(PAGE_ORDER[n - 1])} />
-      <div className="flex-1 relative">
+      <main className="flex-1 relative">
         {pageIdx > 0 && (
           <button onClick={goPrev} className="fixed left-1 sm:left-2 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-card border shadow-md flex items-center justify-center hover:bg-accent transition-colors" aria-label="Página anterior">
             <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
@@ -172,7 +172,7 @@ export default function Apresentacao({ inepFixo, presentationType = 'prospeccao'
           )}
           </Suspense>
         </ErrorBoundary>
-      </div>
+      </main>
       {PAGE_INSTRUCTIONS[page] && (
         <div data-presentation-hide>
           <PageInstructions page={page} title={PAGE_INSTRUCTIONS[page].title} body={PAGE_INSTRUCTIONS[page].body} />
