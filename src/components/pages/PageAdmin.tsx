@@ -157,31 +157,49 @@ export default function PageAdmin() {
     profiles.forEach(p => {
       all.push({ cod_protheus: p.cod_protheus, nome: p.nome, gestor: p.gestor, cargo: p.cargo || 'consultor', profile: p });
     });
-    // Dedup do manifest: mesmo 1º nome + mesmo gestor → mesma pessoa.
-    // Mantém o registro que tem código Protheus (se houver).
+    // Dedup do manifest: só une um registro SEM código com um COM código quando
+    // o 1º nome bate, o gestor bate E existe outro token muito parecido
+    // (Levenshtein <= 2) entre os nomes — assim "Saluceste" ≈ "Soluceste"
+    // funde, mas "Flavia" ≠ "Soluceste" fica separado.
     const stripAccents = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const nameKey = (nome: string, gestor: string | null | undefined) => {
-      const first = stripAccents(nome.trim().toLowerCase()).split(/\s+/)[0] || '';
-      const g = stripAccents((gestor || '').trim().toLowerCase());
-      return `${first}|${g}`;
-    };
-    const manifestDedup = new Map<string, { cod: string; nome: string; gestor: string | null }>();
-    consultores.forEach(c => {
-      const cod = String(c.codConsultor || '').toUpperCase().trim();
-      const k = nameKey(c.consultor, c.gerente);
-      const cur = manifestDedup.get(k);
-      if (!cur) {
-        manifestDedup.set(k, { cod, nome: c.consultor, gestor: c.gerente ?? null });
-      } else if (!cur.cod && cod) {
-        // prefere o que tem código; mantém o nome mais longo (mais completo)
-        manifestDedup.set(k, { cod, nome: c.consultor.length > cur.nome.length ? c.consultor : cur.nome, gestor: cur.gestor ?? c.gerente ?? null });
-      } else if (cod && c.consultor.length > cur.nome.length) {
-        manifestDedup.set(k, { ...cur, nome: c.consultor });
+    const tokens = (n: string) => stripAccents(n.trim().toLowerCase()).split(/\s+/).filter(Boolean);
+    const lev = (a: string, b: string) => {
+      const m = a.length, n = b.length;
+      if (!m) return n; if (!n) return m;
+      const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
+        dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]);
       }
+      return dp[m][n];
+    };
+    const sameGestor = (a: string | null | undefined, b: string | null | undefined) =>
+      stripAccents((a || '').trim().toLowerCase()) === stripAccents((b || '').trim().toLowerCase());
+    const similarNames = (a: string, b: string) => {
+      const ta = tokens(a), tb = tokens(b);
+      if (!ta.length || !tb.length || ta[0] !== tb[0]) return false;
+      const restA = ta.slice(1), restB = tb.slice(1);
+      if (!restA.length || !restB.length) return false;
+      for (const x of restA) for (const y of restB) {
+        if (x.length < 4 || y.length < 4) continue;
+        if (lev(x, y) <= 2) return true;
+      }
+      return false;
+    };
+    const withCod = consultores.filter(c => String(c.codConsultor || '').trim());
+    const noCod = consultores.filter(c => !String(c.codConsultor || '').trim());
+    withCod.forEach(c => {
+      const cod = String(c.codConsultor).toUpperCase().trim();
+      if (byCod.has(cod) || byCod.has(normalize(cod))) return;
+      all.push({ cod_protheus: cod, nome: c.consultor, gestor: c.gerente ?? null, cargo: 'consultor', profile: null });
     });
-    manifestDedup.forEach(({ cod, nome, gestor }) => {
-      if (cod && (byCod.has(cod) || byCod.has(normalize(cod)))) return;
-      all.push({ cod_protheus: cod || '—', nome, gestor, cargo: 'consultor', profile: null });
+    noCod.forEach(c => {
+      const dupOfProfile = profiles.some(p => sameGestor(p.gestor, c.gerente) && similarNames(p.nome, c.consultor));
+      if (dupOfProfile) return;
+      const dupOfManifest = withCod.some(o => sameGestor(o.gerente, c.gerente) && similarNames(o.consultor, c.consultor));
+      if (dupOfManifest) return;
+      all.push({ cod_protheus: '—', nome: c.consultor, gestor: c.gerente ?? null, cargo: 'consultor', profile: null });
     });
     const q = query.trim().toLowerCase();
     return all
