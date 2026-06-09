@@ -1,57 +1,34 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import logo from '@/assets/ebsa_logo.png';
-import { ConsultorSession } from '@/lib/types';
-import { useCarteiraManifest, CarteiraManifestEntry } from '@/hooks/useCarteiraManifest';
+import { useCarteiraManifest } from '@/hooks/useCarteiraManifest';
+import { signInWithCodigo, isAdminCodigo, DEFAULT_CONSULTOR_PASSWORD } from '@/lib/auth';
 import { prefetchCarteira } from '@/hooks/useCarteira';
+import { Eye, EyeOff } from 'lucide-react';
 
 interface Props {
-  onConfirm: (session: ConsultorSession) => void;
+  onLoggedIn: () => void;
+  onForgot: () => void;
 }
 
-export default function PageLogin({ onConfirm }: Props) {
-  const { consultores, loading, findByCodigo } = useCarteiraManifest();
+export default function PageLogin({ onLoggedIn, onForgot }: Props) {
+  const { findByCodigo, loading: manifestLoading } = useCarteiraManifest();
   const [codigo, setCodigo] = useState('');
-  const [focused, setFocused] = useState(false);
+  const [senha, setSenha] = useState('');
+  const [showSenha, setShowSenha] = useState(false);
   const [erro, setErro] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const suggestions = useMemo(() => {
-    if (!focused || codigo.length < 2) return [];
-    const q = codigo.toLowerCase();
-    return consultores
-      .filter(c =>
-        String(c.codConsultor).toLowerCase().includes(q) ||
-        c.consultor.toLowerCase().includes(q)
-      )
-      .slice(0, 8);
-  }, [codigo, focused, consultores]);
-
-  const handleConfirm = (cod?: string) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setErro('');
-    const value = (cod ?? codigo).trim();
-    if (!value) { setErro('Digite seu código Protheus para continuar.'); return; }
-    const c = findByCodigo(value);
-    if (!c) {
-      setErro(`Não encontramos o código "${value}" na base de consultores. Confira o número e tente novamente.`);
-      return;
-    }
-    prefetchCarteira(c.arquivo);
-    onConfirm({
-      codigo: String(c.codConsultor).toUpperCase(),
-      nome: c.consultor,
-      gestor: c.gerente,
-    });
-  };
-
-  const pickSuggestion = (c: CarteiraManifestEntry) => {
-    const cod = String(c.codConsultor);
-    setCodigo(cod);
-    setFocused(false);
-    prefetchCarteira(c.arquivo);
-    onConfirm({
-      codigo: cod.toUpperCase(),
-      nome: c.consultor,
-      gestor: c.gerente,
-    });
+    setSubmitting(true);
+    const codTrim = codigo.trim();
+    const entry = isAdminCodigo(codTrim) ? null : findByCodigo(codTrim);
+    const { profile, error } = await signInWithCodigo(codTrim, senha, entry);
+    setSubmitting(false);
+    if (error || !profile) { setErro(error || 'Falha no login.'); return; }
+    if (entry?.arquivo) prefetchCarteira(entry.arquivo);
+    onLoggedIn();
   };
 
   return (
@@ -59,51 +36,52 @@ export default function PageLogin({ onConfirm }: Props) {
       <img src={logo} alt="Editora do Brasil" className="h-16 sm:h-24 object-contain" />
       <div className="text-center">
         <h1 className="page-title text-2xl sm:text-3xl">Portal do Consultor Comercial</h1>
-        <p className="page-subtitle mt-1 sm:mt-2 text-sm">Acesse sua carteira ou inicie um paper comercial</p>
+        <p className="page-subtitle mt-1 sm:mt-2 text-sm">Faça login para acessar sua carteira</p>
       </div>
 
-      <div className="w-full max-w-md space-y-4">
+      <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
         <div>
-          <label htmlFor="cod-protheus" className="block text-sm font-semibold mb-1.5" style={{ color: 'hsl(var(--navy))' }}>
-            Código Protheus
+          <label htmlFor="login-user" className="block text-sm font-semibold mb-1.5" style={{ color: 'hsl(var(--navy))' }}>
+            Usuário (Código Protheus)
+          </label>
+          <input
+            id="login-user"
+            type="text"
+            autoComplete="username"
+            placeholder="Ex.: 11882 ou ADMIN"
+            value={codigo}
+            onChange={e => { setCodigo(e.target.value); setErro(''); }}
+            disabled={submitting || manifestLoading}
+            className="w-full px-4 py-3 rounded-xl border bg-card text-foreground text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="login-pass" className="block text-sm font-semibold mb-1.5" style={{ color: 'hsl(var(--navy))' }}>
+            Senha
           </label>
           <div className="relative">
             <input
-              id="cod-protheus"
-              type="text"
-              autoComplete="off"
-              placeholder="Ex.: 11882"
-              value={codigo}
-              onChange={e => { setCodigo(e.target.value); setErro(''); }}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setTimeout(() => setFocused(false), 200)}
-              onKeyDown={e => e.key === 'Enter' && handleConfirm()}
-              disabled={loading}
-              className="w-full px-4 py-3 rounded-xl border bg-card text-foreground text-base sm:text-lg font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              aria-describedby="cod-help"
+              id="login-pass"
+              type={showSenha ? 'text' : 'password'}
+              autoComplete="current-password"
+              placeholder="Sua senha"
+              value={senha}
+              onChange={e => { setSenha(e.target.value); setErro(''); }}
+              disabled={submitting}
+              className="w-full px-4 py-3 pr-12 rounded-xl border bg-card text-foreground text-base font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             />
-            {suggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-card border rounded-xl shadow-lg z-10 max-h-72 overflow-y-auto">
-                {suggestions.map(c => (
-                  <button
-                    key={c.consultor}
-                    onMouseDown={e => e.preventDefault()}
-                    onClick={() => pickSuggestion(c)}
-                    className="w-full text-left px-4 py-2.5 hover:bg-teal-light text-sm border-b last:border-0"
-                  >
-                    <span className="font-semibold">{String(c.codConsultor)}</span>
-                    <span className="text-muted-foreground ml-2">{c.consultor}</span>
-                    <div className="text-[10px] text-muted-foreground">
-                      {c.gerente && <>Gestor: {c.gerente} · </>}
-                      {c.totalEscolas} escola{c.totalEscolas !== 1 ? 's' : ''}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => setShowSenha(v => !v)}
+              aria-label={showSenha ? 'Ocultar senha' : 'Mostrar senha'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showSenha ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
           </div>
-          <p id="cod-help" className="text-xs text-muted-foreground mt-1.5">
-            Digite seu código ou comece a digitar seu nome para usar o autocompletar.
+          <p className="text-xs text-muted-foreground mt-1.5">
+            1º acesso de consultor: senha padrão é <code className="px-1 rounded bg-muted">{DEFAULT_CONSULTOR_PASSWORD}</code>.
           </p>
         </div>
 
@@ -114,13 +92,21 @@ export default function PageLogin({ onConfirm }: Props) {
         )}
 
         <button
-          onClick={() => handleConfirm()}
-          disabled={loading}
+          type="submit"
+          disabled={submitting || manifestLoading}
           className="w-full py-3.5 rounded-xl font-semibold text-base text-primary-foreground bg-primary hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition disabled:opacity-50"
         >
-          {loading ? 'Carregando...' : 'Confirmar'}
+          {submitting ? 'Entrando…' : 'Entrar'}
         </button>
-      </div>
+
+        <button
+          type="button"
+          onClick={onForgot}
+          className="w-full text-sm text-center underline text-muted-foreground hover:text-foreground"
+        >
+          Esqueci a senha
+        </button>
+      </form>
     </div>
   );
 }
