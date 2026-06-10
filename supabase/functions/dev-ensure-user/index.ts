@@ -24,18 +24,28 @@ Deno.serve(async (req) => {
     const isAdmin = cod.toUpperCase() === 'ADMIN';
     const email = isAdmin ? `admin@${DOMAIN}` : `${cod.toLowerCase()}@${DOMAIN}`;
 
-    // Procura usuário existente paginando (Auth admin API não tem busca por email direta)
+    // Procura primeiro pelo profile (cod_protheus indexa o usuário)
     let userId: string | null = null;
-    let page = 1;
-    const perPage = 1000;
-    while (true) {
-      const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
-      if (error) throw error;
-      const found = data.users.find(u => (u.email ?? '').toLowerCase() === email);
-      if (found) { userId = found.id; break; }
-      if (data.users.length < perPage) break;
-      page += 1;
-      if (page > 20) break;
+    const { data: prof } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('cod_protheus', cod.toUpperCase())
+      .maybeSingle();
+    if (prof?.id) userId = prof.id;
+
+    // Fallback: pagina usuários do Auth
+    if (!userId) {
+      let page = 1;
+      const perPage = 1000;
+      while (true) {
+        const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+        if (error) throw error;
+        const found = data.users.find(u => (u.email ?? '').toLowerCase() === email);
+        if (found) { userId = found.id; break; }
+        if (data.users.length < perPage) break;
+        page += 1;
+        if (page > 20) break;
+      }
     }
 
     if (userId) {
