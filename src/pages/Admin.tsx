@@ -15,38 +15,13 @@ import { ConsultorSession } from '@/lib/types';
  * - Logado como admin → renderiza o painel.
  */
 export default function AdminRoute() {
-  const { profile, loading } = useAuth();
-
+  // ⚠️ TEMP: autenticação desativada para liberar o painel de cadastros enquanto
+  // o backend é estruturado. Reabilitar quando o fluxo de senha estiver pronto.
+  const { profile } = useAuth();
   const session: ConsultorSession | null = useMemo(() => {
-    if (!profile) return null;
+    if (!profile) return { codigo: 'ADMIN', nome: 'Administrador', gestor: '' };
     return { codigo: profile.cod_protheus, nome: profile.nome, gestor: profile.gestor ?? '' };
   }, [profile]);
-
-  if (loading) {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <Header />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin w-10 h-10 border-4 rounded-full" style={{ borderColor: 'hsl(var(--teal-light))', borderTopColor: 'hsl(var(--teal))' }} />
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-1"><PageLogin onLoggedIn={() => { /* useAuth atualiza sozinho */ }} onForgot={() => {}} /></main>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (profile.role !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
 
   return (
     <div className="flex flex-col min-h-screen">
