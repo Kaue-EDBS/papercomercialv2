@@ -5,7 +5,8 @@ import PageAdmin from '@/components/pages/PageAdmin';
 import PageLogin from '@/components/pages/PageLogin';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/auth';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { devSignInWithCodigo } from '@/lib/auth';
 import { ConsultorSession } from '@/lib/types';
 
 /**
@@ -17,7 +18,21 @@ import { ConsultorSession } from '@/lib/types';
 export default function AdminRoute() {
   // ⚠️ TEMP: autenticação desativada para liberar o painel de cadastros enquanto
   // o backend é estruturado. Reabilitar quando o fluxo de senha estiver pronto.
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
+  const [bootstrapping, setBootstrapping] = useState(false);
+
+  useEffect(() => {
+    if (profile || bootstrapping) return;
+    setBootstrapping(true);
+    devSignInWithCodigo('ADMIN')
+      .then(({ profile: p, error }) => {
+        if (error) console.warn('[admin auto-login]', error);
+        if (p) refreshProfile();
+      })
+      .finally(() => setBootstrapping(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile]);
+
   const session: ConsultorSession | null = useMemo(() => {
     if (!profile) return { codigo: 'ADMIN', nome: 'Administrador', gestor: '' };
     return { codigo: profile.cod_protheus, nome: profile.nome, gestor: profile.gestor ?? '' };
