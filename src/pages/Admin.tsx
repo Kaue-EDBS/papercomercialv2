@@ -1,12 +1,9 @@
-import { Navigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import PageAdmin from '@/components/pages/PageAdmin';
-import PageLogin from '@/components/pages/PageLogin';
 import { useAuth } from '@/hooks/useAuth';
-import { signOut } from '@/lib/auth';
 import { useEffect, useMemo, useState } from 'react';
-import { devSignInWithCodigo } from '@/lib/auth';
+import { devSignInWithCodigo, signOut } from '@/lib/auth';
 import { ConsultorSession } from '@/lib/types';
 
 /**
