@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Apresentacao from "./pages/Apresentacao.tsx";
-import AdminRoute from "./pages/Admin.tsx";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import KeyboardShortcuts from "@/components/KeyboardShortcuts";
 
@@ -22,7 +21,6 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/apresentacao/:inep" element={<Apresentacao />} />
-            <Route path="/admin" element={<AdminRoute />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -14,7 +14,6 @@ import type { CarteiraManifestEntry } from '@/hooks/useCarteiraManifest';
 
 export const ADMIN_CODIGO = 'ADMIN';
 const DOMAIN = 'ebsa.local';
-const DEV_PASSWORD = 'ebsa-dev-2026';
 
 export type AppRole = 'admin' | 'consultor';
 
@@ -34,34 +33,6 @@ function codigoToEmail(codigo: string): string {
 
 export function isAdminCodigo(codigo: string): boolean {
   return codigo.trim().toUpperCase() === ADMIN_CODIGO;
-}
-
-/**
- * DEV-ONLY: login sem senha. Garante o usuário no Auth (via edge function
- * `dev-ensure-user`) usando uma senha fixa de desenvolvimento, e em seguida
- * faz signIn. TODO: remover quando o backend tiver fluxo real de senha.
- */
-export async function devSignInWithCodigo(
-  codigoRaw: string,
-): Promise<{ profile?: UserProfile; error?: string }> {
-  const codigo = codigoRaw.trim();
-  if (!codigo) return { error: 'Informe seu código.' };
-
-  const { data, error } = await supabase.functions.invoke('dev-ensure-user', {
-    body: { codigo },
-  });
-  if (error || !data?.ok) {
-    return { error: (data as { error?: string } | null)?.error || error?.message || 'Não foi possível preparar o acesso.' };
-  }
-  const email = (data as { email: string }).email;
-  const password = (data as { password: string }).password;
-
-  const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
-  if (signInErr) return { error: signInErr.message };
-
-  const profile = await fetchCurrentProfile();
-  if (!profile) return { error: 'Conta autenticada, mas perfil não encontrado.' };
-  return { profile };
 }
 
 /**

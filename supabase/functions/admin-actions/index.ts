@@ -1,23 +1,13 @@
 // Ações administrativas — exigem usuário autenticado COM role 'admin'.
 // Ações suportadas:
-//   - list_emails: devolve {user_id: email} de todos os usuários do Auth
-//   - reset_password: gera senha temporária para um consultor
-//   - set_password: admin define uma senha específica para o consultor
-//   - update_email: admin altera o e-mail de login do consultor
+//   - reset_password: gera senha temporária para um consultor, marca must_change_password=true
 //   - delete_user: remove um consultor (auth + profile cascateia)
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 interface Body {
-  action: 'reset_password' | 'delete_user' | 'set_password' | 'update_email' | 'list_emails' | 'create_user';
-  target_user_id?: string;
-  new_password?: string;
-  new_email?: string;
-  cod_protheus?: string;
-  nome?: string;
-  gestor?: string | null;
-  cargo?: string;
-  email?: string;
+  action: 'reset_password' | 'delete_user';
+  target_user_id: string;
 }
 
 function randomPassword(len = 12): string {
@@ -61,55 +51,6 @@ Deno.serve(async (req) => {
 
     // 3) Executa ação
     const body = await req.json() as Body;
-
-    if (body.action === 'list_emails') {
-      // Pagina todos os usuários e devolve {id: email}
-      const out: Record<string, string> = {};
-      let page = 1;
-      const perPage = 1000;
-      while (true) {
-        const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
-        if (error) throw error;
-        data.users.forEach(u => { if (u.email) out[u.id] = u.email; });
-        if (data.users.length < perPage) break;
-        page += 1;
-        if (page > 20) break;
-      }
-      return json({ ok: true, emails: out });
-    }
-
-    if (body.action === 'create_user') {
-      const cod = (body.cod_protheus ?? '').trim().toUpperCase();
-      const nome = (body.nome ?? '').trim();
-      const gestor = (body.gestor ?? '') ? String(body.gestor).trim() : null;
-      const cargo = (body.cargo ?? 'consultor').trim() || 'consultor';
-      const emailIn = (body.email ?? '').trim().toLowerCase();
-      if (!cod) return json({ error: 'Código Protheus obrigatório.' }, 400);
-      if (!nome) return json({ error: 'Nome obrigatório.' }, 400);
-      const email = emailIn || `${cod.toLowerCase()}@ebsa.local`;
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'E-mail inválido.' }, 400);
-      const tempPass = randomPassword(12);
-      const { data: created, error: createErr } = await admin.auth.admin.createUser({
-        email,
-        password: tempPass,
-        email_confirm: true,
-        user_metadata: {
-          cod_protheus: cod,
-          nome,
-          gestor,
-          role: 'consultor',
-          must_change_password: true,
-        },
-      });
-      if (createErr) throw createErr;
-      const newId = created.user?.id;
-      if (newId) {
-        // O trigger handle_new_user cria o profile; ajustamos cargo/gestor depois.
-        await admin.from('profiles').update({ cargo, gestor }).eq('id', newId);
-      }
-      return json({ ok: true, user_id: newId, temp_password: tempPass });
-    }
-
     if (!body.target_user_id) return json({ error: 'target_user_id obrigatório' }, 400);
 
     if (body.action === 'reset_password') {
@@ -125,23 +66,6 @@ Deno.serve(async (req) => {
     if (body.action === 'delete_user') {
       const { error: delErr } = await admin.auth.admin.deleteUser(body.target_user_id);
       if (delErr) throw delErr;
-      return json({ ok: true });
-    }
-
-    if (body.action === 'set_password') {
-      const pwd = (body.new_password ?? '').trim();
-      if (pwd.length < 8) return json({ error: 'A senha precisa ter ao menos 8 caracteres.' }, 400);
-      const { error: updErr } = await admin.auth.admin.updateUserById(body.target_user_id, { password: pwd });
-      if (updErr) throw updErr;
-      await admin.from('profiles').update({ must_change_password: false }).eq('id', body.target_user_id);
-      return json({ ok: true });
-    }
-
-    if (body.action === 'update_email') {
-      const email = (body.new_email ?? '').trim().toLowerCase();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'E-mail inválido.' }, 400);
-      const { error: updErr } = await admin.auth.admin.updateUserById(body.target_user_id, { email, email_confirm: true });
-      if (updErr) throw updErr;
       return json({ ok: true });
     }
 

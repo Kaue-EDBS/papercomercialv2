@@ -24,18 +24,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (existing) {
-      // Garante que a senha do admin permanece a padrão (idempotente)
-      try {
-        await supabase.auth.admin.updateUserById(existing.id, {
-          password: ADMIN_PASSWORD,
-          email_confirm: true,
-        });
-        await supabase.from('user_roles').upsert(
-          { user_id: existing.id, role: 'admin' },
-          { onConflict: 'user_id,role' },
-        );
-      } catch (_) { /* ignore */ }
-      return new Response(JSON.stringify({ ok: true, created: false, reset: true }), {
+      return new Response(JSON.stringify({ ok: true, created: false }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
