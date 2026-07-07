@@ -10,10 +10,6 @@ import Footer from '@/components/Footer';
 import NavigationBar from '@/components/NavigationBar';
 import ApresentacaoSkeleton from '@/components/ApresentacaoSkeleton';
 import PageInstructions, { PAGE_INSTRUCTIONS } from '@/components/PageInstructions';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import JumpToSlideOverlay from '@/components/JumpToSlideOverlay';
-import { usePresentationMode } from '@/hooks/usePresentationMode';
-import { usePageTracking } from '@/hooks/usePageTracking';
 
 // (#4) Code splitting — cada página vira chunk separado, carregado sob demanda.
 const PageAbertura = lazy(() => import('@/components/pages/PageAbertura'));
@@ -44,8 +40,6 @@ export default function Apresentacao({ inepFixo, presentationType = 'prospeccao'
   const loading = data.status === 'loading';
   const [page, setPage] = useState<AppPage>('abertura');
   const [raioCustom, setRaioCustom] = useState<number | null>(null);
-  usePresentationMode();
-  usePageTracking(`apresentacao:${page}`, { inep });
 
   useEffect(() => { if (!loading) prefetchPotencialConsumo(); }, [loading]);
 
@@ -91,11 +85,6 @@ export default function Apresentacao({ inepFixo, presentationType = 'prospeccao'
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
       if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
-      if (e.key === 'f' || e.key === 'F') {
-        e.preventDefault();
-        if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
-        else document.exitFullscreen().catch(() => {});
-      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -122,9 +111,8 @@ export default function Apresentacao({ inepFixo, presentationType = 'prospeccao'
 
   return (
     <div className="flex flex-col min-h-screen">
-      <div data-presentation-hide><Header /></div>
-      <div data-presentation-hide><NavigationBar currentPage={page} onNavigate={setPage} /></div>
-      <JumpToSlideOverlay total={PAGE_ORDER.length} onJump={(n) => setPage(PAGE_ORDER[n - 1])} />
+      <Header />
+      <NavigationBar currentPage={page} onNavigate={setPage} />
       <main className="flex-1 relative">
         {pageIdx > 0 && (
           <button onClick={goPrev} className="fixed left-1 sm:left-2 top-1/2 -translate-y-1/2 z-30 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-card border shadow-md flex items-center justify-center hover:bg-accent transition-colors" aria-label="Página anterior">
@@ -137,8 +125,7 @@ export default function Apresentacao({ inepFixo, presentationType = 'prospeccao'
           </button>
         )}
 
-        <ErrorBoundary fallbackTitle="Não conseguimos renderizar este slide">
-          <Suspense fallback={<div className="px-6 py-10 text-sm text-muted-foreground">Carregando slide…</div>}>
+        <Suspense fallback={<div className="px-6 py-10 text-sm text-muted-foreground">Carregando slide…</div>}>
           {page === 'abertura' && <PageAbertura type={presentationType} />}
           {page === 'resumo' && <PageResumo analysis={analysis} />}
           {page === 'panorama' && <PagePanorama analysis={analysis} />}
@@ -170,15 +157,12 @@ export default function Apresentacao({ inepFixo, presentationType = 'prospeccao'
               essenciaisInep={[]}
             />
           )}
-          </Suspense>
-        </ErrorBoundary>
+        </Suspense>
       </main>
       {PAGE_INSTRUCTIONS[page] && (
-        <div data-presentation-hide>
-          <PageInstructions page={page} title={PAGE_INSTRUCTIONS[page].title} body={PAGE_INSTRUCTIONS[page].body} />
-        </div>
+        <PageInstructions page={page} title={PAGE_INSTRUCTIONS[page].title} body={PAGE_INSTRUCTIONS[page].body} />
       )}
-      <div data-presentation-hide><Footer /></div>
+      <Footer />
     </div>
   );
 }

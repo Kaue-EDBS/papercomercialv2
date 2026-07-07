@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDataLoader } from '@/hooks/useDataLoader';
 import { prefetchPotencialConsumo } from '@/hooks/usePotencialConsumo';
@@ -9,9 +9,6 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import NavigationBar from '@/components/NavigationBar';
 import PageLogin from '@/components/pages/PageLogin';
-import PageChangePassword from '@/components/pages/PageChangePassword';
-import PageForgotPassword from '@/components/pages/PageForgotPassword';
-import PageAdmin from '@/components/pages/PageAdmin';
 import PageModo from '@/components/pages/PageModo';
 import PageCarteira from '@/components/pages/PageCarteira';
 import PageCapa from '@/components/pages/PageCapa';
@@ -33,12 +30,12 @@ import PagePlanoAcao from '@/components/pages/PagePlanoAcao';
 import PageEncerramento from '@/components/pages/PageEncerramento';
 import ComparativeModule from '@/components/pages/ComparativeModule';
 import PageInstructions, { PAGE_INSTRUCTIONS } from '@/components/PageInstructions';
-import { useAuth } from '@/hooks/useAuth';
-import { signOut } from '@/lib/auth';
 
 const PAGE_ORDER: AppPage[] = ['abertura', 'resumo', 'panorama', 'concorrencia', 'marketshare', 'mensalidade', 'socioeconomico', 'potencial', 'insights', 'planoAcao', 'encerramento'];
 // Páginas da Etapa 2 — fora do PAGE_ORDER (sem navegação livre por setas/atalhos).
 const ETAPA2_PAGES: AppPage[] = ['concEssenciais', 'concTabela', 'concMapa'];
+
+const SESSION_KEY = 'consultor:session:v1';
 
 export default function Index() {
   const { censo, demo, loading } = useDataLoader();
@@ -46,17 +43,10 @@ export default function Index() {
   // (ex.: busca por COD_PROTHEUS de uma escola sem cadastro no censo escolar).
   const { rows: setorRows } = useSetorizacao(true);
   const [page, setPage] = useState<AppPage>('login');
-  const [showForgot, setShowForgot] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [presentationType, setPresentationType] = useState<PresentationType | null>(null);
   const [error, setError] = useState('');
-  const { profile, loading: authLoading, refreshProfile } = useAuth();
-
-  // Sessão derivada do profile (compatibilidade com componentes existentes)
-  const session: ConsultorSession | null = useMemo(() => {
-    if (!profile) return null;
-    return { codigo: profile.cod_protheus, nome: profile.nome, gestor: profile.gestor ?? '' };
-  }, [profile]);
+  const [session, setSession] = useState<ConsultorSession | null>(null);
 
   // Prefetch do JSON pesado de potencial de consumo (~4MB) em background,
   // assim quando o usuário chegar na página os dados já estão em cache.
@@ -77,16 +67,26 @@ export default function Index() {
   const [raioFoiAjustado, setRaioFoiAjustado] = useState(false);
   const [excluidosInep, setExcluidosInep] = useState<string[]>([]);
 
-  // Sincroniza a página com o estado de auth: quando loga, vai pra 'modo';
-  // quando desloga, volta pra 'login'.
+  // Restore session from localStorage
   useEffect(() => {
-    if (authLoading) return;
-    if (profile && page === 'login') setPage('modo');
-    if (!profile && page !== 'login') setPage('login');
-  }, [profile, authLoading, page]);
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const s = JSON.parse(raw) as ConsultorSession;
+        if (s?.codigo && s?.nome) { setSession(s); setPage('modo'); }
+      }
+    } catch {}
+  }, []);
 
-  const handleLogout = useCallback(async () => {
-    await signOut();
+  const handleLogin = useCallback((s: ConsultorSession) => {
+    setSession(s);
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch {}
+    setPage('modo');
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    try { localStorage.removeItem(SESSION_KEY); } catch {}
+    setSession(null);
     setAnalysis(null);
     setPresentationType(null);
     setIsComparative(false);
@@ -349,41 +349,6 @@ export default function Index() {
     );
   }
 
-  // Bloqueia toda a app enquanto a senha do 1º acesso não for trocada.
-  if (profile?.must_change_password) {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <Header session={session} onLogout={handleLogout} />
-        <main className="flex-1">
-          <PageChangePassword obrigatoria onDone={() => refreshProfile()} />
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Tela "esqueci a senha" — fora do fluxo principal
-  if (page === 'login' && showForgot) {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-1"><PageForgotPassword onBack={() => setShowForgot(false)} /></main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Painel admin substitui todo o fluxo de consultor.
-  if (profile?.role === 'admin') {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <Header session={session} onLogout={handleLogout} />
-        <main className="flex-1"><PageAdmin /></main>
-        <Footer />
-      </div>
-    );
-  }
-
   const showNav = PAGE_ORDER.includes(page) && !isComparative;
   const showEtapa2Nav = ETAPA2_PAGES.includes(page) && !isComparative;
   const pageIdx = PAGE_ORDER.indexOf(page);
@@ -451,7 +416,7 @@ export default function Index() {
           <ComparativeModule a1={compA1} a2={compA2} />
         ) : (
           <>
-            {page === 'login' && <PageLogin onLoggedIn={() => setPage('modo')} onForgot={() => setShowForgot(true)} />}
+            {page === 'login' && <PageLogin onConfirm={handleLogin} />}
             {page === 'modo' && session && <PageModo session={session} onSelect={handleSelectModo} />}
             {page === 'carteira' && session && (
               <PageCarteira
