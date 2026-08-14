@@ -13,7 +13,7 @@ export default function Header({ session, onLogout }: Props) {
       <div className="flex items-center gap-3">
         <img src={logo} alt="Editora do Brasil" className="h-8 sm:h-10 object-contain" />
         <span className="text-[10px] sm:text-xs font-medium hidden md:inline" style={{ color: 'hsl(var(--teal-light))' }}>
-          Diagnóstico Territorial — Análise Comercial
+          CIT — Centro de Inteligência Territorial
         </span>
       </div>
       {session && (

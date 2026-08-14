@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="flex items-center justify-between px-4 sm:px-6 py-2 sm:py-3 border-t bg-card">
       <span className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
         © {new Date().getFullYear()} Editora do Brasil S/A
-        <span className="hidden sm:inline"> — Diagnóstico Territorial Comercial — Dados: Censo Escolar 2024</span>
+        <span className="hidden sm:inline"> — CIT - Centro de Inteligência Territorial — Dados: Censo Escolar 2024</span>
       </span>
       <img
         src={logo}

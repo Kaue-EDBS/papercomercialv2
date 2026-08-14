@@ -58,8 +58,8 @@ export default function PageLogin({ onConfirm }: Props) {
     <div className="flex flex-col items-center justify-center min-h-[70vh] gap-6 sm:gap-8 px-4">
       <img src={logo} alt="Editora do Brasil" className="h-16 sm:h-24 object-contain" />
       <div className="text-center">
-        <h1 className="page-title text-2xl sm:text-3xl">Portal do Consultor Comercial</h1>
-        <p className="page-subtitle mt-1 sm:mt-2 text-sm">Acesse sua carteira ou inicie um paper comercial</p>
+        <h1 className="page-title text-2xl sm:text-3xl">CIT - Centro de Inteligência Territorial</h1>
+        <p className="page-subtitle mt-1 sm:mt-2 text-sm">Acesse sua carteira ou inicie um diagnóstico territorial</p>
       </div>
 
       <div className="w-full max-w-md space-y-4">
