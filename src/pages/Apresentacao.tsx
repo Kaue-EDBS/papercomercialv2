@@ -57,7 +57,7 @@ export default function Apresentacao({ inepFixo, presentationType = 'prospeccao'
     if (!analysis) return;
     const nome = analysis.escola.Escola;
     const cidade = `${analysis.escola.Município}/${analysis.escola.UF}`;
-    const title = `${nome} · Diagnóstico Territorial · ${cidade}`;
+    const title = `${nome} · CIT · ${cidade}`;
     document.title = title;
     const setMeta = (selector: string, attr: string, value: string) => {
       const el = document.querySelector(selector);

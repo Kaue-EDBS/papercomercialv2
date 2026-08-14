@@ -147,7 +147,7 @@ function drawPDFHeader(d: DrawCtx) {
   page.drawText('EDITORA DO BRASIL', {
     x: M, y: PDF_H - HEADER_H + 12, size: 9, font: bold, color: NAVY,
   });
-  page.drawText('Diagnóstico Territorial · Análise Estratégica', {
+  page.drawText('CIT · Centro de Inteligência Territorial', {
     x: M + 130, y: PDF_H - HEADER_H + 12, size: 9, font, color: MUTED,
   });
   const right = `${ctx.session?.nome ?? '—'} · ${ctx.analysis.escola.Município}/${ctx.analysis.escola.UF}`;
@@ -501,8 +501,8 @@ function renderPdfCapa(page: PDFPage, font: PDFFont, bold: PDFFont, italic: PDFF
   page.drawRectangle({ x: cx - 22, y: PDF_H - SAFE - 76, width: 44, height: 2, color: TEAL });
 
   // ---------- BLOCO CENTRAL ----------
-  // Subtítulo: "Diagnóstico Territorial · [Tipo]"
-  const subL = 'Diagnóstico Territorial';
+  // Subtítulo: "CIT · Centro de Inteligência Territorial · [Tipo]"
+  const subL = 'CIT · Centro de Inteligência Territorial';
   const subSep = '  ·  ';
   const subR = tipoLabel(ctx.presentationType);
   const subSize = 14;
@@ -2071,10 +2071,10 @@ function pptCapa(s: PptxGenJS.Slide, ctx: ExportContext) {
   });
 
   // ---------- BLOCO CENTRAL ----------
-  // Subtítulo reforçado: "Diagnóstico Territorial · Prospecção/Renovação"
+  // Subtítulo reforçado: "CIT · Centro de Inteligência Territorial · Prospecção/Renovação"
   s.addText(
     [
-      { text: 'Diagnóstico Territorial', options: { color: C.tealLight } },
+      { text: 'CIT · Centro de Inteligência Territorial', options: { color: C.tealLight } },
       { text: '   ·   ', options: { color: C.lime, bold: true } },
       { text: tipoLabel(ctx.presentationType), options: { color: C.white, bold: true } },
     ] as any,
