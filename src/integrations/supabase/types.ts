@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      cadastros: {
+        Row: {
+          ativo: boolean
+          auth_user_id: string | null
+          cargo: string
+          cod_protheus: string | null
+          created_at: string
+          email: string
+          gestor: string | null
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          auth_user_id?: string | null
+          cargo: string
+          cod_protheus?: string | null
+          created_at?: string
+          email: string
+          gestor?: string | null
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          auth_user_id?: string | null
+          cargo?: string
+          cod_protheus?: string | null
+          created_at?: string
+          email?: string
+          gestor?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           arquivo_carteira: string | null
@@ -128,6 +167,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      import_cadastros: { Args: { payload: Json }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "consultor"
