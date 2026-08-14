@@ -53,6 +53,237 @@ export type Database = {
         }
         Relationships: []
       }
+      carteiras_escolas_v3: {
+        Row: {
+          adocao_brasil_did_apoio_ei: number
+          adocao_brasil_did_apoio_em: number
+          adocao_brasil_did_apoio_f1: number
+          adocao_brasil_did_apoio_f2: number
+          adocao_brasil_literatura_ei: number
+          adocao_brasil_literatura_em: number
+          adocao_brasil_literatura_f1: number
+          adocao_brasil_literatura_f2: number
+          adocao_brasil_sistema_ei: number
+          adocao_brasil_sistema_em: number
+          adocao_brasil_sistema_f1: number
+          adocao_brasil_sistema_f2: number
+          adocao_material_proprio_ei: number
+          adocao_material_proprio_em: number
+          adocao_material_proprio_f1: number
+          adocao_material_proprio_f2: number
+          adocao_outra_did_apoio_ei: number
+          adocao_outra_did_apoio_em: number
+          adocao_outra_did_apoio_f1: number
+          adocao_outra_did_apoio_f2: number
+          adocao_outra_literatura_ei: number
+          adocao_outra_literatura_em: number
+          adocao_outra_literatura_f1: number
+          adocao_outra_literatura_f2: number
+          adocao_outra_sistema_ei: number
+          adocao_outra_sistema_em: number
+          adocao_outra_sistema_f1: number
+          adocao_outra_sistema_f2: number
+          adota_brasil: boolean
+          adota_did_apoio_brasil: boolean
+          adota_lit_brasil: boolean
+          adota_sistema_brasil: boolean
+          alunos_ei: number
+          alunos_em: number
+          alunos_f1: number
+          alunos_f2: number
+          alvo_bilingue: boolean
+          alvo_brincando: boolean
+          alvo_cora: boolean
+          alvo_versa: boolean
+          bairro: string
+          cep: string
+          cep5: string
+          cnpj_escola_censo: string | null
+          cod_consultor: string
+          cod_escola: string | null
+          cod_inep: string | null
+          cod_municipio: string
+          cod_protheus: string
+          cod_regiao_geografica_imediata: string
+          cod_regiao_geografica_intermediaria: string
+          consultor: string
+          ddd: string | null
+          endereco: string
+          gerente: string
+          id: number
+          imported_at: string
+          latitude: number | null
+          longitude: number | null
+          mensalidade_ei: string | null
+          mensalidade_em: string | null
+          mensalidade_f1: string | null
+          mensalidade_f2: string | null
+          municipio: string
+          nome_escola: string
+          numero: string | null
+          regiao: string
+          regiao_geografica_imediata: string
+          regiao_geografica_intermediaria: string
+          telefone: string | null
+          tipo_adocao: string
+          tipo_contrato_brasil: string | null
+          tipo_escola: string | null
+          uf: string
+        }
+        Insert: {
+          adocao_brasil_did_apoio_ei?: number
+          adocao_brasil_did_apoio_em?: number
+          adocao_brasil_did_apoio_f1?: number
+          adocao_brasil_did_apoio_f2?: number
+          adocao_brasil_literatura_ei?: number
+          adocao_brasil_literatura_em?: number
+          adocao_brasil_literatura_f1?: number
+          adocao_brasil_literatura_f2?: number
+          adocao_brasil_sistema_ei?: number
+          adocao_brasil_sistema_em?: number
+          adocao_brasil_sistema_f1?: number
+          adocao_brasil_sistema_f2?: number
+          adocao_material_proprio_ei?: number
+          adocao_material_proprio_em?: number
+          adocao_material_proprio_f1?: number
+          adocao_material_proprio_f2?: number
+          adocao_outra_did_apoio_ei?: number
+          adocao_outra_did_apoio_em?: number
+          adocao_outra_did_apoio_f1?: number
+          adocao_outra_did_apoio_f2?: number
+          adocao_outra_literatura_ei?: number
+          adocao_outra_literatura_em?: number
+          adocao_outra_literatura_f1?: number
+          adocao_outra_literatura_f2?: number
+          adocao_outra_sistema_ei?: number
+          adocao_outra_sistema_em?: number
+          adocao_outra_sistema_f1?: number
+          adocao_outra_sistema_f2?: number
+          adota_brasil?: boolean
+          adota_did_apoio_brasil?: boolean
+          adota_lit_brasil?: boolean
+          adota_sistema_brasil?: boolean
+          alunos_ei?: number
+          alunos_em?: number
+          alunos_f1?: number
+          alunos_f2?: number
+          alvo_bilingue?: boolean
+          alvo_brincando?: boolean
+          alvo_cora?: boolean
+          alvo_versa?: boolean
+          bairro: string
+          cep: string
+          cep5: string
+          cnpj_escola_censo?: string | null
+          cod_consultor: string
+          cod_escola?: string | null
+          cod_inep?: string | null
+          cod_municipio: string
+          cod_protheus: string
+          cod_regiao_geografica_imediata: string
+          cod_regiao_geografica_intermediaria: string
+          consultor: string
+          ddd?: string | null
+          endereco: string
+          gerente: string
+          id?: never
+          imported_at?: string
+          latitude?: number | null
+          longitude?: number | null
+          mensalidade_ei?: string | null
+          mensalidade_em?: string | null
+          mensalidade_f1?: string | null
+          mensalidade_f2?: string | null
+          municipio: string
+          nome_escola: string
+          numero?: string | null
+          regiao: string
+          regiao_geografica_imediata: string
+          regiao_geografica_intermediaria: string
+          telefone?: string | null
+          tipo_adocao: string
+          tipo_contrato_brasil?: string | null
+          tipo_escola?: string | null
+          uf: string
+        }
+        Update: {
+          adocao_brasil_did_apoio_ei?: number
+          adocao_brasil_did_apoio_em?: number
+          adocao_brasil_did_apoio_f1?: number
+          adocao_brasil_did_apoio_f2?: number
+          adocao_brasil_literatura_ei?: number
+          adocao_brasil_literatura_em?: number
+          adocao_brasil_literatura_f1?: number
+          adocao_brasil_literatura_f2?: number
+          adocao_brasil_sistema_ei?: number
+          adocao_brasil_sistema_em?: number
+          adocao_brasil_sistema_f1?: number
+          adocao_brasil_sistema_f2?: number
+          adocao_material_proprio_ei?: number
+          adocao_material_proprio_em?: number
+          adocao_material_proprio_f1?: number
+          adocao_material_proprio_f2?: number
+          adocao_outra_did_apoio_ei?: number
+          adocao_outra_did_apoio_em?: number
+          adocao_outra_did_apoio_f1?: number
+          adocao_outra_did_apoio_f2?: number
+          adocao_outra_literatura_ei?: number
+          adocao_outra_literatura_em?: number
+          adocao_outra_literatura_f1?: number
+          adocao_outra_literatura_f2?: number
+          adocao_outra_sistema_ei?: number
+          adocao_outra_sistema_em?: number
+          adocao_outra_sistema_f1?: number
+          adocao_outra_sistema_f2?: number
+          adota_brasil?: boolean
+          adota_did_apoio_brasil?: boolean
+          adota_lit_brasil?: boolean
+          adota_sistema_brasil?: boolean
+          alunos_ei?: number
+          alunos_em?: number
+          alunos_f1?: number
+          alunos_f2?: number
+          alvo_bilingue?: boolean
+          alvo_brincando?: boolean
+          alvo_cora?: boolean
+          alvo_versa?: boolean
+          bairro?: string
+          cep?: string
+          cep5?: string
+          cnpj_escola_censo?: string | null
+          cod_consultor?: string
+          cod_escola?: string | null
+          cod_inep?: string | null
+          cod_municipio?: string
+          cod_protheus?: string
+          cod_regiao_geografica_imediata?: string
+          cod_regiao_geografica_intermediaria?: string
+          consultor?: string
+          ddd?: string | null
+          endereco?: string
+          gerente?: string
+          id?: never
+          imported_at?: string
+          latitude?: number | null
+          longitude?: number | null
+          mensalidade_ei?: string | null
+          mensalidade_em?: string | null
+          mensalidade_f1?: string | null
+          mensalidade_f2?: string | null
+          municipio?: string
+          nome_escola?: string
+          numero?: string | null
+          regiao?: string
+          regiao_geografica_imediata?: string
+          regiao_geografica_intermediaria?: string
+          telefone?: string | null
+          tipo_adocao?: string
+          tipo_contrato_brasil?: string | null
+          tipo_escola?: string | null
+          uf?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           arquivo_carteira: string | null
@@ -158,6 +389,88 @@ export type Database = {
         }
         Relationships: []
       }
+      vw_carteiras_etapa_2_1: {
+        Row: {
+          adocao_brasil_did_apoio_ei: number | null
+          adocao_brasil_did_apoio_em: number | null
+          adocao_brasil_did_apoio_f1: number | null
+          adocao_brasil_did_apoio_f2: number | null
+          adocao_brasil_literatura_ei: number | null
+          adocao_brasil_literatura_em: number | null
+          adocao_brasil_literatura_f1: number | null
+          adocao_brasil_literatura_f2: number | null
+          adocao_brasil_sistema_ei: number | null
+          adocao_brasil_sistema_em: number | null
+          adocao_brasil_sistema_f1: number | null
+          adocao_brasil_sistema_f2: number | null
+          adocao_material_proprio_ei: number | null
+          adocao_material_proprio_em: number | null
+          adocao_material_proprio_f1: number | null
+          adocao_material_proprio_f2: number | null
+          adocao_outra_did_apoio_ei: number | null
+          adocao_outra_did_apoio_em: number | null
+          adocao_outra_did_apoio_f1: number | null
+          adocao_outra_did_apoio_f2: number | null
+          adocao_outra_literatura_ei: number | null
+          adocao_outra_literatura_em: number | null
+          adocao_outra_literatura_f1: number | null
+          adocao_outra_literatura_f2: number | null
+          adocao_outra_sistema_ei: number | null
+          adocao_outra_sistema_em: number | null
+          adocao_outra_sistema_f1: number | null
+          adocao_outra_sistema_f2: number | null
+          adota_brasil: boolean | null
+          adota_did_apoio_brasil: boolean | null
+          adota_lit_brasil: boolean | null
+          adota_sistema_brasil: boolean | null
+          alunos_ei: number | null
+          alunos_em: number | null
+          alunos_f1: number | null
+          alunos_f2: number | null
+          alvo_bilingue: boolean | null
+          alvo_brincando: boolean | null
+          alvo_cora: boolean | null
+          alvo_versa: boolean | null
+          bairro: string | null
+          cep: string | null
+          cep5: string | null
+          cnpj_escola_censo: string | null
+          cod_consultor: string | null
+          cod_escola: string | null
+          cod_inep: string | null
+          cod_municipio: string | null
+          cod_protheus: string | null
+          cod_regiao_geografica_imediata: string | null
+          cod_regiao_geografica_intermediaria: string | null
+          consultor: string | null
+          ddd: string | null
+          endereco: string | null
+          gerente: string | null
+          id: number | null
+          imported_at: string | null
+          latitude: number | null
+          longitude: number | null
+          mensalidade_ei: string | null
+          mensalidade_em: string | null
+          mensalidade_f1: string | null
+          mensalidade_f2: string | null
+          municipio: string | null
+          nome_escola: string | null
+          numero: string | null
+          ocorrencias_cod_protheus: number | null
+          regiao: string | null
+          regiao_geografica_imediata: string | null
+          regiao_geografica_intermediaria: string | null
+          telefone: string | null
+          telefone_formatado: string | null
+          tipo_adocao: string | null
+          tipo_contrato_brasil: string | null
+          tipo_escola: string | null
+          total_alunos: number | null
+          uf: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -168,6 +481,8 @@ export type Database = {
         Returns: boolean
       }
       import_cadastros: { Args: { payload: Json }; Returns: Json }
+      reset_carteiras_escolas_v3: { Args: never; Returns: undefined }
+      validar_carteiras_escolas_v3: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "consultor"
