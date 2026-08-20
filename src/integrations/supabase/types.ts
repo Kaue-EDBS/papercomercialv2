@@ -284,6 +284,93 @@ export type Database = {
         }
         Relationships: []
       }
+      enem_medias_municipio: {
+        Row: {
+          ano: number
+          codigo_municipio: string
+          imported_at: string
+          media_ch: number | null
+          media_cn: number | null
+          media_lc: number | null
+          media_mt: number | null
+          media_redacao: number | null
+          media_redacao_comp1: number | null
+          media_redacao_comp2: number | null
+          media_redacao_comp3: number | null
+          media_redacao_comp4: number | null
+          media_redacao_comp5: number | null
+          municipio: string
+          n_ch: number
+          n_cn: number
+          n_lc: number
+          n_mt: number
+          n_redacao: number
+          n_redacao_comp1: number
+          n_redacao_comp2: number
+          n_redacao_comp3: number
+          n_redacao_comp4: number
+          n_redacao_comp5: number
+          participantes_total: number
+          uf: string
+        }
+        Insert: {
+          ano: number
+          codigo_municipio: string
+          imported_at?: string
+          media_ch?: number | null
+          media_cn?: number | null
+          media_lc?: number | null
+          media_mt?: number | null
+          media_redacao?: number | null
+          media_redacao_comp1?: number | null
+          media_redacao_comp2?: number | null
+          media_redacao_comp3?: number | null
+          media_redacao_comp4?: number | null
+          media_redacao_comp5?: number | null
+          municipio: string
+          n_ch?: number
+          n_cn?: number
+          n_lc?: number
+          n_mt?: number
+          n_redacao?: number
+          n_redacao_comp1?: number
+          n_redacao_comp2?: number
+          n_redacao_comp3?: number
+          n_redacao_comp4?: number
+          n_redacao_comp5?: number
+          participantes_total: number
+          uf: string
+        }
+        Update: {
+          ano?: number
+          codigo_municipio?: string
+          imported_at?: string
+          media_ch?: number | null
+          media_cn?: number | null
+          media_lc?: number | null
+          media_mt?: number | null
+          media_redacao?: number | null
+          media_redacao_comp1?: number | null
+          media_redacao_comp2?: number | null
+          media_redacao_comp3?: number | null
+          media_redacao_comp4?: number | null
+          media_redacao_comp5?: number | null
+          municipio?: string
+          n_ch?: number
+          n_cn?: number
+          n_lc?: number
+          n_mt?: number
+          n_redacao?: number
+          n_redacao_comp1?: number
+          n_redacao_comp2?: number
+          n_redacao_comp3?: number
+          n_redacao_comp4?: number
+          n_redacao_comp5?: number
+          participantes_total?: number
+          uf?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           arquivo_carteira: string | null
