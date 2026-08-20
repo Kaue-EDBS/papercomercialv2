@@ -1,0 +1,1 @@
+REVOKE INSERT, UPDATE, DELETE ON public.enem_medias_municipio FROM sandbox_exec;
