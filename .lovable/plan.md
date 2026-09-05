@@ -1,47 +1,41 @@
-# Base Material Próprio 2026 no banco
+# Novo fluxo: login Outlook → busca → validação → paper
 
-Subir apenas o pacote de Material Próprio, em formato normalizado. O plano anterior (Didático e Apoio) fica de fora — voltamos a ele quando o modelo de normalização estiver definido. Nenhuma alteração de frontend.
+Reorganizar o app em uma única aplicação (SPA) com fluxo direto: **entrar com a conta Microsoft/Outlook → buscar a escola → validar a concorrência → gerar o paper**. A Etapa 1 deixa de existir como etapa separada.
 
-## Como os dados serão guardados
+## O que muda
 
-A planilha vem em formato "largo": uma linha por escola e até 25 blocos de adoção lado a lado (281 colunas). No banco isso vira **uma linha por adoção** — as 9.761 adoções do arquivo — repetindo os campos fixos da escola em cada linha. Nada se perde: a visão em blocos pode ser reconstruída a partir dessa tabela.
+**1. Entrada com Outlook (Microsoft)**
+- A tela de "Código Protheus" é substituída por um botão "Entrar com Microsoft".
+- O login passa a ser de verdade (conta da empresa), não mais uma lista local de códigos.
+- Ao entrar pela primeira vez, o sistema reconhece o consultor pelo e-mail (já existe a base de cadastros no banco que faz essa ligação) e monta a sessão com nome, código e gestor.
+- Quem não estiver cadastrado recebe uma mensagem clara para procurar o administrador — sem acesso ao app.
 
-Tabela `adocoes_material_proprio`:
+**2. Fluxo único, sem Etapa 1**
+- Saem de cena: a tela de escolha "Carteira ou Paper", a tela inicial de busca (capa), o comparativo escolar e a tela "Minha Carteira".
+- Depois do login, o usuário cai direto na busca por escola (Código INEP ou Código Protheus).
+- A partir da busca o fluxo segue como hoje: concorrentes essenciais → tabela de concorrentes → mapa e raio → tipo de apresentação → as 11 páginas do paper.
 
-- Escola: código da escola, nome, município, UF, região, ano (2026)
-- Adoção: ordem do bloco na escola, matéria, segmento (EI, EF1, EF2, EM), tipo de material (sempre MATERIAL PRÓPRIO)
-- Ano anterior: coleção anterior, grupo editorial anterior, quantidade de adoções
-- Ano atual: coleção atual, grupo editorial, quantidade de adoções
-- Anos de adoção da coleção e estratégia (ATACAR, MONITORAR)
+**3. O que não muda**
+- Toda a Etapa 2 (validação de concorrência) e a Etapa 3 (paper completo, comparativos internos, exportação PDF/PPTX) continuam exatamente como estão.
+- Busca por INEP com fallback para Código Protheus continua valendo.
+- Bases no banco (carteiras, censo, ENEM, demográfica) não são tocadas.
 
-A regra do pacote é preservada como veio: onde não havia adoção anterior de material próprio, os campos trazem "COLEÇÃO EDITORIAL / NÃO ADOTAVA MATERIAL PRÓPRIO" e "EDITORIAL / NÃO ADOTAVA MATERIAL PRÓPRIO" (2.777 linhas). Demais ausências continuam vazias, nunca zero.
+## Pontos de atenção
 
-Para facilitar a leitura por escola, incluo também a visão `vw_escolas_material_proprio`: uma linha por escola (1.150) com nome, município, UF, região, número de adoções e totais do ano anterior e do ano atual.
-
-## Acesso
-
-Leitura apenas para usuários autenticados — mesmo critério das bases ENEM, demográfica e censo. Nenhuma escrita pelo app.
-
-## Validação após a carga
-
-- 9.761 adoções e 1.150 escolas distintas
-- Soma do ano anterior = 876.675 e do ano atual = 1.200.136 (conforme a auditoria do pacote)
-- Máximo de 25 blocos em uma escola preservado
-- Amostra conferida contra o arquivo (ex.: ASSOC BENEFIC SANTA ZITA DE LUCCA / Porto Alegre-RS)
-
-## Ponto de atenção
-
-O "Código da Escola" é numérico (ex.: `900102768`) e não bate com o `cod_protheus` das carteiras (formato tipo `C08573`). A base entra independente; a ligação com carteiras depende de um de-para, em etapa futura.
+- **Comparativo escolar**: a interpretação é que sai junto com a Etapa 1. Se quiser mantê-lo, aviso e ele vira um botão na tela de busca.
+- **Carteira fake (Kaue Pastrello / DEMO001)**: sem a tela "Minha Carteira", ela deixa de aparecer no app. Os arquivos continuam no projeto caso a carteira volte em outra versão.
+- **Login Microsoft**: exige um cadastro do aplicativo no Microsoft Entra (Azure) da empresa — normalmente feito pelo time de TI. Eu preparo toda a configuração do lado do app e deixo o passo a passo; sem esse cadastro da TI, o botão de login não funciona.
+- **Sessão**: hoje a sessão fica salva no navegador; com o login real ela passa a ser gerenciada com segurança pela autenticação do backend, incluindo sair da conta.
 
 ## Detalhes técnicos
 
-- `CREATE TABLE public.adocoes_material_proprio` com `id bigint GENERATED ALWAYS AS IDENTITY`, `UNIQUE (ano, codigo_escola, bloco)` para carga idempotente; índices em `codigo_escola`, `(uf, municipio)`, `segmento` e `materia`.
-- `codigo_escola text` (preserva zeros à esquerda); quantidades em `integer` nulo-permissivo; CHECK em `segmento` (`EI|EF1|EF2|EM`).
-- View `vw_escolas_material_proprio` com `security_invoker = true`, herdando a RLS da tabela base.
-- `GRANT SELECT` para `authenticated`, `GRANT ALL` para `service_role`; RLS habilitada com política de leitura para autenticados.
-- Carga como operação de dados: leitura do XLSX do pacote, desdobramento dos até 25 blocos por linha e inserção em lotes com `ON CONFLICT DO UPDATE`.
-- O XLSX não é copiado para o repositório; os dados ficam apenas no banco.
+- `PageLogin` reescrita com `supabase.auth.signInWithOAuth({ provider: 'azure', ... })`, redirect para `window.location.origin` e tratamento de retorno da sessão (`onAuthStateChange`).
+- Configuração do provedor Azure via `configure_social_auth` (mesmo turno), com instruções para o cadastro no portal Azure (client ID/secret).
+- Sessão do consultor derivada de `auth.users` + `profiles`/`cadastros` (o trigger `handle_new_user` já vincula e-mail → cod_protheus e gestor); o `localStorage` de sessão é removido.
+- `Index.tsx`: removidos os estados/telas `modo`, `carteira`, `capa` e o módulo comparativo; após login, `setPage('paper')` (busca). Ajustes de `handleBack`/`handleNewSearch` e do `Header` (botão sair passa a usar `signOut`).
+- Arquivos órfãos (`PageModo`, `PageCapa`, `PageCarteira`, `ComparativeModule`, hooks de carteira) são desligados do fluxo; remoção física dos arquivos só depois de validado, para facilitar reversão.
+- Rota `/apresentacao/:inep` (links diretos) continua funcionando, agora exigindo login.
 
 ## Fora do escopo
 
-Didático e Apoio, e qualquer consumo no frontend.
+Nenhuma mudança visual nas páginas do paper, nenhuma carga de dados nova, e o plano anterior de Material Próprio continua suspenso.
