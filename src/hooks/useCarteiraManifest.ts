@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useState } from 'react';
-
 export interface CarteiraManifestEntry {
   arquivo: string;
   consultor: string;
@@ -10,9 +8,6 @@ export interface CarteiraManifestEntry {
 
 export type CarteiraManifest = Record<string, CarteiraManifestEntry>;
 
-let cache: CarteiraManifest | null = null;
-let pending: Promise<CarteiraManifest> | null = null;
-
 function norm(s: string) {
   return s
     .normalize('NFD')
@@ -22,42 +17,13 @@ function norm(s: string) {
     .toLowerCase();
 }
 
-/**
- * Manifest dos arquivos individuais de carteira (um JSON por consultor).
- * Substitui o filtro amplo na base geral.
- */
+/** Fonte de dados zerada — as carteiras passarão a vir do banco. */
 export function useCarteiraManifest() {
-  const [data, setData] = useState<CarteiraManifest>(cache || {});
-  const [loading, setLoading] = useState(!cache);
-
-  useEffect(() => {
-    if (cache) { setData(cache); setLoading(false); return; }
-    if (!pending) {
-      pending = fetch('/data/carteiras/manifest.json').then(r => r.json());
-    }
-    pending
-      .then((d: CarteiraManifest) => { cache = d; setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
-
-  const consultores = useMemo(() => Object.values(data), [data]);
-
-  /** Procura por código Protheus exato. */
-  const findByCodigo = (codigo: string): CarteiraManifestEntry | null => {
-    const c = String(codigo).trim().toUpperCase();
-    if (!c) return null;
-    return (
-      consultores.find(x => String(x.codConsultor).trim().toUpperCase() === c) || null
-    );
-  };
-
-  /** Procura por chave normalizada do nome (para uso pós-validação). */
-  const findByNome = (nome: string): CarteiraManifestEntry | null => {
-    const k = norm(nome);
-    return data[k] || consultores.find(x => norm(x.consultor) === k) || null;
-  };
-
-  return { manifest: data, consultores, loading, findByCodigo, findByNome };
+  const manifest: CarteiraManifest = {};
+  const consultores: CarteiraManifestEntry[] = [];
+  const findByCodigo = (_codigo: string): CarteiraManifestEntry | null => null;
+  const findByNome = (_nome: string): CarteiraManifestEntry | null => null;
+  return { manifest, consultores, loading: false, findByCodigo, findByNome };
 }
 
 export { norm as normalizeConsultorKey };
