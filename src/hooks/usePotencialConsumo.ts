@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-
 export interface PotencialMunicipio {
   municipio: string;
   domicilios_total: number;
@@ -17,44 +15,19 @@ export interface PotencialMunicipio {
   };
 }
 
-let cache: Record<string, PotencialMunicipio> | null = null;
-let inflight: Promise<Record<string, PotencialMunicipio>> | null = null;
-
-async function load(): Promise<Record<string, PotencialMunicipio>> {
-  if (cache) return cache;
-  if (inflight) return inflight;
-  inflight = fetch('/data/potencial_consumo.json')
-    .then(r => r.json())
-    .then((j: Record<string, PotencialMunicipio>) => { cache = j; inflight = null; return j; });
-  return inflight;
-}
-
-/** Dispara o download em background (idempotente) — útil para prefetch. */
+/** Fonte de dados zerada — potencial de consumo virá do banco. */
 export function prefetchPotencialConsumo(): void {
-  if (cache || inflight) return;
-  void load();
+  /* no-op enquanto não há fonte de dados */
 }
 
-/** Lookup por código IBGE (aceita 6 ou 7 dígitos). */
-export function findPotencialByIBGE(data: Record<string, PotencialMunicipio> | null, codMunicipio: string): PotencialMunicipio | null {
-  if (!data) return null;
-  const cod = String(codMunicipio).replace(/\D/g, '');
-  if (data[cod]) return data[cod];
-  // fallback 6 dígitos
-  const cod6 = cod.length === 7 ? cod.slice(0, 6) : cod;
-  for (const k of Object.keys(data)) {
-    const k6 = k.length === 7 ? k.slice(0, 6) : k;
-    if (k6 === cod6) return data[k];
-  }
+export function findPotencialByIBGE(
+  _data: Record<string, PotencialMunicipio> | null,
+  _codMunicipio: string,
+): PotencialMunicipio | null {
   return null;
 }
 
 export function usePotencialConsumo() {
-  const [data, setData] = useState<Record<string, PotencialMunicipio> | null>(cache);
-  const [loading, setLoading] = useState(!cache);
-  useEffect(() => {
-    if (cache) { setData(cache); setLoading(false); return; }
-    load().then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
-  return { data, loading };
+  const data: Record<string, PotencialMunicipio> | null = null;
+  return { data, loading: false };
 }
