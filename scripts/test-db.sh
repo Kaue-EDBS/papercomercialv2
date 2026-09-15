@@ -10,4 +10,5 @@ for file in database/v2/0001_foundation.sql database/v2/0002_geografia_dtb_2025_
  psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f "$file"
 done
 psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f database/tests/ingestion.sql
-psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -Atqc "select case when exists(select 1 from pg_roles where rolname='cit_replication_source_login' and not rolcanlogin and not rolsuper and not rolbypassrls) and exists(select 1 from pg_roles where rolname='cit_replication_target_login' and not rolcanlogin and not rolsuper and not rolbypassrls) then 'ok' else 1/0::text end"
+result="$(psql "$CIT_TEST_DB_URL" -X -Atqc "select count(*) from pg_roles where rolname in ('cit_replication_source_login','cit_replication_target_login') and not rolcanlogin and not rolsuper and not rolbypassrls")"
+test "$result" = "2" || { echo "Replication login principals failed closed: expected 2 safe NOLOGIN roles, got $result" >&2; exit 1; }
