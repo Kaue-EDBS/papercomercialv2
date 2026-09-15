@@ -93,7 +93,6 @@ begin
   return answer;
  end if;
  if lower(filename) not like '%.csv' and lower(filename) not like '%.tsv' then raise exception 'USE_UTF8_CSV_OR_JSON'; end if;
- -- Count candidate delimiters on the first record, outside quotes.
  while i<=length(t) loop
   ch:=substr(t,i,1);
   if ch='"' then quoted:=not quoted;
@@ -170,7 +169,7 @@ language plpgsql stable set search_path=pg_catalog as $$
 declare c jsonb; n jsonb; u jsonb; z jsonb; code text; nm text; uf text; cp text; method text; reason text;
  m public.dim_municipio%rowtype; named public.dim_municipio%rowtype; candidates jsonb := '[]'; resolved text;
 begin
- if jsonb_typeof(p)<>'object' or octet_length(p::text)>65536 then raise exception 'INVALID_ROW_SIZE_OR_TYPE'; end if;
+ if jsonb_typeof(p) is distinct from 'object' or octet_length(p::text)>65536 then raise exception 'INVALID_ROW_SIZE_OR_TYPE'; end if;
  c:=cit_private.pick(p,array['COD MUNICIPAL','COD MUNICIPIO','CODIGO MUNICIPAL','CODIGO MUNICIPIO','CODIGO MUNICIPIO COMPLETO','COD IBGE','CO MUNICIPIO']);
  n:=cit_private.pick(p,array['MUNICIPIO','NOME MUNICIPIO','NOME DO MUNICIPIO','CIDADE']);
  u:=cit_private.pick(p,array['UF','ESTADO','COD UF','NOME UF']);
@@ -198,7 +197,6 @@ begin
    end if;
   else reason:='CODIGO_INVALIDO_SEM_NOME_UF'; end if;
  end if;
- -- Only an explicit full CEP header permits deriving the 5-digit prefix.
  if cp is not null and jsonb_array_length(z->'keys')=1 and cit_private.norm(z->'keys'->>0)='CEP' and cp ~ '^[0-9]{5}-?[0-9]{3}$' then cp:=left(cp,5); end if;
  if reason is null then
   if cep_required and cp is null then reason:='CEP5_OBRIGATORIO';
@@ -217,20 +215,20 @@ begin
  'cod_uf',(select cod_uf from public.dim_municipio where cod_municipal=resolved),'candidates','[]'::jsonb,'normalized',cit_private.canonical(p,resolved,cp));
 end $$;
 
--- The privileged implementation is private and authenticates every request.
--- Public entrypoint below is SECURITY INVOKER, with no anonymous EXECUTE.
+-- Private privileged implementation: authorization and session checked every call.
+-- Public entrypoint is SECURITY INVOKER, with no anonymous EXECUTE.
 create function cit_private.ingest_api(action text, p jsonb) returns jsonb
 language plpgsql security definer set search_path=pg_catalog as $$
 declare uid uuid:=auth.uid(); role_name text; b cit_private.ingestion_batches%rowtype; r cit_private.ingestion_rows%rowtype;
  id uuid; content bytea; source_rows jsonb; hash text; item jsonb; res jsonb; idx integer; count_rows integer; pending integer; off integer;
- code text; cp text; note text; old_alias text; m public.dim_municipio%rowtype; ev jsonb; version_wanted integer;
+ code text; cp text; note text; old_alias text; m public.dim_municipio%rowtype; version_wanted integer;
 begin
- if uid is null or not exists(select 1 from auth.users where id=uid and deleted_at is null and not coalesce(is_anonymous,false) and (banned_until is null or banned_until<now())) then raise sqlstate '42501' using message='AUTH_REQUIRED'; end if;
- if not exists(select 1 from auth.sessions where user_id=uid and id::text=auth.jwt()->>'session_id') then raise sqlstate '42501' using message='SESSION_REVOKED'; end if;
+ if uid is null or not exists(select 1 from auth.users au where au.id=uid and au.deleted_at is null and not coalesce(au.is_anonymous,false) and (au.banned_until is null or au.banned_until<now())) then raise sqlstate '42501' using message='AUTH_REQUIRED'; end if;
+ if not exists(select 1 from auth.sessions ss where ss.user_id=uid and ss.id::text=auth.jwt()->>'session_id') then raise sqlstate '42501' using message='SESSION_REVOKED'; end if;
  select role into role_name from cit_private.access_grants where user_id=uid and active;
  if action='session' then return jsonb_build_object('role',role_name,'authorized',role_name is not null); end if;
  if role_name is null then raise sqlstate '42501' using message='ACCESS_NOT_APPROVED'; end if;
- if jsonb_typeof(p)<>'object' then raise exception 'PAYLOAD_OBJECT_REQUIRED'; end if;
+ if jsonb_typeof(p) is distinct from 'object' then raise exception 'PAYLOAD_OBJECT_REQUIRED'; end if;
  if action='lookup' then
   select coalesce(jsonb_agg(to_jsonb(x)),'[]') into res from
    (select cod_municipal,municipio,cod_uf from public.dim_municipio where ativo
@@ -273,7 +271,7 @@ begin
  if role_name='viewer' then raise sqlstate '42501' using message='READ_ONLY_ROLE'; end if;
  if action='append' then
   if role_name not in ('admin','operator') or b.status not in ('UPLOADING','REVIEW','READY') then raise exception 'BATCH_NOT_WRITABLE'; end if;
-  if jsonb_typeof(p->'rows')<>'array' or jsonb_array_length(p->'rows') not between 1 and 500 then raise exception 'CHUNK_REQUIRES_1_TO_500_ROWS'; end if;
+  if jsonb_typeof(p->'rows') is distinct from 'array' or jsonb_array_length(p->'rows') not between 1 and 500 then raise exception 'CHUNK_REQUIRES_1_TO_500_ROWS'; end if;
   off:=(p->>'offset')::integer;
   if off is null or off<0 or off+jsonb_array_length(p->'rows')>b.expected_rows then raise exception 'CHUNK_OUT_OF_RANGE'; end if;
   for item,idx in select value,ordinality::integer+off from jsonb_array_elements(p->'rows') with ordinality loop
@@ -299,7 +297,7 @@ begin
   select * into m from public.dim_municipio where cod_municipal=code and ativo;
   if m.cod_municipal is null then raise exception 'CANONICAL_MUNICIPALITY_REQUIRED'; end if;
   if r.resolution->>'cod_uf' is not null and m.cod_uf<>r.resolution->>'cod_uf' and not coalesce((p->>'confirm_uf_change')::boolean,false) then raise exception 'CONFIRM_UF_CHANGE_REQUIRED'; end if;
-  if (b.require_cep5 and cp is null) or (cp is not null and not exists(select 1 from public.dim_cep5 where cod_municipal=code and cep5=cp and ativo)) then raise exception 'CANONICAL_MUNICIPAL_CEP5_REQUIRED'; end if;
+  if ((b.require_cep5 or (cit_private.pick(r.raw,array['CEP5','CEP 5','CEP'])->>'value') is not null) and cp is null) or (cp is not null and not exists(select 1 from public.dim_cep5 where cod_municipal=code and cep5=cp and ativo)) then raise exception 'CANONICAL_MUNICIPAL_CEP5_REQUIRED'; end if;
   res:=jsonb_build_object('status','CORRIGIDO','method','REVISAO_MANUAL','normalized',cit_private.canonical(r.raw,code,cp),'reason',note,'candidates','[]'::jsonb);
   if coalesce((p->>'memorize')::boolean,false) then
    if r.resolution->>'name_key' is null or r.resolution->>'cod_uf' is distinct from m.cod_uf or r.resolution->>'reason'='AMBIGUIDADE_DE_COLUNA' then raise exception 'ALIAS_SCOPE_NOT_SAFE'; end if;
