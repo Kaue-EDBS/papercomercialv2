@@ -25,7 +25,7 @@ QA / auditoria           codigo + DDL + docs           |
 | GitHub | Codigo, DDL, contratos, regras, testes, documentacao, historico | Banco operacional |
 | Lovable Cloud | Runtime e banco operacional PRIMARY | Fonte permanente de regra/documentacao |
 | Supabase externo | REPLICA independente e ambiente de auditoria/consulta | Origem automatica de escrita para producao |
-| Figma | UX/UI e referencia visual | Fonte de regra de negocio estrutural |
+| Figma | UX/UI e referencia visual oficial | Fonte de regra de negocio estrutural |
 | ChatGPT | Orquestracao, implementacao assistida, QA e auditoria | Fonte permanente de verdade |
 
 ## Ambientes identificados em 2026-09-15
@@ -33,6 +33,12 @@ QA / auditoria           codigo + DDL + docs           |
 - Lovable: projeto `Paper Comercial OFICIAL` (`8380d53b-a14d-4993-9447-d7c404347336`) — PRIMARY.
 - Supabase externo: projeto `vevmnoxbjdkibdwfygfn`, regiao `sa-east-1` — REPLICA.
 - Repositorio: `Kaue-EDBS/papercomercialv2` — fonte oficial das alteracoes permanentes.
+- Figma: time `CIT`, team ID `1681665672034047133` — workspace visual oficial do Paper Comercial V2.
+- Link fornecido para o workspace Figma: `https://www.figma.com/files/team/1681665672034047133/all-folders?fuid=1681302531915878482`.
+- `SIGMA` e somente o nome antigo/incorreto usado no Figma; nao representa outro sistema ou projeto.
+- O arquivo Figma especifico ainda nao possui `fileKey` registrado porque o link atual aponta para o time/workspace, nao para um arquivo `figma.com/design/...`.
+- Nao criar um novo arquivo Figma enquanto o arquivo existente nao for identificado pelo link direto/fileKey.
+- Na autenticacao Figma validada em 15/09/2026, o usuario conectado possui acesso `View` no time `CIT`; escrita/renomeacao depende de permissao de edicao.
 
 O `supabase/config.toml` legado aponta para outro identificador tecnico associado ao stack historico. Ele nao deve ser reinterpretado como a REPLICA externa definida nesta V2 sem decisao explicita.
 
@@ -82,6 +88,8 @@ Nenhuma tabela de negocio deve ser recriada ate existir contrato, DDL e criterio
 10. Frontend nao cria regra estrutural de dados.
 11. Toda alteracao permanente e GitHub-first + commit.
 12. Contagem + checksum sao obrigatorios para declarar paridade PRIMARY x REPLICA quando houver dados replicados.
+13. Figma define referencia visual; codigo e regras executaveis continuam versionados no GitHub.
+14. `SIGMA` nunca deve ser tratado como um projeto paralelo ao Paper Comercial V2.
 
 ## Reconstrucao por dominio
 
