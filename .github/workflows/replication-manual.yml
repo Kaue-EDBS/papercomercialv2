@@ -1,0 +1,48 @@
+name: CIT manual replication
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check compares only; apply promotes PRIMARY -> REPLICA'
+        required: true
+        default: check
+        type: choice
+        options: [check, apply]
+      allow_deletions:
+        description: 'Allow explicit destination deletions during apply'
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: read
+concurrency:
+  group: cit-production-replication
+  cancel-in-progress: false
+jobs:
+  replicate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: cit-production-replication
+    env:
+      CIT_PRIMARY_DATABASE_URL: ${{ secrets.CIT_PRIMARY_DATABASE_URL }}
+      CIT_REPLICA_DATABASE_URL: ${{ secrets.CIT_REPLICA_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Fail closed when secrets are absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CIT_PRIMARY_DATABASE_URL" || { echo 'CIT_PRIMARY_DATABASE_URL is not configured'; exit 2; }
+          test -n "$CIT_REPLICA_DATABASE_URL" || { echo 'CIT_REPLICA_DATABASE_URL is not configured'; exit 2; }
+      - name: Install pinned worker dependency
+        run: python -m pip install -r scripts/requirements-worker.txt
+      - name: Reconcile
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=()
+          if [ '${{ inputs.mode }}' = 'apply' ]; then args+=(--apply); fi
+          if [ '${{ inputs.allow_deletions }}' = 'true' ]; then args+=(--allow-deletions); fi
+          python scripts/replication.py "${args[@]}"
