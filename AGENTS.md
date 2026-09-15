@@ -22,3 +22,6 @@ Antes de alterar qualquer coisa, leia `README.md` e `docs/architecture/README.md
 12. Contagem + checksum sao obrigatorios para declarar paridade de datasets replicados.
 13. Schemas gerenciados pela plataforma (`auth`, `storage`, `realtime`, extensoes e equivalentes) nao fazem parte de resets de negocio sem decisao explicita.
 14. Figma e referencia visual; `SIGMA` e somente um nome antigo/incorreto e nao um projeto paralelo.
+15. **Isolamento do Paper:** nenhum outro projeto, aplicacao ou banco deve ser consultado, copiado, usado como fonte, usado como transporte, usado como benchmark tecnico ou citado como justificativa de regra do Paper sem pedido explicito do usuario. O Paper deve ser reconstruido somente a partir de suas proprias fontes aprovadas, do seu GitHub, do seu PRIMARY, da sua REPLICA e do seu Figma.
+16. Conhecimento adquirido em outros projetos pode existir na memoria do agente, mas nao constitui especificacao, dependencia, fonte de verdade ou autorizacao para reutilizacao dentro do Paper.
+17. Para geografia, as fontes vigentes do Paper sao o arquivo original `COD_MUNICIPAL.zip`/DTB 2025 auditado para este projeto e o arquivo `CEP5.xlsx`; nenhuma origem externa ao Paper substitui essa linhagem.
