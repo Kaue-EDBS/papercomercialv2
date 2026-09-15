@@ -1,0 +1,9 @@
+{
+ "policy":"Original approved bytes; no automatic overwrite or deletion. The Library archive is not a runtime dependency.",
+ "restore_verified_at":"2026-09-15",
+ "reprocessor":"scripts/reprocess-geography.py",
+ "files":[
+  {"name":"COD_MUNICIPAL.zip","sha256":"a5947915a7213cddde00682a51d0734ea6b6ec2307d237d1e7937edde6766b99","library_file_id":"libfile_1c52ac040ef0819196b2e6d80e62ca28","path":"/CIT-Paper/V2/Fontes/Geografia/COD_MUNICIPAL.zip"},
+  {"name":"CEP5.xlsx","sha256":"74ad34907a4ee418ededa872d3530cc11ae89270ed666331a6879ea72cb8cf13","library_file_id":"libfile_afd3831615ec81919330d704f81e2ce9","path":"/CIT-Paper/V2/Fontes/Geografia/CEP5.xlsx"}
+ ]
+}

@@ -2,7 +2,7 @@ name: CIT database verification
 on:
   push:
     branches: [main, chore/cit-p01-p11]
-    paths: ['database/**', 'scripts/replication.py', 'tests/**', '.github/workflows/database-tests.yml']
+    paths: ['database/**', 'scripts/**', 'tests/**', '.github/workflows/database-tests.yml']
   pull_request:
     branches: [main]
 permissions:
@@ -29,10 +29,18 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - name: Test only disposable database; never execute reset migration
+      - name: Test isolated ingestion database
+        run: bash scripts/test-db.sh
+      - name: Prepare independent replica fixture
         run: |
-          psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f database/tests/bootstrap.sql
+          psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -c 'create database cit_ci_replica'
+          REPLICA_URL="${CIT_TEST_DB_URL%/cit_ci}/cit_ci_replica"
+          psql "$REPLICA_URL" -X -v ON_ERROR_STOP=1 -f database/tests/bootstrap.sql
           for file in database/v2/0001_foundation.sql database/v2/0002_geografia_dtb_2025_cep5.sql database/v2/0003_cit_ingestion_access.sql database/v2/0004_replication_control.sql; do
-            psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f "$file"
+            psql "$REPLICA_URL" -X -v ON_ERROR_STOP=1 -f "$file"
           done
-          psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f database/tests/ingestion.sql
+          psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f database/tests/replication-seed.sql
+      - name: Install pinned worker dependency
+        run: python -m pip install -r scripts/requirements-worker.txt
+      - name: Verify interrupted transfer, replay, deletion gate and audit delivery
+        run: python tests/integration_replication.py
