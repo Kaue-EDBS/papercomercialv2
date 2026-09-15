@@ -6,20 +6,19 @@
 
 # Paper Comercial V2 - regras para agentes e automacoes
 
-Antes de alterar banco, regra de negocio ou interface, leia `docs/architecture/README.md`.
+Antes de alterar qualquer coisa, leia `README.md` e `docs/architecture/README.md`.
 
-Regras obrigatorias:
-
-1. GitHub e a fonte oficial de codigo, DDL, contratos, regras de negocio, testes e documentacao.
-2. Toda alteracao permanente deve ser feita primeiro no GitHub e registrada em commit. Nao usar mensagens/prompts enviados ao ambiente do Lovable como mecanismo de implementacao.
-3. Lovable Cloud e o runtime e banco operacional PRIMARY.
-4. O Supabase externo `vevmnoxbjdkibdwfygfn` e REPLICA independente; nunca deve originar escrita automatica de volta ao PRIMARY.
-5. Toda mudanca de schema V2 deve existir primeiro em `database/v2/` e possuir contrato correspondente em `docs/data-contracts/` quando houver dado de negocio.
-6. O diretorio historico `supabase/migrations/` pertence ao desenho anterior. Nao deve ser reaplicado como fonte da V2.
-7. Nenhuma credencial, secret key, service role, connection string ou segredo deve ser versionado.
-8. Tabelas tecnicas internas devem usar RLS e nao conceder acesso direto a `anon`/`authenticated` sem necessidade explicita.
-9. Chaves oficiais e estaveis devem preceder nomes em relacionamentos. Para escola, `COD_INEP` e candidato canonico para identidade fisica; `COD_PROTHEUS`/`CD_ESCOLA` sao chaves operacionais e precisam de contrato antes de uso definitivo.
-10. Alteracoes estruturais devem incluir build/testes quando aplicavel e, para dados replicados, contagem + checksum PRIMARY x REPLICA.
-11. Nenhuma tabela de negocio deve nascer diretamente no banco sem DDL versionado e validacao objetiva.
-12. Frontend nao deve definir regra estrutural de dados; regras criticas devem ser documentadas e testaveis.
-13. Schemas gerenciados pela plataforma (`auth`, `storage`, `realtime`, extensoes e equivalentes) nao fazem parte do reset de negocio, salvo decisao explicita e separada.
+1. GitHub e a fonte oficial de codigo, DDL, contratos, regras futuras, testes e documentacao.
+2. Em 2026-09-15 todas as regras de negocio legadas foram removidas da branch atual. Nao recuperar formulas, fluxos, chaves, filtros ou heuristicas do historico Git sem pedido explicito do usuario.
+3. Toda regra de negocio nova deve nascer de fonte/necessidade explicitada, contrato versionado, implementacao testavel e commit.
+4. Nao assumir chaves canonicas, ordem de dominios, faixas, formulas, criterios de concorrencia, market share, mensalidade, potencial, oferta ou qualquer comportamento legado.
+5. Lovable Cloud e runtime e banco operacional PRIMARY. Alteracoes permanentes de codigo nao devem ser feitas por mensagens/prompts no agente do Lovable.
+6. Supabase externo `vevmnoxbjdkibdwfygfn` e a REPLICA confirmada. Fluxo automatico de dados e sempre PRIMARY -> REPLICA.
+7. `supabase/config.toml` aponta para `chwsmkdkgdgocnbcyvmq` e deve permanecer assim ate prova administrativa em contrario. Esse ID e fortemente consistente com o backend tecnico ligado ao Lovable/PRIMARY; nao substitui-lo pelo ID da REPLICA.
+8. O projeto `chwsmkdkgdgocnbcyvmq` nao e acessivel pela conexao Supabase externa atual, portanto sua natureza exata permanece como topologia inferida, nao fato administrativo confirmado.
+9. Toda mudanca de schema V2 deve existir primeiro em `database/v2/`. Dados de negocio exigem contrato em `docs/data-contracts/`.
+10. Nenhuma credencial, service role, connection string ou segredo deve ser versionado.
+11. Tabelas internas devem usar RLS e principio de menor privilegio.
+12. Contagem + checksum sao obrigatorios para declarar paridade de datasets replicados.
+13. Schemas gerenciados pela plataforma (`auth`, `storage`, `realtime`, extensoes e equivalentes) nao fazem parte de resets de negocio sem decisao explicita.
+14. Figma e referencia visual; `SIGMA` e somente um nome antigo/incorreto e nao um projeto paralelo.

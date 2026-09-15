@@ -1,27 +1,26 @@
 # Banco Paper Comercial V2
 
-Este diretorio e a fonte oficial de DDL da reconstrucao V2.
+`database/v2/` é a única fonte oficial de DDL da V2.
 
-## Regra
+## Estado atual
 
-Nenhuma tabela de negocio deve ser criada no PRIMARY ou na REPLICA sem existir primeiro aqui e, quando aplicavel, possuir contrato em `docs/data-contracts/`.
+- `0000_reset_legacy.sql` — evidência reproduzível do reset realizado em 2026-09-15.
+- `0001_foundation.sql` — cria somente `etl_cargas`, `audit_data_quality` e `audit_replication_runs`.
+- `0002+` — ainda não definidos. Não atribuir domínio, chave ou regra antes de nova decisão/contrato.
 
-## Migrations V2
+## Histórico antigo
 
-- `0000_reset_legacy.sql` — remove a camada de negocio legada auditada em 2026-09-15, preservando schemas gerenciados pela plataforma.
-- `0001_foundation.sql` — cria `etl_cargas`, `audit_data_quality` e `audit_replication_runs`.
-- `0002+` — reservadas aos dominios reconstruidos, um por vez, com contrato e QA.
+Os arquivos antigos de `supabase/migrations/` foram removidos da **branch atual** durante o clean slate de regras de negócio. Eles continuam recuperáveis no histórico Git, mas são não vigentes e não devem ser reaplicados.
 
-## Historico legado
+O histórico de migrations já registrado internamente nos bancos/plataformas é metadado operacional e não equivale a DDL oficial da V2.
 
-O diretorio `supabase/migrations/` pertence ao desenho anterior. Ele permanece no repositorio como evidencia historica e **nao deve ser reaplicado automaticamente** na V2.
+## Aplicação
 
-## Aplicacao
-
-1. revisar/commitir SQL no GitHub;
-2. aplicar no Lovable Cloud PRIMARY;
-3. validar estrutura;
-4. aplicar o mesmo desenho no Supabase REPLICA;
-5. validar paridade estrutural;
-6. quando houver dados, validar contagem + checksum;
-7. atualizar documentacao/handoff.
+1. contrato/decisão;
+2. DDL no GitHub;
+3. commit;
+4. aplicação no PRIMARY;
+5. QA;
+6. aplicação/replicação na REPLICA conforme arquitetura;
+7. contagem + checksum para dados replicados;
+8. documentação final.

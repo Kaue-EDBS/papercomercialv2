@@ -1,242 +1,113 @@
-# Paper Comercial V2 — Engenharia e Continuidade
+# Paper Comercial V2 — Fundação Limpa
 
-> **Documento principal de handoff da reconstrução V2**
->
-> Última consolidação: **2026-09-15**.
->
-> Antes de alterar banco, arquitetura ou regras estruturais, leia este README, `AGENTS.md` e `docs/architecture/README.md`.
+> Documento principal de continuidade. Última consolidação: **2026-09-15**.
 
-O Paper Comercial é a aplicação comercial da Editora do Brasil para apoiar diagnóstico de escolas, concorrência, prospecção, renovação, oferta e decisão comercial. A reconstrução V2 aplica ao projeto a mesma disciplina de engenharia consolidada no PEM: GitHub-first, PRIMARY + REPLICA, contratos antes da carga, auditoria e paridade objetiva.
+## Estado atual
 
-## 1. Estado atual em uma página
-
-Em **15/09/2026**, a fundação V2 foi aplicada e validada em PRIMARY e REPLICA.
+O projeto está em **clean slate funcional**. A fundação técnica V2 está instalada, mas **nenhuma regra de negócio está ativa** na branch atual.
 
 Concluído:
 
-- governança GitHub-first;
-- Lovable Cloud definido como **PRIMARY**;
-- Supabase `vevmnoxbjdkibdwfygfn` definido como **REPLICA**;
-- Figma do time `CIT` identificado como workspace visual oficial do projeto;
-- correção de nomenclatura registrada: `SIGMA` é somente o nome antigo/incorreto usado no Figma;
-- inventário da camada legada;
-- reset controlado dos objetos de negócio antigos em `public`;
-- preservação de schemas gerenciados pela plataforma;
-- criação de `etl_cargas`;
-- criação de `audit_data_quality`;
-- criação de `audit_replication_runs`;
-- RLS habilitado nas três tabelas técnicas;
-- ausência de grants diretos para `anon/authenticated`;
-- validação estrutural em PRIMARY e REPLICA;
-- advisors da REPLICA revisados;
-- contrato-template e documentação de replicação criados.
+- GitHub-first e governança V2;
+- limpeza da camada de negócio do PRIMARY e da REPLICA;
+- `etl_cargas`, `audit_data_quality` e `audit_replication_runs` nos dois bancos;
+- RLS nas tabelas técnicas e sem acesso direto de `anon/authenticated`;
+- remoção da branch atual de páginas, hooks, cálculos, exports, planos Lovable e migrations legadas que materializavam regras anteriores;
+- frontend substituído por uma tela neutra de fundação;
+- tipos Supabase reduzidos ao schema técnico atual;
+- Project Knowledge do Lovable verificado: **vazio**;
+- Figma do time `CIT` registrado como workspace visual oficial; `SIGMA` é somente nome antigo/incorreto.
 
-Estado atual de `public` nos dois bancos:
+## Regra principal
+
+**O histórico Git não é uma especificação funcional vigente.** Regras removidas continuam recuperáveis tecnicamente pelo histórico, mas não devem ser reutilizadas, copiadas ou inferidas por um agente futuro sem pedido explícito do usuário.
+
+Qualquer regra de negócio nova deve passar por:
 
 ```text
-etl_cargas                0 linhas
-audit_data_quality        0 linhas
-audit_replication_runs    0 linhas
-```
-
-**Não existem mais tabelas de negócio legadas em `public`.**
-
-Evidência completa: [`docs/testing/foundation-v2-2026-09-15.md`](docs/testing/foundation-v2-2026-09-15.md).
-
-## 2. Regra máxima
-
-Toda alteração permanente de código, schema, regra, documentação, interface ou configuração versionável deve ser feita **via GitHub + commit**.
-
-Não usar mensagens/prompts enviados ao ambiente do Lovable como mecanismo de implementação. O Lovable é runtime/preview e hospeda o banco operacional PRIMARY; a branch conectada é o caminho oficial de sincronização do código.
-
-## 3. Fontes da verdade
-
-| Camada | Papel |
-|---|---|
-| GitHub | fonte oficial de código, DDL, contratos, regras, testes, documentação e histórico |
-| Lovable Cloud | runtime e banco operacional **PRIMARY** |
-| Supabase `vevmnoxbjdkibdwfygfn` | **REPLICA** externa independente |
-| Figma | referência oficial de UX/UI; workspace visual no time `CIT` |
-| ChatGPT | orquestração, implementação assistida, QA e auditoria |
-
-Direção de dados:
-
-```text
-Lovable Cloud PRIMARY  --->  Supabase REPLICA
-```
-
-Nunca existe reparo automático REPLICA -> PRIMARY.
-
-## 4. Ambientes identificados
-
-- Repositório: `Kaue-EDBS/papercomercialv2`.
-- Lovable PRIMARY: projeto `Paper Comercial OFICIAL`, ID `8380d53b-a14d-4993-9447-d7c404347336`.
-- Supabase REPLICA: projeto `vevmnoxbjdkibdwfygfn`, região `sa-east-1`.
-- Figma: time `CIT`, team ID `1681665672034047133`, definido como workspace visual oficial do Paper Comercial V2.
-- Link de workspace fornecido: `https://www.figma.com/files/team/1681665672034047133/all-folders?fuid=1681302531915878482`.
-- O nome `SIGMA` usado no Figma é **legado/incorreto** e não representa outro projeto. O nome conceitual correto é **Paper Comercial V2**.
-- O link atual é de workspace/time e não identifica um arquivo `design/...`; portanto o `fileKey` oficial do arquivo visual ainda não está registrado. Não criar outro arquivo nem assumir um `fileKey` até receber/localizar o link direto do arquivo.
-- A conexão Figma validada em 15/09/2026 está com acesso `View` no time `CIT`; alterações de nome/conteúdo dependem de permissão de edição.
-- O `supabase/config.toml` legado aponta para `chwsmkdkgdgocnbcyvmq`; esse identificador pertence ao stack histórico e **não deve ser tratado como a REPLICA externa da V2** sem decisão explícita.
-
-## 5. Estado encontrado antes do reset V2
-
-Em 15/09/2026, PRIMARY e REPLICA apresentavam a mesma camada de negócio em `public`:
-
-| objeto | tipo | linhas |
-|---|---|---:|
-| `densidade_demografica_cep5` | tabela | 0 |
-| `dim_escola` | tabela | 0 |
-| `dim_municipio` | tabela | 0 |
-| `escola_protheus` | tabela | 0 |
-| `v_escola_por_protheus` | view | — |
-| `densidade_demografica_cep5_id_seq` | sequence | — |
-
-Não havia rotinas `public` nem policies de RLS específicas nesses objetos no PRIMARY.
-
-O reset removeu somente essa camada de negócio e preservou schemas gerenciados pela plataforma (`auth`, `storage`, `realtime`, extensões e equivalentes). Isso é intencional e replica o padrão de reset adotado no PEM.
-
-SQL oficial do reset: `database/v2/0000_reset_legacy.sql`.
-
-## 6. Fundação V2
-
-A fundação técnica inicial é deliberadamente pequena e não recria datasets de negócio:
-
-- `etl_cargas` — rastreia cada carga, origem, arquivo, status, volumes e timestamps;
-- `audit_data_quality` — registra checks de qualidade por dataset/carga;
-- `audit_replication_runs` — registra contagem, checksum e status de sincronizações PRIMARY x REPLICA.
-
-DDL oficial: `database/v2/0001_foundation.sql`.
-
-As três tabelas usam RLS e não concedem acesso direto a `anon` ou `authenticated`.
-
-Na REPLICA, os advisors atuais retornam somente avisos informativos esperados:
-
-- `rls_enabled_no_policy` — intencional, pois as tabelas são internas e não possuem policies públicas;
-- `unused_index` — esperado, porque as tabelas acabaram de ser criadas e estão vazias.
-
-## 7. O que NÃO deve ser recriado automaticamente
-
-A existência de tabelas ou migrations antigas não autoriza recriá-las na V2. Antes de voltar qualquer domínio, é obrigatório criar contrato e DDL novo.
-
-Isso vale especialmente para:
-
-- identidade escolar (`dim_escola`);
-- geografia (`dim_municipio`);
-- relacionamento operacional (`escola_protheus`, `COD_PROTHEUS`, `CD_ESCOLA`);
-- Censo Escolar;
-- demografia/CEP;
-- adoção histórica;
-- Melhor Oferta;
-- Zero Estoque;
-- concorrência e área de influência;
-- agregações do frontend.
-
-## 8. Chaves candidatas — não congelar sem contrato
-
-Diretrizes já conhecidas do domínio, mas que precisam ser formalizadas na V2 antes de virar schema:
-
-- `COD_INEP`: candidato principal para identidade física da escola;
-- `COD_PROTHEUS` / `CD_ESCOLA`: chaves operacionais/comerciais, não identidade física por padrão;
-- chaves geográficas devem usar códigos oficiais estáveis;
-- nomes de escola ou município nunca devem ser a única chave de relacionamento.
-
-## 9. Regras comerciais legadas
-
-A especificação funcional extensa que ocupava este README antes da reconstrução **não foi descartada**. Ela permanece integralmente no histórico Git; o commit `618c90214c2f78a517c832d8d593d5fdce1f9da5` ainda contém o README funcional anterior.
-
-Esse material é referência para reconstruir o produto, mas **não é migration, contrato de dados nem autorização para recriar tabelas antigas**.
-
-Entre os domínios históricos existentes no produto estão: prospecção/renovação, concorrência, market share, mensalidade, perfil socioeconômico, Melhor Oferta, Proposta Comercial e Zero Estoque. Cada regra será promovida para documentação V2 conforme o domínio for reconstruído.
-
-## 10. Ordem recomendada da reconstrução
-
-```text
-1. Fundação + governança                     ✅
-2. Identidade geográfica e escolar canônica  <- PRÓXIMO
-3. Cadastro operacional/comercial de escolas
-4. Censo Escolar
-5. Demografia / CEP
-6. Adoção histórica
-7. Melhor Oferta
-8. Zero Estoque
-9. Concorrência / área de influência
-10. Agregações e frontend
-```
-
-Não iniciar o próximo domínio sem fechar QA do anterior.
-
-## 11. Fluxo obrigatório para cada dataset
-
-```text
-fonte
- -> auditoria do arquivo
- -> contrato de dados
- -> DDL no GitHub
- -> validações
- -> carga no PRIMARY
- -> QA
- -> replicação para REPLICA
+necessidade/fonte
+ -> definição explícita
+ -> contrato/documentação
+ -> implementação GitHub + commit
+ -> testes/QA
+ -> aplicação no PRIMARY
+ -> replicação quando aplicável
  -> contagem + checksum
- -> auditoria de paridade
- -> liberação para consumo
 ```
 
-## 12. Replicação
+## Topologia
 
-O desenho de replicação está documentado em [`docs/replication/lovable-to-supabase.md`](docs/replication/lovable-to-supabase.md).
+| camada | papel |
+|---|---|
+| GitHub `Kaue-EDBS/papercomercialv2` | fonte oficial de código, DDL, contratos, decisões e histórico |
+| Lovable `Paper Comercial OFICIAL` | runtime + banco operacional PRIMARY |
+| Supabase `vevmnoxbjdkibdwfygfn` | REPLICA externa confirmada |
+| Figma time `CIT` | referência visual |
+| ChatGPT | orquestração, implementação assistida, auditoria e QA |
 
-A fundação de auditoria já existe, mas o pipeline genérico de replicação ainda será implementado quando o primeiro dataset de negócio estiver formalizado. Ele deve herdar o padrão validado no PEM: registry/allowlist, leitura paginada, receiver server-side, upsert por lotes, checksum canônico, auditoria e reconciliação PRIMARY -> REPLICA.
+Fluxo autorizado de dados: **PRIMARY -> REPLICA**. Nunca REPLICA -> PRIMARY automaticamente.
 
-## 13. Diretórios oficiais
+## Sobre os dois IDs Supabase
 
-- `AGENTS.md` — regras obrigatórias para agentes/automações;
-- `database/v2/` — DDL oficial da V2;
-- `docs/architecture/` — arquitetura;
-- `docs/governance/` — fontes da verdade e workflow;
-- `docs/data-contracts/` — contratos por domínio/dataset;
-- `docs/replication/` — arquitetura e operação da réplica;
-- `docs/testing/` — evidências de QA/E2E;
-- `supabase/migrations/` — **histórico legado**, não fonte da V2.
+### `vevmnoxbjdkibdwfygfn`
 
-## 14. Sobre a “limpeza total”
+Confirmado pela conexão Supabase disponível como projeto externo saudável, região `sa-east-1`. Papel V2: **REPLICA**.
 
-A limpeza realizada é **total da camada de negócio da aplicação**, tanto no PRIMARY quanto na REPLICA.
+### `chwsmkdkgdgocnbcyvmq`
 
-Não foram apagados schemas internos/gerenciados da plataforma (`auth`, `storage`, `realtime`, metadados de migrations, extensões etc.), porque eles não são dados de negócio e sua remoção quebraria a infraestrutura Supabase/Lovable. O histórico anterior de migrations da REPLICA permanece como metadado da plataforma, mas os objetos de negócio que ele criou foram efetivamente removidos de `public`.
+É o `project_id` existente em `supabase/config.toml`. A conexão Supabase externa atual não possui permissão para consultar esse projeto, enquanto o Lovable PRIMARY usa integração Supabase e o arquivo foi gerado no repositório conectado. A evidência é **fortemente consistente** com esse ID sendo o backend técnico gerenciado/associado ao Lovable PRIMARY.
 
-## 15. Não descalibrar
+Isso ainda não é confirmação administrativa do projeto no painel Supabase. Por segurança:
 
-- Não reconstruir o banco a partir de migrations legadas.
-- Não criar tabela diretamente no runtime sem commit prévio.
-- Não transformar Supabase REPLICA em backend autoritativo.
-- Não usar mensagens do Lovable para implementar código permanente.
-- Não expor `service_role`/segredos no frontend ou GitHub.
-- Não liberar dataset sem QA objetivo.
-- Não declarar paridade sem contagem + checksum quando houver dados.
-- Não assumir que uma chave antiga continua sendo a chave correta sem novo contrato.
-- Não apagar schemas gerenciados pela plataforma como parte de resets de negócio.
-- Não tratar `SIGMA` como projeto distinto: é apenas o nome antigo/incorreto no Figma.
-- Não criar novo arquivo Figma enquanto o arquivo existente não for identificado por link direto/fileKey.
+- **não alterar `supabase/config.toml` para o ID da REPLICA**;
+- tratar `chwsm...` como identificador técnico do lado PRIMARY/Lovable até prova em contrário;
+- tratar `vevm...` como REPLICA externa confirmada.
 
-## 16. Ponto de retomada
+## Banco atual
 
-A fundação V2 está **concluída e validada**. O próximo trabalho é definir e reconstruir o primeiro domínio canônico: **identidade geográfica e escolar**.
+Em PRIMARY e REPLICA, a camada `public` de negócio foi limpa. Permanecem na fundação:
 
-Antes de criar a próxima migration (`0002`), auditar as fontes que alimentarão a identidade escolar/geográfica e fechar:
+```text
+etl_cargas
+audit_data_quality
+audit_replication_runs
+```
 
-- grão;
-- PK canônica;
-- chaves de relacionamento;
-- tratamento de duplicidades;
-- relação `COD_INEP` x `COD_PROTHEUS`/`CD_ESCOLA`;
-- geografia oficial;
-- critérios de QA;
-- escopo de replicação.
+Schemas gerenciados pela plataforma foram preservados.
 
-No Figma, o próximo passo é apenas registrar o arquivo visual correto quando houver link direto `figma.com/design/...`; o workspace oficial já está definido como o time `CIT`.
+DDL oficial:
 
-Documentação complementar:
+- `database/v2/0000_reset_legacy.sql`
+- `database/v2/0001_foundation.sql`
+
+## Código atual
+
+A branch atual preserva somente infraestrutura necessária à reconstrução: bootstrap React/Vite, componentes UI genéricos, integração Supabase do runtime, estilos e fundação de dados. Código que continha comportamento comercial foi removido.
+
+Os arquivos antigos em `.lovable/plan/` e `supabase/migrations/` também foram removidos da branch atual. O histórico Git continua existindo, mas é **não vigente**.
+
+## Figma
+
+Workspace oficial: time `CIT` (`1681665672034047133`). O link fornecido aponta para o time, não para um arquivo `/design/...`, portanto o `fileKey` ainda não está registrado. A autenticação atual possui acesso `View`; edição depende de permissão apropriada.
+
+`SIGMA` = nome antigo/incorreto. Nome conceitual do projeto: **Paper Comercial V2**.
+
+## O que um próximo chat NÃO deve fazer
+
+- não recuperar regras antigas do Git;
+- não presumir chaves de escola, município, cliente ou produto;
+- não presumir ordem de reconstrução dos domínios;
+- não recriar migrations removidas;
+- não usar mensagens no Lovable para implementar mudanças permanentes;
+- não apontar `supabase/config.toml` para a REPLICA;
+- não criar dataset de negócio sem contrato e QA;
+- não declarar paridade sem contagem + checksum.
+
+## Ponto de retomada
+
+A próxima etapa não está pré-definida por regra legada. O usuário escolhe o primeiro domínio/dataset a reconstruir. Ao receber a fonte, começar por auditoria, grão, chave, contrato e critérios de qualidade antes de escrever DDL ou lógica comercial.
+
+Documentação:
 
 - [`AGENTS.md`](AGENTS.md)
 - [`docs/architecture/README.md`](docs/architecture/README.md)
@@ -245,4 +116,4 @@ Documentação complementar:
 - [`docs/data-contracts/_template.md`](docs/data-contracts/_template.md)
 - [`docs/replication/lovable-to-supabase.md`](docs/replication/lovable-to-supabase.md)
 - [`docs/testing/foundation-v2-2026-09-15.md`](docs/testing/foundation-v2-2026-09-15.md)
-- [`database/v2/README.md`](database/v2/README.md)
+- [`docs/testing/business-rules-reset-2026-09-15.md`](docs/testing/business-rules-reset-2026-09-15.md)

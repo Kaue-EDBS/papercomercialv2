@@ -1,23 +1,26 @@
 # Fontes da verdade — Paper Comercial V2
 
 ## GitHub
-Fonte oficial de codigo, DDL, migrations V2, contratos, regras, testes e documentacao. Em conflito entre conversa/prompts e repositorio, prevalece o estado versionado aprovado.
+Fonte oficial de código, DDL, contratos, regras aprovadas, testes e documentação. Regras removidas do estado atual não voltam a ser válidas por existirem no histórico.
 
 ## Lovable Cloud
-Runtime da aplicacao e banco operacional PRIMARY. Nao e fonte oficial de documentacao. Alteracoes permanentes de codigo nao devem ser feitas por mensagens ao agente do Lovable; entram pela branch Git conectada.
+Runtime e banco operacional PRIMARY. Mudanças permanentes entram pela branch Git conectada, não por prompts ao agente do Lovable.
 
 ## Supabase externo
-Projeto `vevmnoxbjdkibdwfygfn`. Papel oficial: REPLICA independente, auditoria e consultas auxiliares. Nao deve originar escrita automatica para o PRIMARY.
+`vevmnoxbjdkibdwfygfn` é a REPLICA externa confirmada. Nunca origina reparo automático para o PRIMARY.
+
+## `supabase/config.toml`
+Contém `chwsmkdkgdgocnbcyvmq`. Não trocar por `vevmnoxbjdkibdwfygfn`. O ID é tratado como identificador técnico provável do lado PRIMARY/Lovable, mas essa natureza não foi confirmada administrativamente porque a conexão Supabase externa não tem permissão sobre ele.
 
 ## Figma
-Referencia visual e UX. O codigo versionado no GitHub e a implementacao executavel.
+Time `CIT` é o workspace visual oficial. `SIGMA` é apenas nome antigo/incorreto. Figma não define regra de negócio.
 
 ## ChatGPT
-Orquestracao, implementacao assistida, pesquisa, auditoria e QA. Nenhuma decisao deve depender exclusivamente da memoria de um chat; decisoes permanentes precisam ser promovidas ao GitHub.
+Orquestração e QA. Nenhuma decisão permanente depende somente do chat.
 
-## Regras de conflito
+## Conflitos
 
-1. GitHub x banco: GitHub define o schema esperado; divergencia deve ser investigada antes de escrever.
-2. PRIMARY x REPLICA: PRIMARY e autoritativo; reparo sempre PRIMARY -> REPLICA.
-3. Figma x codigo: a decisao aprovada deve ser sincronizada entre ambos; regra de negocio estrutural fica documentada no GitHub.
-4. README legado x V2: migrations e regras legadas sao evidencia historica, nao instrucao automatica para reconstruir o banco.
+1. GitHub x conversa: prevalece o estado versionado aprovado.
+2. PRIMARY x REPLICA: PRIMARY é autoritativo.
+3. História Git x branch atual: branch atual define o que é vigente; histórico não reativa regra removida.
+4. Figma x código: Figma referencia UX/UI; GitHub contém a implementação executável.

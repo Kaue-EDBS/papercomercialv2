@@ -1,51 +1,36 @@
-# Workflow de mudanca — Paper Comercial V2
+# Workflow de mudança — Paper Comercial V2
 
 ## Regra geral
 
-Toda mudanca permanente nasce no GitHub e deve ser commitada antes de ser aplicada ao runtime ou aos bancos.
+Toda mudança permanente nasce no GitHub e recebe commit antes de chegar ao runtime ou ao banco.
 
-## Mudanca de dados/schema
+## Nova regra ou dataset
 
-1. Identificar fonte, grao, chave e objetivo de negocio.
-2. Criar/atualizar contrato em `docs/data-contracts/`.
-3. Criar DDL/migration em `database/v2/`.
-4. Revisar PK, FK, tipos, nulabilidade, indices, constraints e RLS.
-5. Revisar impacto no frontend e nas regras comerciais.
-6. Aplicar no PRIMARY.
-7. Validar estrutura e dados no PRIMARY.
-8. Aplicar o mesmo desenho na REPLICA.
-9. Replicar dados somente apos validacao do PRIMARY.
-10. Comparar contagem + checksum.
-11. Registrar auditoria e somente entao liberar consumo.
+1. Registrar necessidade e fonte.
+2. Definir grão, semântica, chaves e limitações sem herdar pressupostos antigos.
+3. Criar contrato em `docs/data-contracts/`.
+4. Criar DDL em `database/v2/` quando houver schema.
+5. Definir testes e checks de qualidade.
+6. Implementar via GitHub.
+7. Validar build/testes.
+8. Aplicar no PRIMARY.
+9. Validar o PRIMARY.
+10. Replicar para REPLICA quando aplicável.
+11. Comparar contagem + checksum.
+12. Documentar resultado.
 
-## Mudanca de interface
+## Interface
 
-1. Definir necessidade e regra de negocio.
-2. Confirmar que o contrato de dados suporta a necessidade.
-3. Ajustar Figma quando houver mudanca relevante de UX/UI.
+1. Especificar comportamento atual desejado.
+2. Não copiar fluxo ou texto antigo por inferência.
+3. Atualizar Figma quando aplicável.
 4. Implementar via GitHub + commit.
-5. Rodar testes/build conforme aplicavel.
-6. Sincronizar pela branch conectada ao Lovable.
-7. Validar estados vazio/loading/erro e dados reais.
+5. Testar estados vazio/loading/erro e comportamento aprovado.
 
-## Mudanca destrutiva
+## Mudança destrutiva
 
-Reset, DROP, exclusao de dados ou mudanca de chave exige:
-
-- inventario antes da mudanca;
-- SQL versionado no GitHub;
-- confirmacao do escopo;
-- preservacao de schemas gerenciados pela plataforma, salvo decisao explicita;
-- validacao posterior mostrando exatamente quais objetos permaneceram.
+Exige inventário, SQL/código versionado, escopo explícito e validação posterior. Schemas gerenciados pela plataforma são preservados salvo decisão específica.
 
 ## Definition of Done
 
-Uma alteracao nao esta concluida ate que:
-
-- regra/origem estejam documentadas;
-- codigo/DDL estejam versionados;
-- testes aplicaveis passem;
-- dados tenham validacao objetiva quando houver carga;
-- nao existam segredos no diff;
-- PRIMARY e REPLICA estejam em paridade quando aplicavel;
-- o README/handoff esteja atualizado se a mudanca alterar arquitetura ou ponto de retomada.
+A alteração precisa ter fonte/decisão documentada, código versionado, testes aplicáveis, QA objetivo de dados quando houver, ausência de segredos no diff e paridade PRIMARY/REPLICA quando aplicável.
