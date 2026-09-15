@@ -1,210 +1,153 @@
-# Paper Comercial V2 — Fundação Limpa e Ponto de Retomada
+# Paper Comercial V2 — Estado Atual e Ponto de Retomada
 
-> **Documento principal de continuidade da reconstrução V2**  
+> Documento principal de continuidade do CIT/Paper Comercial V2.  
 > Última consolidação: **2026-09-15**.
->
-> Antes de qualquer alteração, leia também `AGENTS.md`, `docs/architecture/README.md` e `docs/governance/change-workflow.md`.
 
-## 1. Estado executivo
+Antes de qualquer alteração, leia também:
 
-O Paper Comercial V2 está em **clean slate funcional**.
-
-Isso significa que a engenharia-base está pronta, mas **nenhuma regra de negócio antiga é considerada vigente** na branch `main`.
-
-Hoje o projeto possui:
-
-- governança GitHub-first;
-- Lovable Cloud como runtime e banco operacional PRIMARY;
-- Supabase externo `vevmnoxbjdkibdwfygfn` como REPLICA confirmada;
-- banco de negócio antigo removido de PRIMARY e REPLICA;
-- fundação técnica V2 instalada nos dois bancos;
-- frontend neutralizado;
-- regras comerciais, fórmulas, heurísticas e fluxos antigos removidos da branch atual;
-- planos históricos do Lovable removidos da branch atual;
-- migrations antigas de negócio removidas da branch atual;
-- tipos Supabase alinhados somente ao schema técnico atual;
-- Project Knowledge do Lovable verificado como vazio;
-- Figma do time `CIT` registrado como workspace visual oficial;
-- documentação de arquitetura, governança, replicação e QA preservada.
-
-**Próximo passo:** receber o primeiro dataset real e reconstruir o domínio correspondente do zero, com contrato, DDL, QA, carga no PRIMARY e replicação controlada.
+- `AGENTS.md`;
+- `docs/architecture/README.md`;
+- `docs/governance/change-workflow.md`;
+- `docs/data-contracts/geografia-dtb-2025-cep5.md`.
 
 ---
 
-## 2. Regra máxima de continuidade
+## 1. Regra máxima: o Paper é autônomo
 
-**O histórico Git não é uma especificação funcional vigente.**
+O CIT/Paper Comercial V2 deve ser tratado como um projeto isolado.
 
-Arquivos, regras, fórmulas e fluxos removidos continuam tecnicamente recuperáveis pelo histórico Git, mas isso serve apenas como evidência histórica.
+Nenhum outro projeto, aplicação ou banco deve ser usado como:
 
-Um próximo agente/chat **não deve**:
+- fonte de dados;
+- fonte de regra de negócio;
+- mecanismo de transporte;
+- fallback;
+- benchmark obrigatório;
+- referência de checksum;
+- especificação funcional;
+- justificativa arquitetural.
 
-- restaurar regra antiga por iniciativa própria;
-- copiar fórmulas antigas porque “já existiam”;
-- presumir que antigas chaves continuam corretas;
-- reativar migrations antigas;
-- reintroduzir páginas e fluxos antigos sem nova definição explícita;
-- interpretar o código histórico como requisito atual.
+Conhecimento de outros projetos não constitui requisito do Paper.
 
-Toda nova regra válida deve nascer novamente por decisão explícita e ser versionada.
+As decisões do Paper devem nascer apenas de:
 
-Fluxo obrigatório:
-
-```text
-necessidade / fonte
- -> auditoria
- -> definição de grão
- -> definição de chave(s)
- -> contrato de dados
- -> DDL / implementação no GitHub
- -> commit
- -> testes / QA
- -> aplicação no PRIMARY
- -> replicação para REPLICA quando aplicável
- -> contagem + checksum
- -> documentação final
-```
+1. fontes explicitamente aprovadas para o Paper;
+2. contratos versionados neste repositório;
+3. código/DDL versionado neste repositório;
+4. banco PRIMARY do Paper;
+5. REPLICA do Paper;
+6. Figma oficial do Paper para UX/UI;
+7. decisões explícitas do usuário.
 
 ---
 
-## 3. Fontes da verdade
+## 2. Fontes da verdade
 
 | Camada | Papel oficial |
 |---|---|
-| GitHub `Kaue-EDBS/papercomercialv2` | fonte oficial de código, DDL, contratos, decisões, testes, documentação e histórico |
-| Lovable `Paper Comercial OFICIAL` | runtime e banco operacional **PRIMARY** |
-| Supabase `vevmnoxbjdkibdwfygfn` | **REPLICA externa** confirmada |
-| Figma — time `CIT` | referência visual e UX/UI |
-| ChatGPT | orquestração, implementação assistida, auditoria e QA |
+| GitHub `Kaue-EDBS/papercomercialv2` | código, DDL, contratos, regras, testes, documentação e histórico |
+| Lovable `Paper Comercial OFICIAL` | runtime + banco operacional **PRIMARY** |
+| Supabase `vevmnoxbjdkibdwfygfn` | **REPLICA externa** |
+| Figma — time `CIT` | referência visual/UX |
+| arquivos-fonte aprovados | origem dos dados de negócio |
 
-Fluxo de dados autorizado:
+Fluxo autorizado:
 
 ```text
-GitHub  --->  Lovable runtime / PRIMARY
-                  |
-                  | replicação 1-way
-                  v
-             Supabase REPLICA
+fontes aprovadas
+      |
+      v
+GitHub / contratos
+      |
+      v
+Lovable PRIMARY
+      |
+      | replicação 1-way
+      v
+Supabase REPLICA
 ```
 
 Nunca existe reparo automático REPLICA -> PRIMARY.
 
 ---
 
-## 4. Ambientes identificados
+## 3. Ambientes
 
 ### GitHub
 
-- Repositório: `Kaue-EDBS/papercomercialv2`
-- Branch operacional: `main`
+- repositório: `Kaue-EDBS/papercomercialv2`;
+- branch operacional: `main`.
 
 ### Lovable / PRIMARY
 
-- Projeto: `Paper Comercial OFICIAL`
-- Project ID: `8380d53b-a14d-4993-9447-d7c404347336`
-- Papel: runtime + banco operacional PRIMARY
+- projeto: `Paper Comercial OFICIAL`;
+- Project ID: `8380d53b-a14d-4993-9447-d7c404347336`;
+- papel: runtime + banco operacional PRIMARY.
 
 ### Supabase / REPLICA
 
-- Project ref: `vevmnoxbjdkibdwfygfn`
-- Região: `sa-east-1`
-- Papel: REPLICA externa independente
+- Project ref: `vevmnoxbjdkibdwfygfn`;
+- região: `sa-east-1`;
+- papel: REPLICA externa independente.
 
 ### Figma
 
-- Time: `CIT`
-- Team ID: `1681665672034047133`
-- Workspace fornecido: `https://www.figma.com/files/team/1681665672034047133/all-folders?fuid=1681302531915878482`
-- `SIGMA` é apenas o nome antigo/incorreto usado anteriormente no Figma.
-- Nome conceitual correto: **Paper Comercial V2**.
-- O link atual aponta para o workspace/time, não para um arquivo `/design/...`; portanto o `fileKey` específico ainda não está registrado.
-- A conexão Figma validada possui acesso `View`; alterações no arquivo dependem de permissão de edição.
+- time: `CIT`;
+- Team ID: `1681665672034047133`;
+- nome conceitual correto: **Paper Comercial V2**;
+- `SIGMA` é apenas nome antigo/incorreto e não outro projeto.
 
 ---
 
-## 5. Os dois IDs Supabase
-
-Existem dois identificadores diferentes e eles **não devem ser confundidos**.
+## 4. Identificadores Supabase
 
 ### `vevmnoxbjdkibdwfygfn`
 
-Este projeto foi validado pela conexão Supabase disponível.
-
-Papel definido na V2:
-
-```text
-REPLICA externa
-```
+REPLICA externa confirmada.
 
 ### `chwsmkdkgdgocnbcyvmq`
 
-É o ID atualmente presente em:
+ID presente em `supabase/config.toml`.
 
-```text
-supabase/config.toml
-```
-
-Conteúdo atual:
-
-```toml
-project_id = "chwsmkdkgdgocnbcyvmq"
-```
-
-A conexão Supabase externa usada nesta reconstrução **não possui permissão** para consultar diretamente esse projeto.
-
-Ao mesmo tempo:
-
-- o repositório está conectado ao Lovable;
-- o runtime possui integração Supabase;
-- esse ID já estava no `config.toml` gerado pelo stack existente.
-
-A interpretação técnica mais segura é que `chwsm...` pertence ao lado técnico/gerenciado do Lovable PRIMARY.
-
-**Isso é uma inferência técnica forte, não uma confirmação administrativa do painel Supabase.**
+A evidência técnica é consistente com esse ID pertencendo ao lado Lovable/PRIMARY, mas isso não foi confirmado administrativamente pela conexão externa atual.
 
 Portanto:
 
 - não trocar `supabase/config.toml` para `vevm...`;
 - não tratar `chwsm...` como REPLICA;
-- manter `vevm...` como REPLICA externa confirmada;
-- só alterar essa topologia se houver evidência administrativa explícita.
+- manter `vevm...` como REPLICA confirmada;
+- só alterar essa topologia com evidência explícita.
 
 ---
 
-## 6. Reset do banco realizado
+## 5. Clean slate V2
 
-Antes da reconstrução V2, PRIMARY e REPLICA possuíam objetos de negócio antigos em `public`.
+Em 2026-09-15 a camada funcional antiga foi removida da branch atual.
 
-Foram removidos da camada de negócio:
+Foram removidos:
 
-- `densidade_demografica_cep5`;
-- `dim_escola`;
-- `dim_municipio`;
-- `escola_protheus`;
-- `v_escola_por_protheus`;
-- sequence associada à antiga densidade demográfica.
+- regras comerciais antigas;
+- fórmulas;
+- heurísticas;
+- fluxos antigos;
+- páginas específicas do produto anterior;
+- hooks e módulos de negócio antigos;
+- `.lovable/plan/`;
+- migrations antigas de negócio em `supabase/migrations/`.
 
-No momento do reset, as quatro tabelas auditadas estavam com **0 linhas**.
+Merge principal do reset funcional:
 
-Schemas gerenciados pela plataforma foram preservados, incluindo componentes como:
+```text
+f026c78f1f98d2142271118cf6adc339e1bfa867
+```
 
-- `auth`;
-- `storage`;
-- `realtime`;
-- extensões;
-- metadados internos da plataforma.
-
-Isso é intencional: o reset foi da **camada de negócio**, não da infraestrutura Supabase/Lovable.
-
-SQL oficial:
-
-- `database/v2/0000_reset_legacy.sql`
+O histórico Git permanece apenas como evidência histórica. Não deve ser usado como requisito vigente sem pedido explícito do usuário.
 
 ---
 
-## 7. Fundação técnica V2
+## 6. Fundação técnica V2
 
-Após o reset, PRIMARY e REPLICA receberam a mesma fundação técnica:
+PRIMARY e REPLICA possuem:
 
 ```text
 etl_cargas
@@ -212,285 +155,362 @@ audit_data_quality
 audit_replication_runs
 ```
 
-### `etl_cargas`
+DDL oficial:
 
-Rastreia cada carga de dados:
+- `database/v2/0001_foundation.sql`.
 
-- dataset;
-- fonte;
-- arquivo;
-- hash;
-- ano/competência;
-- status;
-- linhas recebidas;
-- linhas válidas;
-- linhas rejeitadas;
-- linhas gravadas;
-- timestamps;
-- observações.
+Essas tabelas têm RLS habilitado e não possuem grants diretos para `anon`/`authenticated`.
 
-### `audit_data_quality`
+---
 
-Registra checks de qualidade e seus resultados.
-
-### `audit_replication_runs`
-
-Registra execuções de replicação PRIMARY -> REPLICA, incluindo contagem, checksum, status e erro.
+## 7. Primeiro domínio V2 — Geografia DTB 2025 + CEP5
 
 DDL oficial:
 
-- `database/v2/0001_foundation.sql`
+- `database/v2/0002_geografia_dtb_2025_cep5.sql`.
 
-As três tabelas estão com RLS habilitado e sem grants diretos de conveniência para `anon`/`authenticated`.
+Contrato:
 
----
+- `docs/data-contracts/geografia-dtb-2025-cep5.md`.
 
-## 8. Clean slate das regras de negócio
-
-Depois do reset do banco, foi feita uma segunda limpeza: **remoção das regras funcionais da branch atual**.
-
-PR utilizado:
-
-- PR `#1` — `Reset completo das regras de negócio para a fundação V2`
-
-Merge final:
+Estrutura:
 
 ```text
-f026c78f1f98d2142271118cf6adc339e1bfa867
+dim_municipio
+dim_distrito
+dim_subdistrito
+dim_cep5
 ```
 
-A mudança atingiu **77 arquivos**, com aproximadamente **13,5 mil linhas removidas**.
+Modelo lógico:
 
-### Removido do `main`
+```text
+UF
+ -> Região Geográfica Intermediária
+    -> Região Geográfica Imediata
+       -> Município
+          ├─ Distrito
+          │  └─ Subdistrito
+          └─ CEP5
+```
 
-- `.lovable/plan/` com planos históricos de carga e reconstrução;
-- migrations antigas em `supabase/migrations/`;
-- páginas específicas do produto anterior;
-- componentes de concorrência;
-- rotas de apresentação e busca antigas;
-- hooks de carteira;
-- hooks de consultores;
-- hooks de potencial;
-- hooks de renda;
-- hooks de setorização;
-- módulos de análise;
-- regras de mensalidade;
-- regras socioeconômicas;
-- exportações antigas;
-- tipos de domínio antigos;
-- fluxos de market share;
-- fluxos de concorrência;
-- fluxos de plano de ação;
-- fluxos de carteira;
-- demais comportamentos comerciais legados codificados.
-
-### Preservado no `main`
-
-- bootstrap React/Vite;
-- componentes UI genéricos;
-- estilos e design tokens;
-- integração Supabase necessária ao runtime;
-- `supabase/config.toml`;
-- fundação técnica V2;
-- templates de contratos;
-- arquitetura;
-- governança;
-- documentação de replicação;
-- documentação de QA.
-
-### Histórico Git
-
-Os arquivos removidos continuam existindo no histórico Git por rastreabilidade, porém são **não vigentes**.
+O CEP5 é uma dimensão operacional própria. Ele não é distrito nem subdistrito.
 
 ---
 
-## 9. Frontend atual
+## 8. Fonte DTB 2025 do Paper
 
-O frontend atual foi deliberadamente neutralizado.
+Arquivo original recebido:
 
-Ele não oferece:
+```text
+COD_MUNICIPAL.zip
+```
 
-- recomendação comercial;
-- fórmula;
-- market share;
+Fonte institucional:
+
+```text
+IBGE — Divisão Territorial Brasileira 2025
+```
+
+SHA-256:
+
+```text
+a5947915a7213cddde00682a51d0734ea6b6ec2307d237d1e7937edde6766b99
+```
+
+Auditoria direta:
+
+- 5.571 municípios;
+- 27 UFs;
+- 133 regiões intermediárias;
+- 510 regiões imediatas;
+- 10.751 distritos;
+- 646 subdistritos;
+- 0 PK duplicada;
+- 0 FK inválida;
+- 0 quebra de prefixo hierárquico.
+
+---
+
+## 9. Estado da carga DTB 2025
+
+Status: **CONCLUÍDA**.
+
+Carga:
+
+```text
+geografia_dtb_2025
+```
+
+Contagens no PRIMARY e na REPLICA:
+
+| tabela | linhas |
+|---|---:|
+| `dim_municipio` | 5.571 |
+| `dim_distrito` | 10.751 |
+| `dim_subdistrito` | 646 |
+
+Checksums determinísticos atuais:
+
+```text
+dim_municipio    4665954435fe358572621d23847ac833
+dim_distrito     82deeb72775cc53ef362bca04834571a
+dim_subdistrito  9bf7f178c76829051084ef9c6702a19b
+```
+
+Resultado E2E:
+
+- contagens PRIMARY = REPLICA;
+- checksums PRIMARY = REPLICA;
+- FK inválida = 0;
+- prefixo hierárquico inválido = 0;
+- carga registrada como concluída.
+
+---
+
+## 10. Fonte CEP5 do Paper
+
+Arquivo recebido:
+
+```text
+CEP5.xlsx
+```
+
+Aba:
+
+```text
+Resultados
+```
+
+SHA-256:
+
+```text
+74ad34907a4ee418ededa872d3530cc11ae89270ed666331a6879ea72cb8cf13
+```
+
+Auditoria:
+
+- 24.905 associações `CEP5 + Município + UF`;
+- 24.905 combinações exatas únicas;
+- 24.896 CEP5 distintos;
+- 5.570 municípios cobertos;
+- 27 UFs;
+- 0 nulos;
+- 100% dos CEP5 com 5 dígitos;
+- 248 CEP5 começam com zero;
+- 9 CEP5 são compartilhados entre dois municípios;
+- 24.905/24.905 linhas resolvidas para `COD_MUNICIPAL`;
+- nenhuma resolução fuzzy.
+
+`CEP5` deve permanecer `text`.
+
+---
+
+## 11. Chave territorial CEP5
+
+CEP5 não é globalmente único.
+
+A chave territorial fina é:
+
+```text
+(COD_MUNICIPAL, CEP5)
+```
+
+Essa combinação é a PK de `dim_cep5`.
+
+Consulta apenas por CEP5 pode retornar mais de um município. A aplicação nunca deve escolher silenciosamente um deles.
+
+---
+
+## 12. Aliases homologados do CEP5
+
+Somente três diferenças nominais foram aprovadas:
+
+| origem | UF | município canônico | COD_MUNICIPAL |
+|---|---|---|---|
+| `São Luiz` | RR | `São Luiz do Anauá` | `1400605` |
+| `Arês` | RN | `Arez` | `2401206` |
+| `Açu` | RN | `Assú` | `2400208` |
+
+Método registrado:
+
+```text
+ALIAS_HOMOLOGADO
+```
+
+Todos os demais relacionamentos são `EXATO`.
+
+---
+
+## 13. CEP5 compartilhados
+
+Os nove CEP5 compartilhados auditados são:
+
+```text
+11770
+17455
+36490
+44865
+45263
+45265
+46110
+65935
+78470
+```
+
+Esses casos são válidos e são o motivo para não existir `unique(cep5)`.
+
+---
+
+## 14. Município sem CEP5 na fonte atual
+
+`Boa Esperança do Norte/MT` (`5101837`) existe na DTB 2025, mas não aparece no `CEP5.xlsx` recebido.
+
+Isso não é erro e não inativa o município.
+
+Cobertura atual:
+
+```text
+5.570 / 5.571 municípios
+```
+
+---
+
+## 15. Estado da carga CEP5
+
+Carga registrada:
+
+```text
+geografia_cep5
+```
+
+Estado atual:
+
+- fonte auditada: sim;
+- 24.905 linhas válidas: sim;
+- 0 rejeições: sim;
+- `dim_cep5` criada: sim;
+- RLS ativo: sim;
+- linhas gravadas: **ainda pendentes**;
+- checksum PRIMARY x REPLICA: **pendente**.
+
+Existe atualmente um helper interno temporário criado apenas para facilitar a ingestão compacta dos pares `COD_MUNICIPAL + CEP5`.
+
+Antes de considerar o CEP5 concluído, é obrigatório:
+
+1. carregar as 24.905 associações no PRIMARY;
+2. validar PK/FK/cobertura/aliases;
+3. replicar para a REPLICA;
+4. validar contagem + checksum;
+5. registrar QA;
+6. remover qualquer helper temporário de ingestão.
+
+---
+
+## 16. Replicação
+
+Direção única:
+
+```text
+Lovable PRIMARY  --->  Supabase REPLICA
+```
+
+A replicação do Paper deve ser implementada dentro do próprio Paper, com:
+
+- allowlist explícita;
+- paginação;
+- idempotência;
+- lotes controlados;
+- checksum determinístico;
+- contagem;
+- auditoria em `audit_replication_runs`;
+- reconciliação;
+- reparo somente PRIMARY -> REPLICA.
+
+Nenhum outro projeto deve participar desse fluxo.
+
+---
+
+## 17. Segurança
+
+Regras vigentes:
+
+- RLS nas tabelas internas;
+- nenhum grant direto de conveniência para `anon`/`authenticated` nas dimensões internas;
+- nenhum `service_role` ou segredo no frontend;
+- nenhuma credencial versionada intencionalmente;
+- funções temporárias devem ser removidas após uso;
+- alterações permanentes devem passar pelo GitHub.
+
+### Dívida técnica conhecida
+
+Existe um `.env` rastreado pelo repositório.
+
+Ele não foi aberto durante o clean slate. Deve passar por auditoria de segurança separada antes de ser considerado seguro.
+
+---
+
+## 18. Frontend
+
+O frontend permanece neutralizado.
+
+Ainda não estão reativados:
+
 - concorrência;
+- market share;
 - mensalidade;
 - perfil socioeconômico;
 - carteira;
 - potencial;
 - Melhor Oferta;
 - Zero Estoque;
-- fluxo decisório.
+- proposta;
+- plano de ação;
+- demais regras comerciais.
 
-A tela atual serve apenas para indicar que a fundação V2 está ativa e que o sistema aguarda reconstrução controlada.
-
----
-
-## 10. Lovable Project Knowledge
-
-O `Project Knowledge` do projeto Lovable foi consultado em 15/09/2026.
-
-Resultado:
-
-```text
-vazio
-```
-
-Portanto, não foi encontrada uma segunda camada oculta de regras funcionais persistidas no Knowledge do projeto.
+Nenhuma dessas regras deve ser recuperada do histórico automaticamente.
 
 ---
 
-## 11. Segurança e pendências conhecidas
+## 19. O que já está decidido
 
-### `.env` versionado
-
-Existe um arquivo `.env` rastreado pelo repositório.
-
-Durante esta etapa ele **não foi aberto nem alterado**, para evitar exposição desnecessária de possíveis credenciais.
-
-Antes de uma revisão de segurança definitiva, deve ser tratado como dívida técnica específica:
-
-- verificar se contém segredo;
-- rotacionar credenciais se necessário;
-- remover segredo do estado vigente;
-- revisar histórico se houver exposição relevante.
-
-Não presumir que o `.env` é seguro apenas porque está versionado.
-
-### Build/CI
-
-A limpeza estrutural foi validada por inspeção de árvore, diff e estado pós-merge.
-
-O repositório não apresentou status checks/CI configurados para o merge, e a execução local de build/testes não ficou comprovada nesta etapa.
-
-Portanto, um próximo ciclo técnico deve executar build/testes antes de considerar alterações de frontend concluídas.
+- `COD_MUNICIPAL` é a chave administrativa canônica da geografia;
+- DTB 2025 é a fonte geográfica vigente;
+- CEP5 é `text`;
+- CEP5 é dimensão territorial operacional de primeira classe;
+- PK do CEP5 = `(cod_municipal, cep5)`;
+- CEP5 servirá como granularidade territorial fina para futuros contratos de concorrência e demografia;
+- PRIMARY -> REPLICA é a única direção automática de dados;
+- Paper é autônomo e não depende de outro projeto.
 
 ---
 
-## 12. Replicação
+## 20. O que ainda NÃO está decidido
 
-A direção está definida:
-
-```text
-Lovable Cloud PRIMARY  --->  Supabase REPLICA
-```
-
-Porém o pipeline genérico do Paper Comercial ainda **não foi implementado**.
-
-Quando o primeiro dataset for aprovado, a replicação deve herdar a engenharia validada no PEM:
-
-- registry/allowlist explícita;
-- tabelas autorizadas apenas;
-- leitura paginada;
-- operações idempotentes;
-- lotes controlados;
-- checksum determinístico;
-- contagem PRIMARY x REPLICA;
-- auditoria em `audit_replication_runs`;
-- reconciliação;
-- reparo somente PRIMARY -> REPLICA.
-
-Documentação:
-
-- `docs/replication/lovable-to-supabase.md`
-
----
-
-## 13. Protocolo para o PRIMEIRO dataset
-
-Ao receber os primeiros dados reais, **não criar tabela imediatamente**.
-
-Executar nesta ordem:
-
-### Etapa A — auditoria da fonte
-
-1. identificar arquivo(s) e formato;
-2. identificar fonte oficial;
-3. identificar período/competência;
-4. medir linhas e colunas;
-5. verificar duplicidades;
-6. verificar nulos;
-7. verificar tipos;
-8. identificar possíveis chaves;
-9. identificar inconsistências e aliases;
-10. registrar limitações metodológicas.
-
-### Etapa B — contrato
-
-Definir explicitamente:
-
-- nome lógico do dataset;
-- grão de uma linha;
-- PK;
-- chaves de relacionamento;
-- tipos;
-- regras de nulidade;
-- normalizações;
-- deduplicação;
-- regras de qualidade;
-- critérios de rejeição;
-- segurança/RLS;
-- estratégia de replicação;
-- colunas utilizadas no checksum.
-
-Usar:
-
-- `docs/data-contracts/_template.md`
-
-### Etapa C — engenharia
-
-1. criar `database/v2/0002_*.sql` somente depois do contrato;
-2. versionar no GitHub;
-3. commit;
-4. executar testes estruturais;
-5. aplicar no PRIMARY;
-6. carregar staging quando necessário;
-7. executar QA;
-8. promover somente dados aprovados;
-9. aplicar estrutura correspondente na REPLICA;
-10. replicar;
-11. comparar contagem + checksum;
-12. documentar evidência E2E.
-
-### Gate de promoção
-
-Nenhum dataset deve ser considerado concluído se houver:
-
-- PK duplicada não explicada;
-- falha crítica de integridade;
-- chave ambígua não tratada;
-- divergência PRIMARY x REPLICA;
-- checksum diferente;
-- linha rejeitada sem tratamento quando a regra exigir 100% de resolução.
-
----
-
-## 14. O que NÃO está decidido
-
-Neste momento **não existe decisão vigente** sobre:
+Ainda não existe decisão vigente sobre:
 
 - chave canônica de escola;
 - chave canônica de cliente;
-- relação entre INEP e Protheus;
-- geografia;
-- ordem de reconstrução dos domínios;
-- regra de concorrência;
-- raio comercial;
+- relação INEP x Protheus;
+- regras para identificar concorrentes;
+- raio/geometria de concorrência;
+- uso exato do CEP5 na seleção de concorrentes;
+- metodologia demográfica por CEP5;
 - market share;
-- faixa de mensalidade;
+- mensalidade;
 - perfil socioeconômico;
 - potencial de consumo;
 - Melhor Oferta;
 - Zero Estoque;
-- regras de proposta;
-- regras de prospecção/renovação;
+- proposta;
+- prospecção/renovação;
 - fórmulas e pesos comerciais.
 
-Tudo isso deverá ser reconstruído e aprovado explicitamente.
+Tudo isso deve nascer de nova definição explícita.
 
 ---
 
-## 15. Diretórios oficiais
+## 21. Diretórios oficiais
 
 ```text
 AGENTS.md
@@ -499,6 +519,7 @@ README.md
 database/v2/
   0000_reset_legacy.sql
   0001_foundation.sql
+  0002_geografia_dtb_2025_cep5.sql
   README.md
 
 docs/architecture/
@@ -515,56 +536,55 @@ src/
 supabase/config.toml
 ```
 
-As antigas migrations de negócio não fazem mais parte da branch atual.
-
 ---
 
-## 16. Não descalibrar
+## 22. Não descalibrar
 
 - Não reutilizar regras legadas automaticamente.
+- Não recuperar regra de outro projeto.
+- Não consultar outro banco como atalho para o Paper.
+- Não usar outro projeto como transporte de dados.
 - Não restaurar `.lovable/plan/` como especificação.
-- Não restaurar `supabase/migrations/` antigas como V2.
+- Não restaurar migrations antigas como V2.
 - Não assumir chaves sem contrato.
-- Não criar tabela diretamente no runtime antes de GitHub + commit.
-- Não usar mensagem/prompt no Lovable como mecanismo de implementação permanente.
+- Não criar DDL permanente fora do GitHub.
+- Não usar prompts no Lovable como mecanismo permanente de implementação.
 - Não transformar a REPLICA em origem de escrita.
-- Não trocar `config.toml` para `vevm...` sem nova evidência.
-- Não expor `service_role` ou secrets.
+- Não trocar `config.toml` para `vevm...` sem evidência nova.
+- Não expor secrets.
 - Não liberar dataset sem QA objetivo.
 - Não declarar paridade sem contagem + checksum.
-- Não tratar `SIGMA` como outro projeto.
 - Não depender da memória de um chat para decisão estrutural.
 
 ---
 
-## 17. Ponto exato de retomada
-
-**Fundação e clean slate concluídos.**
-
-O projeto está pronto para receber os primeiros dados.
-
-O próximo chat deve começar assim:
+## 23. Ponto exato de retomada
 
 ```text
 1. Ler README.md + AGENTS.md.
-2. Não recuperar nenhuma regra antiga.
-3. Receber o primeiro arquivo/dataset.
-4. Auditar a fonte antes de modelar.
-5. Criar o primeiro contrato V2.
-6. Só depois criar database/v2/0002_*.sql.
-7. Carregar no PRIMARY com QA.
-8. Implementar/usar replicação controlada.
-9. Confirmar PRIMARY x REPLICA por contagem + checksum.
-10. Atualizar este README com o novo domínio fechado.
+2. Trabalhar somente no CIT/Paper.
+3. Não consultar outros projetos como referência operacional.
+4. DTB 2025 já está concluído.
+5. Retomar a carga do CEP5.xlsx.
+6. Carregar 24.905 associações em dim_cep5 no PRIMARY.
+7. Validar PK/FK/aliases/cobertura.
+8. Replicar para a REPLICA do Paper.
+9. Confirmar contagem + checksum.
+10. Remover helpers temporários.
+11. Registrar QA e atualizar este README.
+12. Só depois iniciar o próximo domínio.
 ```
 
-## 18. Evidências e documentação complementar
+---
 
-- [`AGENTS.md`](AGENTS.md)
-- [`docs/architecture/README.md`](docs/architecture/README.md)
-- [`docs/governance/sources-of-truth.md`](docs/governance/sources-of-truth.md)
-- [`docs/governance/change-workflow.md`](docs/governance/change-workflow.md)
-- [`docs/data-contracts/_template.md`](docs/data-contracts/_template.md)
-- [`docs/replication/lovable-to-supabase.md`](docs/replication/lovable-to-supabase.md)
-- [`docs/testing/foundation-v2-2026-09-15.md`](docs/testing/foundation-v2-2026-09-15.md)
-- [`docs/testing/business-rules-reset-2026-09-15.md`](docs/testing/business-rules-reset-2026-09-15.md)
+## 24. Documentação complementar
+
+- `AGENTS.md`
+- `database/v2/README.md`
+- `docs/architecture/README.md`
+- `docs/governance/sources-of-truth.md`
+- `docs/governance/change-workflow.md`
+- `docs/data-contracts/geografia-dtb-2025-cep5.md`
+- `docs/replication/lovable-to-supabase.md`
+- `docs/testing/foundation-v2-2026-09-15.md`
+- `docs/testing/business-rules-reset-2026-09-15.md`
