@@ -38,6 +38,8 @@ jobs:
           test -n "$CIT_REPLICA_DATABASE_URL" || { echo 'CIT_REPLICA_DATABASE_URL is not configured'; exit 2; }
       - name: Install pinned worker dependency
         run: python -m pip install -r scripts/requirements-worker.txt
+      - name: Sanitized connection preflight
+        run: python scripts/replication_preflight.py
       - name: Reconcile
         shell: bash
         run: |
