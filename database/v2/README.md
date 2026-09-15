@@ -1,124 +1,82 @@
-# Banco Paper Comercial V2
+# Banco — CIT / Paper Comercial V2
 
-`database/v2/` é a única fonte oficial de DDL da V2.
+> Estado auditado em **15/09/2026**. Este diretório é a fonte oficial de DDL da V2.
 
-## Estado atual
+## Documentação de referência
 
-- `0000_reset_legacy.sql` — reset reproduzível da camada de negócio realizado em 2026-09-15.
-- `0001_foundation.sql` — fundação técnica: `etl_cargas`, `audit_data_quality` e `audit_replication_runs`.
-- `0002_geografia_dtb_2025_cep5.sql` — primeiro domínio V2: DTB 2025 + dimensão operacional CEP5.
-- `0003+` — ainda não definido. Não atribuir domínio, chave ou regra sem decisão e contrato novos.
+- [Mapa completo de engenharia](../../docs/architecture/mapa-cit-paper-v2.md).
+- [Contrato geográfico](../../docs/data-contracts/geografia-dtb-2025-cep5.md).
+- [Snapshot de evidências](../../docs/testing/cit-paper-snapshot-2026-09-15.json).
+- [Consultas somente leitura](../validation/geografia_snapshot_readonly.sql).
 
-## Domínio 0002 — Geografia + CEP5
+## Migrations canônicas
 
-Contrato: `docs/data-contracts/geografia-dtb-2025-cep5.md`.
+| Arquivo | Escopo | Atenção |
+|---|---|---|
+| `0000_reset_legacy.sql` | Reset da camada de negócio antiga | Registro histórico executável; **não reaplicar sobre os dados atuais**. |
+| `0001_foundation.sql` | `etl_cargas`, `audit_data_quality`, `audit_replication_runs` | Fundação técnica existente nos dois ambientes. |
+| `0002_geografia_dtb_2025_cep5.sql` | Município, distrito, subdistrito e CEP5 | Primeiro domínio de dados carregado e homologado. |
+| `0003+` | Ainda não definido | Exige novo escopo e contrato; não recuperar migrations legadas. |
 
-Fontes vigentes e autônomas do Paper:
+Os arquivos em `database/validation/` são consultas de auditoria e **não são migrations**. Um arquivo SQL no GitHub não prova que foi aplicado; cada aplicação exige confirmação e QA do ambiente correto.
 
-- `COD_MUNICIPAL.zip` — IBGE / DTB 2025 original auditado;
-- `CEP5.xlsx` — referência territorial CEP5 auditada.
+## Estrutura e volumes
 
-Estrutura persistente:
+| Tabela | Colunas | PRIMARY | REPLICA |
+|---|---:|---:|---:|
+| `etl_cargas` | 16 | 2 | 2 |
+| `audit_data_quality` | 8 | 2 | 2 |
+| `audit_replication_runs` | 16 | 1 | 0 |
+| `dim_municipio` | 14 | 5.571 | 5.571 |
+| `dim_distrito` | 9 | 10.751 | 10.751 |
+| `dim_subdistrito` | 10 | 646 | 646 |
+| `dim_cep5` | 8 | 24.905 | 24.905 |
 
-- `dim_municipio`;
-- `dim_distrito`;
-- `dim_subdistrito`;
-- `dim_cep5`.
+As quatro dimensões somam **41.873 registros por banco**. As estruturas das sete tabelas comparadas coincidem, mas a trilha de replicação não está integralmente espelhada.
 
-Chaves:
+## Fontes e chaves
 
-- município: `cod_municipal`;
-- distrito: `cod_distrito`;
-- subdistrito: `cod_subdistrito`;
-- CEP5: PK composta `(cod_municipal, cep5)`.
+Fontes aprovadas: `COD_MUNICIPAL.zip` — DTB 2025 original — e `CEP5.xlsx`, aba `Resultados`.
 
-O `CEP5` não é globalmente único e não é tratado como distrito/subdistrito. É uma ramificação territorial operacional abaixo do município, destinada a suportar futuros contratos de concorrência e demografia.
+Chaves físicas:
 
-## Estado homologado da carga
+- município: `cod_municipal`, texto de sete dígitos;
+- distrito: `cod_distrito`, texto de nove dígitos;
+- subdistrito: `cod_subdistrito`, texto de onze dígitos;
+- CEP5: **PK composta `(cod_municipal, cep5)`**, com CEP5 textual de cinco dígitos.
 
-### DTB 2025
+UF, região intermediária e região imediata estão em `dim_municipio`; não são tabelas físicas separadas. CEP5 é associação operacional própria, não distrito/subdistrito.
 
-- `dim_municipio`: 5.571 linhas;
-- `dim_distrito`: 10.751 linhas;
-- `dim_subdistrito`: 646 linhas;
-- 27 UFs;
-- 133 Regiões Geográficas Intermediárias;
-- 510 Regiões Geográficas Imediatas;
-- zero PK duplicada;
-- zero FK inválida;
-- zero inconsistência de prefixo hierárquico.
+A fonte CEP5 contém 24.896 prefixos distintos, nove compartilhados entre municípios, três aliases tratados e 5.570 municípios cobertos. Existem **4.495 CEP5 distintos iniciados por zero**; a descrição antiga de 248 estava incorreta. Os zeros já estavam preservados nos dados. O município `5101837` continua válido na DTB, sem CEP5 nessa fonte.
 
-Checksums PRIMARY = REPLICA:
+## Homologação do conteúdo
 
-- município: `4665954435fe358572621d23847ac833`;
-- distrito: `82deeb72775cc53ef362bca04834571a`;
-- subdistrito: `9bf7f178c76829051084ef9c6702a19b`.
+As cargas `geografia_dtb_2025` e `geografia_cep5` estão concluídas nos dois ambientes. A releitura dos originais coincidiu com os CSVs normalizados e com os hashes calculados nos dois bancos.
 
-Carga: `geografia_dtb_2025` — **concluída**.
+Protocolo de auditoria: `sha256-json-array-lines-v1`. Ordem de colunas e hashes completos no snapshot JSON. Consulta reprodutível em `database/validation/geografia_snapshot_readonly.sql`.
 
-### CEP5
+Os MD5 históricos registrados nas cargas anteriores foram preservados. Não comparar algoritmos ou serializações diferentes. `carga_id` e `atualizado_em` não fazem parte do checksum territorial e devem ser auditados separadamente.
 
-- 24.905 associações gravadas;
-- 24.896 CEP5 distintos;
-- 5.570 municípios cobertos;
-- 3 aliases homologados;
-- 9 CEP5 compartilhados entre municípios;
-- zero PK duplicada;
-- zero FK inválida;
-- zero CEP5 fora do formato de 5 dígitos;
-- zero nulo crítico;
-- `Boa Esperança do Norte/MT` permanece como município DTB válido sem CEP5 nesta fonte.
+**Paridade comprovada: conteúdo geográfico.** Não declarar igualdade integral de bancos ou de toda a auditoria. Há um run CEP5 no PRIMARY e nenhum na REPLICA; os eventos individuais DTB não constam de `audit_replication_runs`. Uma eventual complementação precisa ser identificada como reconciliação posterior, sem fabricar eventos históricos.
 
-Checksum PRIMARY = REPLICA:
+## O que a homologação não significa
 
-`09737a6c95f08c920532a2baadbf411e`
+As cópias e comparações foram operações pontuais. Ainda não há pipeline permanente V2 homologado de ingestão, validação municipal/CEP5, staging, revisão humana, replicação ou reconciliação.
 
-Carga: `geografia_cep5` — **concluída**.
+Não há implementação de Edge Functions V2 na árvore Git auditada. A REPLICA retornou zero funções implantadas. O catálogo administrativo completo do PRIMARY gerenciado não foi verificado independentemente.
 
-A replicação foi executada no sentido oficial:
+Os helpers `tmp_*` de aplicação foram removidos do escopo consultado. Não existe subscription PostgreSQL nem `cron.job` nos dois bancos inspecionados. Isso não substitui uma investigação de eventuais agendadores externos.
 
-```text
-Lovable Cloud PRIMARY -> Supabase REPLICA
-```
+## Segurança e isolamento
 
-O evento foi registrado em `audit_replication_runs`.
+RLS ativo nas sete tabelas; nenhum privilégio efetivo de tabela para `anon`/`authenticated` no snapshot. O acesso futuro exige contrato de exposição e autorização, sem desativar RLS como atalho.
 
-## Estado técnico após a carga
+Schemas de plataforma, usuários Auth e demais metadados foram preservados. A extensão HTTP permanece no PRIMARY; sua necessidade deve ser revista em escopo próprio, não removida automaticamente por uma tarefa documental.
 
-Todos os objetos temporários usados exclusivamente na ingestão/replicação do CEP5 foram removidos após a validação.
+Fluxo autorizado: **PRIMARY Paper → REPLICA Paper**. Nenhum outro projeto é fonte, transporte ou fallback sem pedido explícito. A REPLICA não equivale a um backup versionado com restauração testada.
 
-Validação final:
+## Evolução
 
-- PRIMARY: 24.905 linhas em `dim_cep5`, 0 tabelas `tmp_*`, 0 rotinas `tmp_*`;
-- REPLICA: 24.905 linhas em `dim_cep5`, 0 tabelas `tmp_*`, 0 rotinas `tmp_*`.
+Fonte e necessidade → auditoria → contrato → DDL no GitHub → commit → aplicação controlada → QA → replicação quando implementada/aplicável → contagem e checksum → documentação.
 
-Não há Edge Function criada por este domínio neste momento. O domínio 0002 é composto por DDL, tabelas, constraints, índices, RLS, carga, QA e replicação. Serviços/Edge Functions futuros devem nascer apenas quando houver um caso de uso funcional definido.
-
-## Segurança
-
-As dimensões são internas por padrão:
-
-- RLS habilitado;
-- sem grants diretos para `anon`/`authenticated`;
-- helpers temporários de carga removidos;
-- nenhuma credencial persistida no DDL ou na documentação.
-
-## Isolamento
-
-O Paper Comercial V2 é autônomo.
-
-Nenhum outro projeto, banco ou aplicação deve ser utilizado como fonte, transporte, fallback, especificação ou referência operacional sem pedido explícito do usuário.
-
-## Fluxo para novos domínios
-
-1. fonte/necessidade explícita;
-2. auditoria;
-3. definição de grão e chave;
-4. contrato em `docs/data-contracts/`;
-5. DDL em `database/v2/`;
-6. commit GitHub;
-7. aplicação no PRIMARY;
-8. QA;
-9. replicação PRIMARY -> REPLICA;
-10. contagem + checksum;
-11. evidência e documentação final.
+O próximo trabalho deve preservar as cargas existentes, distinguir infraestrutura de automação e implementar somente o escopo aprovado pelo usuário.
