@@ -1,0 +1,42 @@
+name: CIT database verification
+on:
+  push:
+    branches: [main, chore/cit-p01-p11]
+    paths: ['database/**', 'scripts/replication.py', 'tests/**', '.github/workflows/database-tests.yml']
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: cit-db-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci_only_not_a_production_secret
+          POSTGRES_DB: cit_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd 'pg_isready -U postgres'
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      CIT_TEST_DB_URL: postgresql://postgres:ci_only_not_a_production_secret@localhost:5432/cit_ci
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Test only disposable database; never execute reset migration
+        run: |
+          psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f database/tests/bootstrap.sql
+          for file in database/v2/0001_foundation.sql database/v2/0002_geografia_dtb_2025_cep5.sql database/v2/0003_cit_ingestion_access.sql; do
+            psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f "$file"
+          done
+          psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f database/tests/ingestion.sql
