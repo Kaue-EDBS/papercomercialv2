@@ -1,0 +1,152 @@
+{
+  "snapshot_date": "2026-09-15",
+  "timezone": "America/Sao_Paulo",
+  "code_ref_audited": "aedaaef212d0a60c448bb1b55642e6cbaf046bd4",
+  "scope": "CIT/Paper only; documentation audit; no production writes in this audit",
+  "observations": {
+    "primary_inventory_at_utc": "2026-09-15T15:12:28.958467+00:00",
+    "replica_inventory_at_utc": "2026-09-15T15:12:52.425121+00:00",
+    "source_recheck": "Original ODS reports inside COD_MUNICIPAL.zip and CEP5.xlsx were independently normalized and compared with supplied CSVs. The same business-content hashes were obtained from both databases."
+  },
+  "environments": {
+    "repository": "Kaue-EDBS/papercomercialv2",
+    "branch": "main",
+    "primary_lovable_project_id": "8380d53b-a14d-4993-9447-d7c404347336",
+    "replica_supabase_project_ref": "vevmnoxbjdkibdwfygfn",
+    "config_toml_project_id": "chwsmkdkgdgocnbcyvmq",
+    "config_toml_primary_association": "inferred_not_administratively_confirmed",
+    "figma_team_id": "1681665672034047133",
+    "figma_team_name": "CIT",
+    "figma_plan_observed": "starter",
+    "figma_seat_observed": "View",
+    "figma_file_key": null
+  },
+  "business_data": {
+    "fingerprint_protocol": "sha256-json-array-lines-v1",
+    "protocol_definition": "Fixed-order arrays of business fields, JSON UTF-8, one row per LF, no terminal LF, ordered by primary key. PostgreSQL uses jsonb_build_array(...)::text. Excludes carga_id and atualizado_em.",
+    "total_rows_per_database": 41873,
+    "tables": {
+      "dim_municipio": {
+        "columns": 14,
+        "primary_key": ["cod_municipal"],
+        "checksum_columns": ["cod_municipal","municipio","cod_uf","nome_uf","cod_regiao_intermediaria","regiao_intermediaria","cod_regiao_imediata","regiao_imediata","cod_municipio_dtb","ano_dtb","data_base_dtb","ativo"],
+        "source_rows": 5571,
+        "primary_rows": 5571,
+        "replica_rows": 5571,
+        "source_primary_replica_sha256": "44b2d93b700d03b11ddb81ca1688b2d2f599e7eeffef2d6b3ab2cb2fd57d70f3",
+        "historical_md5": "4665954435fe358572621d23847ac833"
+      },
+      "dim_distrito": {
+        "columns": 9,
+        "primary_key": ["cod_distrito"],
+        "checksum_columns": ["cod_distrito","cod_municipal","distrito_dtb","distrito","ano_dtb","data_base_dtb","ativo"],
+        "source_rows": 10751,
+        "primary_rows": 10751,
+        "replica_rows": 10751,
+        "source_primary_replica_sha256": "5e3bfea56b4c8b82ca6f8a92f8ecd9f82ac4bfacc7c5825a8d5fdd5284dc3679",
+        "historical_md5": "82deeb72775cc53ef362bca04834571a"
+      },
+      "dim_subdistrito": {
+        "columns": 10,
+        "primary_key": ["cod_subdistrito"],
+        "checksum_columns": ["cod_subdistrito","cod_distrito","cod_municipal","subdistrito_dtb","subdistrito","ano_dtb","data_base_dtb","ativo"],
+        "source_rows": 646,
+        "primary_rows": 646,
+        "replica_rows": 646,
+        "source_primary_replica_sha256": "2c9aeef8a0df9882883ae042decea8cf799d7b0e516292c30fc44b0ec83d981a",
+        "historical_md5": "9bf7f178c76829051084ef9c6702a19b"
+      },
+      "dim_cep5": {
+        "columns": 8,
+        "primary_key": ["cod_municipal","cep5"],
+        "checksum_columns": ["cod_municipal","cep5","municipio_origem","uf_origem","metodo_resolucao","ativo"],
+        "source_rows": 24905,
+        "primary_rows": 24905,
+        "replica_rows": 24905,
+        "source_primary_replica_sha256": "346285b67463ee58bd2e27f30d46e59281cb9c6ef095c3d5e4389e5f7d884b56",
+        "historical_md5": "09737a6c95f08c920532a2baadbf411e"
+      }
+    },
+    "checks": {
+      "ufs": 27,
+      "regioes_intermediarias": 133,
+      "regioes_imediatas": 510,
+      "cep5_distintos": 24896,
+      "municipios_com_cep5": 5570,
+      "cep5_compartilhados": 9,
+      "cep5_zero_esquerda_registros": 4495,
+      "cep5_zero_esquerda_distintos": 4495,
+      "correction_note": "The previous value 248 in documentation was incorrect. Original source, normalized CSV and both databases show 4495. No data correction was required.",
+      "alias_rows": 3,
+      "cep5_format_errors": 0,
+      "cep5_orphan_municipalities": 0,
+      "district_orphan_municipalities": 0,
+      "subdistrict_hierarchy_errors": 0,
+      "municipalities_without_cep5": ["5101837"]
+    }
+  },
+  "original_files": {
+    "COD_MUNICIPAL.zip": {"sha256": "a5947915a7213cddde00682a51d0734ea6b6ec2307d237d1e7937edde6766b99"},
+    "CEP5.xlsx": {"sha256": "74ad34907a4ee418ededa872d3530cc11ae89270ed666331a6879ea72cb8cf13"}
+  },
+  "technical_data": {
+    "etl_cargas": {"primary": 2,"replica": 2,"both_loads_status": "concluida"},
+    "audit_data_quality": {"primary": 2,"replica": 2},
+    "audit_replication_runs": {
+      "primary": 1,
+      "replica": 0,
+      "primary_run_id": "7212a290-0884-4b2c-b7d0-6c49aac4033e",
+      "primary_run_table": "dim_cep5",
+      "dtb_table_runs_found": 0,
+      "audit_log_parity": false,
+      "interpretation": "Geographic data parity is confirmed; replication-event trail is partial. No historical events were fabricated or backfilled."
+    }
+  },
+  "database_security_and_platform": {
+    "application_tables": 7,
+    "structural_signatures_equal": true,
+    "all_application_tables_rls_enabled": true,
+    "anon_effective_table_privileges": false,
+    "authenticated_effective_table_privileges": false,
+    "application_rls_policies": 0,
+    "custom_public_sql_functions_primary": 0,
+    "custom_public_sql_functions_replica": 0,
+    "primary_auth_users": 28,
+    "replica_auth_users": 0,
+    "primary_auth_identities": 28,
+    "replica_auth_identities": 0,
+    "primary_storage_buckets": 0,
+    "replica_storage_buckets": 0,
+    "primary_storage_objects": 0,
+    "replica_storage_objects": 0,
+    "http_extension_primary": true,
+    "http_extension_replica": false,
+    "postgres_subscriptions_primary": 0,
+    "postgres_subscriptions_replica": 0,
+    "cron_job_relation_primary": false,
+    "cron_job_relation_replica": false,
+    "replica_security_advisor": "7 INFO rls_enabled_no_policy findings",
+    "pii_included": false
+  },
+  "application": {
+    "frontend": "neutral_static_foundation_screen",
+    "geography_consumption_in_app": false,
+    "database_types_include_geographic_tables": false,
+    "versioned_edge_function_implementations": 0,
+    "replica_deployed_edge_functions": 0,
+    "primary_deployed_edge_function_catalog": "not_independently_verified",
+    "permanent_ingestion_pipeline": "not_implemented_or_homologated",
+    "persistent_staging": false,
+    "manual_review_ui": false,
+    "generic_exception_registry": false,
+    "generic_replication_registry": false,
+    "continuous_reconciliation": "not_homologated",
+    "github_ci_workflow_files_found": 0,
+    "test_example": "expect(true).toBe(true)",
+    "env_file_tracked": true,
+    "env_contents_reviewed": false,
+    "build_executed_in_audit": false,
+    "runtime_login_e2e_executed": false,
+    "reason_build_unverified": "Local git access failed: Could not resolve host github.com. No build approval is claimed."
+  }
+}
