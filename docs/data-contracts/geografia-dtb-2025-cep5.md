@@ -1,13 +1,13 @@
 # Contrato de dados — Geografia DTB 2025 + CEP5
 
-> Status: **ATIVO PARA ESTRUTURA / CARGA PENDENTE**  
+> Status: **DTB CONCLUÍDO / CEP5 AUDITADO E PENDENTE DE CARGA**  
 > Definido em: **2026-09-15**
 
 ## 1. Papel
 
 A geografia é o primeiro domínio de negócio reconstruído do Paper Comercial V2.
 
-O núcleo administrativo replica a geografia canônica validada no PEM, baseada no **IBGE — Divisão Territorial Brasileira (DTB) 2025**, e acrescenta o `CEP5` como dimensão territorial operacional de primeira classe.
+O núcleo administrativo é baseado diretamente no **IBGE — Divisão Territorial Brasileira (DTB) 2025**, a partir do arquivo original auditado para este projeto, e acrescenta o `CEP5` como dimensão territorial operacional de primeira classe.
 
 O CEP5 terá papel central nas funcionalidades futuras de:
 
@@ -22,21 +22,32 @@ Este contrato define apenas a estrutura territorial e as regras de integridade. 
 Fonte canônica: **IBGE — DTB 2025**.  
 Data-base utilizada: **2025-12-31**.
 
-Arquivos de referência da publicação:
+Arquivo recebido e auditado para o Paper:
 
-- `RELATORIO_DTB_BRASIL_2025_MUNICIPIOS`;
-- `RELATORIO_DTB_BRASIL_2025_DISTRITOS`;
-- `RELATORIO_DTB_BRASIL_2025_SUBDISTRITOS`;
-- pacote oficial `DTB_2025.zip`.
+- `COD_MUNICIPAL.zip`
 
-O Paper Comercial deve reproduzir a mesma geografia homologada no PEM:
+SHA-256:
+
+`a5947915a7213cddde00682a51d0734ea6b6ec2307d237d1e7937edde6766b99`
+
+Conteúdo utilizado:
+
+- relatório de municípios;
+- relatório de distritos;
+- relatório de subdistritos;
+- arquivo informativo de unidades novas/extintas apenas como evidência documental.
+
+Auditoria direta do arquivo original:
 
 - 5.571 municípios;
 - 27 UFs;
 - 133 Regiões Geográficas Intermediárias;
 - 510 Regiões Geográficas Imediatas;
 - 10.751 distritos;
-- 646 subdistritos.
+- 646 subdistritos;
+- 0 PK duplicada;
+- 0 FK inválida;
+- 0 inconsistência de prefixo hierárquico.
 
 As contagens acima são propriedades do snapshot DTB 2025, não regras hard-coded para futuras versões.
 
@@ -65,7 +76,9 @@ Auditoria da fonte:
 - 0 nulos nos três campos;
 - 100% dos CEP5 com exatamente 5 dígitos;
 - 248 CEP5 iniciam com zero, portanto `CEP5` é obrigatoriamente `text`;
-- 9 CEP5 são compartilhados por dois municípios.
+- 9 CEP5 são compartilhados por dois municípios;
+- 24.905/24.905 linhas resolvidas para `COD_MUNICIPAL`;
+- nenhuma linha ficou sem resolução.
 
 ## 4. Modelo territorial
 
@@ -92,7 +105,7 @@ Regras:
 - PK de `dim_municipio`;
 - nomes nunca são chave definitiva;
 - UF não substitui `COD_MUNICIPAL`;
-- a verdade nominal de município/UF é a DTB 2025.
+- a verdade nominal de município/UF é a DTB 2025 auditada no próprio Paper.
 
 ## 6. Chave canônica do CEP5
 
@@ -114,7 +127,7 @@ Regra obrigatória para aplicações futuras:
 
 ## 7. `dim_municipio`
 
-Repete o contrato vigente do PEM:
+Contrato vigente do Paper:
 
 | Campo | Tipo | Regra |
 |---|---|---|
@@ -175,7 +188,7 @@ A auditoria identificou três diferenças nominais entre `CEP5.xlsx` e a DTB 202
 | `Arês` | RN | `Arez` | `2401206` | `ALIAS_HOMOLOGADO` |
 | `Açu` | RN | `Assú` | `2400208` | `ALIAS_HOMOLOGADO` |
 
-Todos os demais pares Município + UF da fonte são resolvidos por igualdade exata com a dimensão canônica.
+Todos os demais pares Município + UF da fonte são resolvidos por igualdade exata com a dimensão canônica do Paper.
 
 ## 12. Município DTB sem CEP5 na fonte
 
@@ -220,7 +233,7 @@ A carga geográfica só pode ser promovida quando:
 - distritos 100% relacionados a município;
 - subdistritos 100% relacionados a distrito e município;
 - prefixos hierárquicos consistentes;
-- contagens e checksum iguais ao conjunto canônico homologado no PEM.
+- contagens e checksum iguais entre PRIMARY e REPLICA do próprio Paper.
 
 ### CEP5
 
@@ -230,13 +243,44 @@ A carga geográfica só pode ser promovida quando:
 - 0 nulos;
 - todos os CEP5 com 5 dígitos;
 - 100% das linhas resolvidas para um `COD_MUNICIPAL` canônico;
-- exatamente 3 resoluções `ALIAS_HOMOLOGADO` por par nominal de origem, podendo cada alias aparecer em várias linhas;
+- exatamente 3 pares nominais de origem tratados por `ALIAS_HOMOLOGADO`, podendo cada alias aparecer em várias linhas;
 - nenhuma resolução fuzzy automática;
 - 9 CEP5 com mais de um `COD_MUNICIPAL` na fonte auditada;
 - 5.570 municípios canônicos cobertos pelo arquivo;
 - `Boa Esperança do Norte/MT` reconhecido como ausência esperada da fonte, não como erro da dimensão municipal.
 
-## 15. Replicação
+## 15. Estado da carga DTB
+
+Carga `geografia_dtb_2025` concluída no Paper.
+
+Contagens:
+
+- `dim_municipio`: 5.571;
+- `dim_distrito`: 10.751;
+- `dim_subdistrito`: 646.
+
+Checksums determinísticos atuais:
+
+- município: `4665954435fe358572621d23847ac833`;
+- distrito: `82deeb72775cc53ef362bca04834571a`;
+- subdistrito: `9bf7f178c76829051084ef9c6702a19b`.
+
+PRIMARY e REPLICA do Paper apresentaram mesmas contagens, mesmos checksums e zero falhas de FK/prefixo.
+
+## 16. Estado da carga CEP5
+
+A carga `geografia_cep5` está registrada e auditada, mas ainda **não concluída**.
+
+Estado atual esperado antes da promoção:
+
+- fonte validada: sim;
+- 24.905 linhas resolvidas: sim;
+- schema `dim_cep5`: criado;
+- linhas efetivamente gravadas: pendente;
+- checksum PRIMARY x REPLICA: pendente;
+- remoção de helpers temporários de ingestão: obrigatória após a carga.
+
+## 17. Replicação
 
 Tabelas replicáveis deste domínio:
 
@@ -252,7 +296,9 @@ Paridade exige, por tabela:
 - ausência de FK inválida;
 - registro em `audit_replication_runs` quando o pipeline genérico estiver ativo.
 
-## 16. Segurança
+A replicação deve ocorrer exclusivamente entre os ambientes do próprio Paper.
+
+## 18. Segurança
 
 As quatro dimensões são internas por padrão:
 
@@ -260,7 +306,22 @@ As quatro dimensões são internas por padrão:
 - sem grants diretos para `anon`/`authenticated`;
 - consumo pelo backend/server-side ou por interfaces explicitamente autorizadas futuramente.
 
-## 17. Uso futuro
+## 19. Isolamento do domínio
+
+Este contrato é autônomo dentro do Paper Comercial V2.
+
+Nenhum outro projeto, aplicação ou banco constitui:
+
+- fonte da geografia;
+- fonte do CEP5;
+- especificação funcional;
+- mecanismo de transporte;
+- referência obrigatória de qualidade;
+- fallback de dados.
+
+As fontes vigentes são apenas os arquivos aprovados neste contrato e os ambientes oficiais do Paper.
+
+## 20. Uso futuro
 
 Este contrato autoriza o CEP5 como **chave territorial fina** para os próximos contratos de concorrência e demografia.
 
