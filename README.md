@@ -17,6 +17,8 @@ Concluído:
 - governança GitHub-first;
 - Lovable Cloud definido como **PRIMARY**;
 - Supabase `vevmnoxbjdkibdwfygfn` definido como **REPLICA**;
+- Figma do time `CIT` identificado como workspace visual oficial do projeto;
+- correção de nomenclatura registrada: `SIGMA` é somente o nome antigo/incorreto usado no Figma;
 - inventário da camada legada;
 - reset controlado dos objetos de negócio antigos em `public`;
 - preservação de schemas gerenciados pela plataforma;
@@ -54,7 +56,7 @@ Não usar mensagens/prompts enviados ao ambiente do Lovable como mecanismo de im
 | GitHub | fonte oficial de código, DDL, contratos, regras, testes, documentação e histórico |
 | Lovable Cloud | runtime e banco operacional **PRIMARY** |
 | Supabase `vevmnoxbjdkibdwfygfn` | **REPLICA** externa independente |
-| Figma | referência UX/UI quando aplicável |
+| Figma | referência oficial de UX/UI; workspace visual no time `CIT` |
 | ChatGPT | orquestração, implementação assistida, QA e auditoria |
 
 Direção de dados:
@@ -70,6 +72,11 @@ Nunca existe reparo automático REPLICA -> PRIMARY.
 - Repositório: `Kaue-EDBS/papercomercialv2`.
 - Lovable PRIMARY: projeto `Paper Comercial OFICIAL`, ID `8380d53b-a14d-4993-9447-d7c404347336`.
 - Supabase REPLICA: projeto `vevmnoxbjdkibdwfygfn`, região `sa-east-1`.
+- Figma: time `CIT`, team ID `1681665672034047133`, definido como workspace visual oficial do Paper Comercial V2.
+- Link de workspace fornecido: `https://www.figma.com/files/team/1681665672034047133/all-folders?fuid=1681302531915878482`.
+- O nome `SIGMA` usado no Figma é **legado/incorreto** e não representa outro projeto. O nome conceitual correto é **Paper Comercial V2**.
+- O link atual é de workspace/time e não identifica um arquivo `design/...`; portanto o `fileKey` oficial do arquivo visual ainda não está registrado. Não criar outro arquivo nem assumir um `fileKey` até receber/localizar o link direto do arquivo.
+- A conexão Figma validada em 15/09/2026 está com acesso `View` no time `CIT`; alterações de nome/conteúdo dependem de permissão de edição.
 - O `supabase/config.toml` legado aponta para `chwsmkdkgdgocnbcyvmq`; esse identificador pertence ao stack histórico e **não deve ser tratado como a REPLICA externa da V2** sem decisão explícita.
 
 ## 5. Estado encontrado antes do reset V2
@@ -209,6 +216,8 @@ Não foram apagados schemas internos/gerenciados da plataforma (`auth`, `storage
 - Não declarar paridade sem contagem + checksum quando houver dados.
 - Não assumir que uma chave antiga continua sendo a chave correta sem novo contrato.
 - Não apagar schemas gerenciados pela plataforma como parte de resets de negócio.
+- Não tratar `SIGMA` como projeto distinto: é apenas o nome antigo/incorreto no Figma.
+- Não criar novo arquivo Figma enquanto o arquivo existente não for identificado por link direto/fileKey.
 
 ## 16. Ponto de retomada
 
@@ -224,6 +233,8 @@ Antes de criar a próxima migration (`0002`), auditar as fontes que alimentarão
 - geografia oficial;
 - critérios de QA;
 - escopo de replicação.
+
+No Figma, o próximo passo é apenas registrar o arquivo visual correto quando houver link direto `figma.com/design/...`; o workspace oficial já está definido como o time `CIT`.
 
 Documentação complementar:
 
