@@ -1,1 +1,0 @@
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.enem_medias_municipio TO sandbox_exec;
