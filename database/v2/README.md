@@ -13,19 +13,43 @@
 
 Contrato: `docs/data-contracts/geografia-dtb-2025-cep5.md`.
 
-A estrutura administrativa replica a geografia homologada no PEM:
+Fontes vigentes deste domínio no próprio Paper:
+
+- `COD_MUNICIPAL.zip` — DTB 2025 original auditado;
+- `CEP5.xlsx` — referência territorial CEP5 auditada.
+
+Estrutura:
 
 - `dim_municipio`;
 - `dim_distrito`;
-- `dim_subdistrito`.
-
-O Paper Comercial acrescenta:
-
+- `dim_subdistrito`;
 - `dim_cep5`.
 
 `COD_MUNICIPAL` é a chave canônica administrativa. Como CEP5 não é globalmente único, a identidade territorial fina é a combinação `(cod_municipal, cep5)`.
 
 O CEP5 será a granularidade operacional preferencial para futuros contratos de concorrência e demografia quando o contexto municipal estiver disponível. A criação desta dimensão não define, por si só, fórmulas de concorrência, raio, ranking ou agregação demográfica.
+
+### Estado da carga
+
+DTB 2025 concluído:
+
+- 5.571 municípios;
+- 10.751 distritos;
+- 646 subdistritos;
+- PRIMARY x REPLICA com mesma contagem e checksum.
+
+CEP5:
+
+- fonte auditada;
+- 24.905 associações válidas;
+- schema criado;
+- carga de dados ainda pendente de conclusão e reconciliação.
+
+## Isolamento
+
+O Paper Comercial V2 é autônomo.
+
+Nenhum outro projeto, banco ou aplicação deve ser utilizado como fonte de dados, transporte, fallback, especificação ou referência operacional sem pedido explícito do usuário.
 
 ## Histórico antigo
 
