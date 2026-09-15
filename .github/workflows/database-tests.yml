@@ -16,17 +16,13 @@ jobs:
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:17
+        image: postgres:17@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: ci_only_not_a_production_secret
           POSTGRES_DB: cit_ci
         ports: ['5432:5432']
-        options: >-
-          --health-cmd 'pg_isready -U postgres'
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
+        options: --health-cmd=pg_isready --health-interval=5s --health-timeout=5s --health-retries=10
     env:
       CIT_TEST_DB_URL: postgresql://postgres:ci_only_not_a_production_secret@localhost:5432/cit_ci
     steps:
@@ -36,7 +32,7 @@ jobs:
       - name: Test only disposable database; never execute reset migration
         run: |
           psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f database/tests/bootstrap.sql
-          for file in database/v2/0001_foundation.sql database/v2/0002_geografia_dtb_2025_cep5.sql database/v2/0003_cit_ingestion_access.sql; do
+          for file in database/v2/0001_foundation.sql database/v2/0002_geografia_dtb_2025_cep5.sql database/v2/0003_cit_ingestion_access.sql database/v2/0004_replication_control.sql; do
             psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f "$file"
           done
           psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f database/tests/ingestion.sql
