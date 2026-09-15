@@ -1,62 +1,56 @@
-# Arquitetura Paper Comercial V2
+# Arquitetura — CIT / Paper Comercial V2
 
-## Objetivo
+> Estado auditado em **15/09/2026**. Escopo exclusivo do CIT/Paper.
 
-Manter uma arquitetura auditável, reproduzível e independente da memória de chats ou de regras ocultas em runtime.
+## Documento principal
 
-```text
-                           FIGMA
-                    referencia visual
-                           |
-                           v
-CHATGPT <--------------> GITHUB <--------------> LOVABLE
-orquestracao             fonte oficial           runtime + PRIMARY
-QA / auditoria           codigo + DDL + docs           |
-                                                       | 1-way
-                                                       v
-                                                   SUPABASE
-                                                      REPLICA
+O [Mapa completo de engenharia](mapa-cit-paper-v2.md) é a referência detalhada de continuidade. Contém 19 seções e cinco diagramas Mermaid editáveis: contexto, modelo relacional, linhagem, pipeline-alvo e fluxo de mudanças.
+
+Evidências: [snapshot estruturado](../testing/cit-paper-snapshot-2026-09-15.json). Consultas reproduzíveis: [SQL somente leitura](../../database/validation/geografia_snapshot_readonly.sql).
+
+## Resumo correto
+
+A fundação técnica e as quatro dimensões geográficas estão carregadas e verificadas. O pipeline permanente de validação, staging, revisão humana, replicação e reconciliação **ainda não foi implementado/homologado**. As cargas e comparações já realizadas foram operações pontuais.
+
+```mermaid
+flowchart TB
+    G["GitHub: código, DDL, contratos e evidências"] --> L["Lovable runtime"]
+    F["Figma CIT; fileKey pendente"] -.-> G
+    S["Fontes aprovadas do Paper"] --> E["Carga controlada já executada"]
+    G --> E
+    E --> P[("PRIMARY Paper")]
+    L --- P
+    P -->|"cópia pontual"| R[("REPLICA Paper")]
+    P -.-> A["Pipeline automático pendente"]
+    A -.-> R
 ```
-
-## Estado funcional
-
-Desde 2026-09-15, **nenhuma regra de negócio legada é vigente na branch atual**. Não existe ordem obrigatória de domínios, chave canônica pré-escolhida, fórmula, faixa, critério comercial ou fluxo funcional herdado.
 
 ## Ambientes
 
-- GitHub: `Kaue-EDBS/papercomercialv2` — fonte oficial.
-- Lovable: `Paper Comercial OFICIAL` (`8380d53b-a14d-4993-9447-d7c404347336`) — runtime + PRIMARY.
-- Supabase externo: `vevmnoxbjdkibdwfygfn`, `sa-east-1` — REPLICA confirmada.
-- Figma: time `CIT` (`1681665672034047133`) — workspace visual oficial; `SIGMA` é nome antigo/incorreto.
+| Camada | Identificação |
+|---|---|
+| GitHub | `Kaue-EDBS/papercomercialv2`, branch `main` |
+| Lovable PRIMARY | `8380d53b-a14d-4993-9447-d7c404347336` |
+| Supabase REPLICA | `vevmnoxbjdkibdwfygfn` |
+| `config.toml` | `chwsmkdkgdgocnbcyvmq`; associação ao PRIMARY ainda inferida, não confirmada administrativamente |
+| Figma | time CIT `1681665672034047133`; arquivo direto pendente |
 
-## Supabase: `config.toml` x REPLICA
+Não trocar `config.toml` para o ID da REPLICA. Não consultar projetos externos como fonte, transporte ou especificação sem pedido explícito.
 
-`supabase/config.toml` contém `project_id = "chwsmkdkgdgocnbcyvmq"`. Esse ID não é acessível pela conexão Supabase externa atual. Como o repositório está conectado ao Lovable e mantém integração Supabase gerada pelo runtime, a interpretação operacional mais segura é que `chwsm...` pertence ao lado técnico do PRIMARY/Lovable.
+## Banco e aplicação
 
-Essa associação é uma **inferência técnica forte**, não uma confirmação administrativa. Portanto o arquivo deve ser preservado sem substituir seu ID por `vevm...`.
+Sete tabelas em `public`: `etl_cargas`, `audit_data_quality`, `audit_replication_runs`, `dim_municipio`, `dim_distrito`, `dim_subdistrito` e `dim_cep5`.
 
-`vevm...` permanece inequivocamente a REPLICA externa definida pela V2.
+As quatro dimensões têm **41.873 registros por banco**, com hashes SHA-256 idênticos aos arquivos normalizados. UF e regiões são atributos de município, não tabelas físicas separadas. A PK do CEP5 é `(cod_municipal, cep5)`.
 
-## Banco
+A estrutura das sete tabelas coincide, mas os bancos inteiros não são idênticos: a trilha de replicação tem 1 run no PRIMARY e 0 na REPLICA; Auth possui 28 contas no PRIMARY e 0 na REPLICA. As contas preservadas não são uma política de autorização V2.
 
-A fundação técnica contém apenas:
+RLS está ativo nas sete tabelas e não há privilégios efetivos de tabela para `anon`/`authenticated`. O frontend permanece neutro e não consome as dimensões. Os tipos TypeScript ainda descrevem somente as três tabelas técnicas.
 
-- `etl_cargas`;
-- `audit_data_quality`;
-- `audit_replication_runs`.
+## Regras de continuidade
 
-Schemas da plataforma (`auth`, `storage`, `realtime`, extensões etc.) não são domínio do Paper Comercial e não entram em resets de negócio por padrão.
+GitHub + commit para mudanças permanentes; nenhum prompt ao agente Lovable para implementar código. DDL em Git não prova aplicação no banco; código de função em Git não prova deploy; deploy não prova E2E.
 
-## Princípios
+Não reaplicar o reset `0000` sobre os dados atuais. Não reativar regras comerciais antigas. Novas funcionalidades exigem contrato e testes próprios.
 
-1. GitHub-first + commit para mudanças permanentes.
-2. PRIMARY é a origem operacional de escrita.
-3. REPLICA recebe dados somente PRIMARY -> REPLICA.
-4. Contrato e DDL precedem qualquer dataset de negócio.
-5. Nenhuma chave, regra ou heurística é presumida a partir do sistema antigo.
-6. Histórico Git é evidência, não especificação vigente.
-7. Falhas críticas bloqueiam promoção de dados.
-8. Segredos ficam server-side.
-9. RLS e menor privilégio por padrão.
-10. Datasets replicados exigem paridade objetiva por contagem + checksum.
-11. Figma define referência visual; GitHub define implementação executável.
+O mapa completo distingue fatos verificados, operações pontuais, diretrizes futuras e itens não verificados. Leia suas pendências P01–P11 antes de começar o próximo escopo.
