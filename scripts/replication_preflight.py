@@ -11,7 +11,7 @@ import os
 import re
 import socket
 import sys
-from urllib.parse import unquote, urlparse, parse_qs
+from urllib.parse import parse_qs, quote, unquote, urlparse, urlunparse
 
 EXPECTED = {
     "PRIMARY": {
@@ -35,7 +35,7 @@ def classify_error(exc: Exception) -> str:
         return "DNS"
     if any(x in msg for x in ("password authentication failed", "authentication failed", "sasl authentication failed", "invalid password")):
         return "AUTH"
-    if any(x in msg for x in ("tenant or user not found", "unsupported or invalid secret format")):
+    if any(x in msg for x in ("tenant/user", "tenant or user not found", "unsupported or invalid secret format")):
         return "POOLER_AUTH"
     if any(x in msg for x in ("tenant not found", "unknown tenant", "invalid tenant")):
         return "POOLER_TENANT"
@@ -95,6 +95,7 @@ def inspect_dsn(dsn: str, expected_ref: str, expected_role: str) -> dict:
         "database": (u.path or "/").lstrip("/"),
         "user_shape_ok": direct_ok or pooler_ok,
         "sslmode_ok": sslmode == "verify-full",
+        "is_pooler": pooler_ok,
     }
 
 
@@ -109,6 +110,50 @@ def dns_families(host: str, port: int) -> list[str]:
     except socket.gaierror:
         return []
     return sorted(families)
+
+
+def direct_probe_dsn(pooler_dsn: str, cfg: dict) -> str:
+    """Build the canonical direct endpoint without logging credentials."""
+    parsed = urlparse(pooler_dsn)
+    password = quote(unquote(parsed.password or ""), safe="")
+    netloc = f"{cfg['role']}:{password}@db.{cfg['ref']}.supabase.co:5432"
+    return urlunparse((parsed.scheme, netloc, "/postgres", "", parsed.query, ""))
+
+
+def probe_direct_primary(pooler_dsn: str, cfg: dict) -> dict:
+    import psycopg
+
+    dsn = direct_probe_dsn(pooler_dsn, cfg)
+    host = f"db.{cfg['ref']}.supabase.co"
+    probe = {
+        "attempted": True,
+        "host": host,
+        "port": 5432,
+        "dns_families": dns_families(host, 5432),
+        "ok": False,
+    }
+    try:
+        with psycopg.connect(dsn, autocommit=True, connect_timeout=10) as conn:
+            row = conn.execute(
+                "select current_user, current_database(), current_setting('server_version_num'), pg_has_role(current_user,%s,'member')",
+                (cfg["member_of"],),
+            ).fetchone()
+            probe.update(
+                {
+                    "current_user_ok": row[0] == cfg["role"],
+                    "database_ok": row[1] == "postgres",
+                    "role_membership_ok": bool(row[3]),
+                    "server_version_num": row[2],
+                }
+            )
+            probe["ok"] = all((probe["current_user_ok"], probe["database_ok"], probe["role_membership_ok"]))
+            probe["category"] = "OK" if probe["ok"] else "ROLE_CONTRACT"
+    except Exception as exc:
+        probe["category"] = classify_error(exc)
+        probe["error_type"] = type(exc).__name__
+        probe["sqlstate"] = getattr(exc, "sqlstate", None)
+        probe["safe_detail"] = sanitize_error(exc, cfg, dsn)
+    return probe
 
 
 def check_side(label: str, cfg: dict) -> dict:
@@ -155,6 +200,8 @@ def check_side(label: str, cfg: dict) -> dict:
         result["error_type"] = type(exc).__name__
         result["sqlstate"] = getattr(exc, "sqlstate", None)
         result["safe_detail"] = sanitize_error(exc, cfg, dsn)
+        if label == "PRIMARY" and meta["is_pooler"] and result["category"] == "POOLER_AUTH":
+            result["direct_probe"] = probe_direct_primary(dsn, cfg)
         return result
 
 
