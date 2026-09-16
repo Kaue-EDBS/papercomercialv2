@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'check compares only; apply promotes PRIMARY -> REPLICA'
+        description: 'check compares and writes audit; apply promotes PRIMARY -> REPLICA'
         required: true
         default: check
         type: choice
@@ -50,7 +50,7 @@ jobs:
           openssl x509 -in "$RUNNER_TEMP/postgresql/root.crt" -noout >/dev/null
           echo "PGSSLROOTCERT=$RUNNER_TEMP/postgresql/root.crt" >> "$GITHUB_ENV"
       - name: Sanitized connection preflight
-        run: python scripts/replication_preflight.py
+        run: python scripts/primary_session.py preflight
       - name: Reconcile
         shell: bash
         run: |
@@ -58,4 +58,4 @@ jobs:
           args=()
           if [ '${{ inputs.mode }}' = 'apply' ]; then args+=(--apply); fi
           if [ '${{ inputs.allow_deletions }}' = 'true' ]; then args+=(--allow-deletions); fi
-          python scripts/replication.py "${args[@]}"
+          python scripts/primary_session.py replicate "${args[@]}"
