@@ -26,6 +26,7 @@ jobs:
     env:
       CIT_PRIMARY_DATABASE_URL: ${{ secrets.CIT_PRIMARY_DATABASE_URL }}
       CIT_REPLICA_DATABASE_URL: ${{ secrets.CIT_REPLICA_DATABASE_URL }}
+      CIT_SUPABASE_CA_CERT: ${{ secrets.CIT_SUPABASE_CA_CERT }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -36,8 +37,18 @@ jobs:
           set -euo pipefail
           test -n "$CIT_PRIMARY_DATABASE_URL" || { echo 'CIT_PRIMARY_DATABASE_URL is not configured'; exit 2; }
           test -n "$CIT_REPLICA_DATABASE_URL" || { echo 'CIT_REPLICA_DATABASE_URL is not configured'; exit 2; }
+          test -n "$CIT_SUPABASE_CA_CERT" || { echo 'CIT_SUPABASE_CA_CERT is not configured'; exit 2; }
       - name: Install pinned worker dependency
         run: python -m pip install -r scripts/requirements-worker.txt
+      - name: Install Supabase CA certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -d -m 700 "$RUNNER_TEMP/postgresql"
+          printf '%s\n' "$CIT_SUPABASE_CA_CERT" > "$RUNNER_TEMP/postgresql/root.crt"
+          chmod 600 "$RUNNER_TEMP/postgresql/root.crt"
+          openssl x509 -in "$RUNNER_TEMP/postgresql/root.crt" -noout >/dev/null
+          echo "PGSSLROOTCERT=$RUNNER_TEMP/postgresql/root.crt" >> "$GITHUB_ENV"
       - name: Sanitized connection preflight
         run: python scripts/replication_preflight.py
       - name: Reconcile
