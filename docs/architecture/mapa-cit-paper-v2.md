@@ -1,94 +1,180 @@
 # Mapa de engenharia — CIT / Paper Comercial V2
 
-> **Snapshot auditado em 15/09/2026.** Base de código inspecionada: `aedaaef212d0a60c448bb1b55642e6cbaf046bd4`.
-> Documento de arquitetura existente, lacunas e continuidade. Não é declaração de que toda a plataforma está pronta.
-> Escopo exclusivo: este repositório, seus arquivos-fonte, seu Lovable PRIMARY, sua REPLICA Supabase e seu workspace Figma.
+> **Atualizado em 16/09/2026.** Este documento é o mapa técnico e histórico da V2: mostra o que foi decidido, implementado, validado, o que ainda está pendente e como interpretar os principais termos. Não é uma declaração de que o produto comercial esteja concluído.
+>
+> Escopo exclusivo: `Kaue-EDBS/papercomercialv2`, Lovable PRIMARY, Supabase REPLICA, fontes aprovadas do Paper e Figma CIT.
 
-## 1. A conclusão que organiza todo o projeto
+## 1. A ideia que organiza toda a V2
 
-**A fundação e os dados geográficos estão implementados. O pipeline automático de ingestão, revisão, replicação e reconciliação ainda não está implementado/homologado no CIT/Paper.**
+A V2 não foi tratada como continuação automática do sistema anterior. Ela foi reconstruída sobre uma fundação nova para evitar que regras, dependências ou comportamentos legados voltassem sem nova homologação.
 
-Existem quatro dimensões carregadas e equivalentes nos dois bancos. Existem tabelas para rastrear cargas, qualidade e replicação. Isso não significa que existam serviços permanentes executando essas etapas automaticamente.
+A sequência real do projeto foi:
 
-A interface atual é uma tela neutra de reconstrução. Não há fluxo funcional de importação, revisão municipal, concorrência ou demografia ligado a ela. A infraestrutura de autenticação foi preservada, mas o login e a autorização do produto V2 ainda precisam de implementação e validação.
+```text
+reset controlado do legado
+→ foundation
+→ geografia DTB 2025
+→ CEP5
+→ prova de paridade por hash
+→ ingestão/staging/revisão
+→ roles e grants
+→ replicação permanente
+→ CI e preflight
+→ conexão real PRIMARY → REPLICA
+→ E2E
+→ regras comerciais
+```
 
-### Vocabulário de status
+Hoje o projeto está entre **replicação permanente** e **E2E real**. A REPLICA está conectada; o PRIMARY ainda apresenta bloqueio de conexão externa pelo ambiente Lovable.
 
-| Status | Significado neste mapa |
+## 2. Vocabulário de status
+
+| Status | Significado |
 |---|---|
-| **Verificado** | Confirmado por leitura do código, arquivo-fonte, catálogo ou consulta ao banco nesta auditoria. |
-| **Executado pontualmente** | A operação ocorreu e há resultado verificável; não equivale a automação permanente. |
-| **Diretriz definida** | Arquitetura ou intenção acordada; implementação ainda ausente ou não homologada. |
-| **Pendente** | Falta construir, corrigir, decidir ou provar o comportamento. |
-| **Não verificado** | O acesso ou o teste necessário não foi realizado; não inferir conclusão. |
+| **Verificado** | Confirmado por código, consulta, execução ou artefato. |
+| **Implementado** | Existe no GitHub e passou pelos testes aplicáveis. |
+| **Aplicado** | Migration/alteração foi executada no ambiente indicado. |
+| **Validado** | O resultado foi testado depois da aplicação. |
+| **Pendente** | Falta executar, decidir ou provar. |
+| **Não analisado** | Existe uma execução/resultado, mas ainda não foi inspecionado. |
 
-## 2. Mapa de contexto e fronteiras
+Essas palavras não são intercambiáveis. Código escrito não significa deploy; deploy não significa teste; teste de CI não significa produção conectada.
+
+## 3. Arquitetura oficial e fronteiras
 
 ```mermaid
 flowchart TB
     U["Usuário / Inteligência de Mercado"]
-    A["ChatGPT: análise, implementação assistida e QA"]
-    G["GitHub: código, contratos, DDL e documentação"]
-    F["Figma CIT: referência visual; arquivo específico pendente"]
-    L["Lovable: runtime e preview do Paper"]
-    P[("PRIMARY Paper: PostgreSQL gerenciado")]
-    R[("REPLICA Paper: Supabase externo")]
-    S["Fontes aprovadas: COD_MUNICIPAL.zip e CEP5.xlsx"]
-    Q["Preparação e carga controladas; executadas pontualmente"]
-    N["Pipeline permanente: ainda pendente"]
-    U --> A
-    A -->|"commits"| G
-    F -.->|"especificação visual futura"| G
-    G -->|"branch conectada; deploy exige verificação"| L
+    G["GitHub: código, DDL, contratos, testes e histórico"]
+    F["Figma CIT: referência UX/UI"]
+    L["Lovable: runtime oficial"]
+    P[("PRIMARY: PostgreSQL operacional")]
+    R[("REPLICA: Supabase externo")]
+    S["Fontes aprovadas"]
+    I["Ingestão, staging, revisão e promoção"]
+    W["Worker de replicação"]
+
+    U --> G
+    F -.-> G
+    G --> L
     L --- P
-    S --> Q
-    G -->|"contrato e DDL"| Q
-    Q --> P
-    P -->|"cópia pontual concluída"| R
-    P -.-> N
-    N -.-> R
+    S --> I
+    G --> I
+    I --> P
+    P --> W
+    W --> R
 ```
 
-Setas contínuas representam relações existentes ou operações já executadas. Setas pontilhadas representam intenção, etapa pendente ou integração não comprovada ponta a ponta. A cópia entre bancos não está rodando continuamente.
+### Fontes da verdade
 
-### Identificação dos ambientes
+| Camada | Responsabilidade |
+|---|---|
+| GitHub | Código, migrations, DDL, contratos, testes, decisões e documentação. |
+| Lovable PRIMARY | Runtime e dado operacional autoritativo. |
+| Supabase REPLICA | Cópia independente. Não escreve de volta no PRIMARY. |
+| Figma | Referência visual; não define regra comercial. |
+| Arquivos homologados | Origem dos datasets. |
 
-| Elemento | Identificador | Papel e limite |
-|---|---|---|
-| Repositório | `Kaue-EDBS/papercomercialv2` | Fonte versionada do projeto. |
-| Branch operacional | `main` | Histórico publicado não deve ser reescrito. |
-| Lovable | `8380d53b-a14d-4993-9447-d7c404347336` | Projeto `Paper Comercial OFICIAL`, runtime e PRIMARY. |
-| Supabase externo | `vevmnoxbjdkibdwfygfn` | REPLICA do Paper; não é origem de dados operacionais. |
-| Configuração existente | `chwsmkdkgdgocnbcyvmq` | Valor de `supabase/config.toml`; associação ao backend PRIMARY é inferência, não confirmação administrativa. |
-| Figma | time `CIT`, `1681665672034047133` | Workspace de UX. Link direto de arquivo/fileKey ainda ausente. |
+Direção autorizada: **PRIMARY → REPLICA**.
 
-**Não substituir o ID de `config.toml` pelo da REPLICA.** A distinção PRIMARY/REPLICA não é uma convenção cosmética: determina de onde saem os dados autoritativos e para onde ocorre eventual reparo.
+Nenhum outro projeto ou banco participa do CIT/Paper sem decisão explícita.
 
-Nenhum ambiente de outro projeto faz parte deste mapa. A fundação já incorporada pertence agora ao próprio Paper e deve evoluir a partir de seus contratos.
+## 4. Identificação dos ambientes
 
-## 3. Inventário físico dos bancos
+| Elemento | Identificador |
+|---|---|
+| Repositório | `Kaue-EDBS/papercomercialv2` |
+| Branch operacional | `main` |
+| Lovable oficial | `8380d53b-a14d-4993-9447-d7c404347336` |
+| Projeto | `Paper Comercial OFICIAL` |
+| URL publicada | `https://cit-edbs.lovable.app` |
+| Project ref usado pela aplicação | `chwsmkdkgdgocnbcyvmq` |
+| Supabase REPLICA | `vevmnoxbjdkibdwfygfn` |
+| Região REPLICA | `sa-east-1` |
+| Figma | time `CIT`, Team ID `1681665672034047133` |
 
-Consultas independentes aos dois bancos confirmaram sete tabelas persistentes de aplicação em `public`.
+`supabase/config.toml` permanece com `project_id = "chwsmkdkgdgocnbcyvmq"`. Não substituir pelo ID da REPLICA.
 
-| Tabela | Colunas | PRIMARY | REPLICA | Função |
-|---|---:|---:|---:|---|
-| `etl_cargas` | 16 | 2 | 2 | Registro das cargas DTB e CEP5. |
-| `audit_data_quality` | 8 | 2 | 2 | Resultados registrados dos checks das duas cargas. |
-| `audit_replication_runs` | 16 | 1 | 0 | Histórico de operações de replicação; **não está espelhado integralmente**. |
-| `dim_municipio` | 14 | 5.571 | 5.571 | Cadastro municipal canônico e seus atributos regionais. |
-| `dim_distrito` | 9 | 10.751 | 10.751 | Distritos vinculados a municípios. |
-| `dim_subdistrito` | 10 | 646 | 646 | Subdistritos vinculados a distrito e município. |
-| `dim_cep5` | 8 | 24.905 | 24.905 | Associações entre município canônico e prefixo postal. |
+## 5. Linha do tempo técnica da V2
 
-Total nas quatro dimensões: **41.873 registros por banco**. Não somar as linhas técnicas de auditoria como se fossem unidades territoriais.
+### 5.1 Reset controlado
 
-As assinaturas estruturais das sete tabelas coincidiram entre PRIMARY e REPLICA, considerando colunas, tipos, nulidade, defaults, constraints, índices e flag RLS. Isso não significa identidade de usuários, extensões, ACLs administrativas, comentários ou metadados de toda a plataforma.
+A migration `0000_reset_legacy.sql` registra o reset inicial dos objetos comerciais antigos. Estruturas gerenciadas da plataforma foram preservadas.
 
-### O que não existe como tabela de aplicação
+Regra: **não reaplicar `0000` sobre o estado atual**.
 
-Não foram encontradas tabelas de staging persistente, fila de ingestão, lote de validação municipal, resoluções manuais, exceções reutilizáveis ou registry de replicação. Também não existe ainda cadastro de escolas/clientes nem tabelas de demografia, concorrência, adoção ou propostas na V2.
+### 5.2 Foundation
 
-## 4. Modelo relacional existente
+`0001_foundation.sql` criou:
+
+- `etl_cargas`
+- `audit_data_quality`
+- `audit_replication_runs`
+
+Objetivo: cada carga e cada verificação precisa ter rastreabilidade.
+
+### 5.3 Geografia
+
+`0002_geografia_dtb_2025_cep5.sql` criou:
+
+- `dim_municipio`
+- `dim_distrito`
+- `dim_subdistrito`
+- `dim_cep5`
+
+A geografia foi escolhida como primeiro domínio porque município, UF, CEP5, território, demografia e futura concorrência dependem dessa base.
+
+### 5.4 Ingestão
+
+`0003_cit_ingestion_access.sql` criou a camada de ingestão, grants, staging e revisão.
+
+### 5.5 Controle de replicação
+
+`0004_replication_control.sql` criou jobs, páginas e itens de replicação.
+
+### 5.6 Roles técnicas
+
+`0005_replication_roles.sql` criou os grupos de menor privilégio para origem e destino.
+
+### 5.7 Login principals
+
+`0006_replication_login_principals.sql` criou os usuários técnicos usados pelo worker.
+
+## 6. Modelo físico atual
+
+### Foundation pública
+
+| Tabela | Papel |
+|---|---|
+| `etl_cargas` | Linhagem e estado das cargas. |
+| `audit_data_quality` | Checks de qualidade. |
+| `audit_replication_runs` | Auditoria de replicação/reconciliação. |
+
+### Geografia pública
+
+| Tabela | Registros validados |
+|---|---:|
+| `dim_municipio` | 5.571 |
+| `dim_distrito` | 10.751 |
+| `dim_subdistrito` | 646 |
+| `dim_cep5` | 24.905 |
+
+Total das dimensões: **41.873 registros**.
+
+### Camada privada
+
+Principais estruturas em `cit_private`:
+
+- `access_grants`
+- `ingestion_batches`
+- `ingestion_rows`
+- `review_events`
+- `municipality_aliases`
+- `replication_jobs`
+- `replication_pages`
+- `replication_items`
+
+## 7. Modelo relacional geográfico
 
 ```mermaid
 erDiagram
@@ -96,392 +182,456 @@ erDiagram
     ETL_CARGAS ||--o{ DIM_DISTRITO : rastreia
     ETL_CARGAS ||--o{ DIM_SUBDISTRITO : rastreia
     ETL_CARGAS ||--o{ DIM_CEP5 : rastreia
-    ETL_CARGAS o|--o{ AUDIT_DATA_QUALITY : referencia
-    ETL_CARGAS o|--o{ AUDIT_REPLICATION_RUNS : referencia
     DIM_MUNICIPIO ||--o{ DIM_DISTRITO : contem
     DIM_DISTRITO ||--o{ DIM_SUBDISTRITO : contem
-    DIM_MUNICIPIO ||--o{ DIM_SUBDISTRITO : valida_municipio
     DIM_MUNICIPIO ||--o{ DIM_CEP5 : associa
-
-    DIM_MUNICIPIO {
-        text cod_municipal PK
-        text municipio
-        text cod_uf
-        text nome_uf
-        text cod_regiao_intermediaria
-        text regiao_intermediaria
-        text cod_regiao_imediata
-        text regiao_imediata
-        text cod_municipio_dtb
-        smallint ano_dtb
-        date data_base_dtb
-        boolean ativo
-        uuid carga_id FK
-        timestamptz atualizado_em
-    }
-    DIM_DISTRITO {
-        text cod_distrito PK
-        text cod_municipal FK
-        text distrito_dtb
-        text distrito
-        smallint ano_dtb
-        date data_base_dtb
-        boolean ativo
-        uuid carga_id FK
-        timestamptz atualizado_em
-    }
-    DIM_SUBDISTRITO {
-        text cod_subdistrito PK
-        text cod_distrito FK
-        text cod_municipal FK
-        text subdistrito_dtb
-        text subdistrito
-        smallint ano_dtb
-        date data_base_dtb
-        boolean ativo
-        uuid carga_id FK
-        timestamptz atualizado_em
-    }
-    DIM_CEP5 {
-        text cod_municipal PK,FK
-        text cep5 PK
-        text municipio_origem
-        text uf_origem
-        text metodo_resolucao
-        boolean ativo
-        uuid carga_id FK
-        timestamptz atualizado_em
-    }
-    ETL_CARGAS {
-        uuid carga_id PK
-        text dataset
-        text fonte_sistema
-        text arquivo_sha256
-        text status
-        bigint linhas_recebidas
-        bigint linhas_gravadas
-    }
-    AUDIT_DATA_QUALITY {
-        uuid check_id PK
-        uuid carga_id FK
-        text dataset
-        text nome_check
-        boolean passou
-        jsonb detalhes
-    }
-    AUDIT_REPLICATION_RUNS {
-        uuid run_id PK
-        uuid carga_id FK
-        text tabela
-        text status
-        bigint linhas_origem
-        bigint linhas_destino
-        text checksum_origem
-        text checksum_destino
-    }
 ```
 
-O diagrama mostra todos os campos das quatro dimensões e os campos de referência das tabelas técnicas. O DDL é a fonte do dicionário completo.
-
-### Hierarquia de apresentação versus relacionamento de dados
-
-UF, região intermediária e região imediata são atributos de `dim_municipio`; **não existem tabelas físicas separadas para esses três níveis**. A interface futura pode apresentar essa árvore sem exigir que todos os datasets sejam relacionados por cada nível.
+Hierarquia de apresentação:
 
 ```text
 UF
-  Região Geográfica Intermediária
-    Região Geográfica Imediata
-      Município
-        ├─ Distrito
-        │    └─ Subdistrito
-        └─ Associação Município + CEP5
+  → Região Intermediária
+    → Região Imediata
+      → Município
+        ├─ Distrito → Subdistrito
+        └─ Município + CEP5
 ```
 
-Distritos/subdistritos dão contexto territorial. O CEP5 forma um ramo operacional próprio e não deve ser colocado artificialmente dentro de um distrito. Não há geometria, polígonos ou distância física armazenados nessas dimensões.
+UF e regiões são atributos de `dim_municipio`; não existem tabelas físicas separadas para esses níveis.
 
-## 5. Identidade e integridade territorial
+## 8. Geografia DTB 2025
 
-O cabeçalho lógico de ingestão é `COD_MUNICIPAL`; no PostgreSQL o identificador físico é `cod_municipal`. O código municipal é `text` com sete dígitos. A dimensão municipal mantém exatamente 14 colunas.
+Fonte: `COD_MUNICIPAL.zip`.
 
-A PK de `dim_cep5` é **`(cod_municipal, cep5)`**. Existem 24.896 valores de CEP5 e 24.905 associações: nove prefixos aparecem em dois municípios. Uma consulta por CEP5 isolado pode devolver múltiplas associações e não autoriza escolher o primeiro resultado.
+SHA-256:
 
-**Correção documental identificada nesta auditoria:** são **4.495 registros e 4.495 CEP5 distintos iniciados por zero**, não 248. A contagem foi conferida no XLSX original, no CSV normalizado, no PRIMARY e na REPLICA. O problema estava na descrição anterior; os dados estão preservados como texto.
+```text
+a5947915a7213cddde00682a51d0734ea6b6ec2307d237d1e7937edde6766b99
+```
 
-Há 5.570 municípios cobertos pela fonte CEP5. O município `5101837` existe na DTB e não tem associação nessa fonte. Essa ausência não é código inválido nem motivo para inativar o município; é uma limitação de cobertura do arquivo.
+Carga:
 
-As três correspondências nominais explicitamente tratadas na carga são:
+```text
+geografia_dtb_2025
+934dafbe-0d0c-4463-8600-3faf0e623026
+```
 
-| UF | Texto da fonte CEP5 | Nome canônico | Código |
+Resultados:
+
+- 5.571 municípios;
+- 10.751 distritos;
+- 646 subdistritos;
+- 27 UFs;
+- 133 regiões intermediárias;
+- 510 regiões imediatas;
+- zero duplicidade de PK identificada;
+- zero falha de FK/hierarquia nos checks executados.
+
+`COD_MUNICIPAL` é texto de sete dígitos e é a referência territorial canônica atual.
+
+## 9. CEP5
+
+Fonte: `CEP5.xlsx`, aba `Resultados`.
+
+SHA-256:
+
+```text
+74ad34907a4ee418ededa872d3530cc11ae89270ed666331a6879ea72cb8cf13
+```
+
+Carga:
+
+```text
+geografia_cep5
+42229071-a0a3-4c0d-a8a8-14d7ead5895e
+```
+
+Resultados:
+
+- 24.905 associações;
+- 24.896 CEP5 distintos;
+- 5.570 municípios cobertos;
+- 27 UFs;
+- 4.495 CEP5 iniciados por zero;
+- nove CEP5 compartilhados entre municípios.
+
+A chave correta é **`(cod_municipal, cep5)`**.
+
+Aliases homologados:
+
+| UF | Fonte | Canônico | Código |
 |---|---|---|---|
 | RR | São Luiz | São Luiz do Anauá | `1400605` |
 | RN | Arês | Arez | `2401206` |
 | RN | Açu | Assú | `2400208` |
 
-`metodo_resolucao` registra `EXATO` ou `ALIAS_HOMOLOGADO` nas linhas carregadas. **Isso não é um motor genérico de aliases:** não existe ainda tabela reutilizável de exceções nem tela para homologar futuras correções.
+Boa Esperança do Norte/MT (`5101837`) existe na DTB e não aparece na fonte CEP5. Nenhum CEP foi inventado para preencher a ausência.
 
-## 6. Linhagem e prova de equivalência dos dados
+## 10. Prova de equivalência
 
-```mermaid
-flowchart LR
-    Z["COD_MUNICIPAL.zip: relatórios ODS/XLS DTB 2025"] --> D["Municípios, distritos e subdistritos normalizados"]
-    X["CEP5.xlsx: aba Resultados"] --> C["Associações CEP5; resolução nominal explícita"]
-    D --> P[("PRIMARY Paper")]
-    C --> P
-    P -->|"cópia pontual executada"| R[("REPLICA Paper")]
-    D --> H["Verificação independente: contagem e SHA-256"]
-    C --> H
-    P --> H
-    R --> H
+Protocolo: **`sha256-json-array-lines-v1`**.
+
+Passos conceituais:
+
+1. escolher colunas de negócio fixas;
+2. ordenar por PK;
+3. representar cada linha como array JSON preservando tipos;
+4. concatenar com LF, sem LF final;
+5. codificar em UTF-8;
+6. calcular SHA-256.
+
+| Tabela | SHA-256 |
+|---|---|
+| `dim_municipio` | `44b2d93b700d03b11ddb81ca1688b2d2f599e7eeffef2d6b3ab2cb2fd57d70f3` |
+| `dim_distrito` | `5e3bfea56b4c8b82ca6f8a92f8ecd9f82ac4bfacc7c5825a8d5fdd5284dc3679` |
+| `dim_subdistrito` | `2c9aeef8a0df9882883ae042decea8cf799d7b0e516292c30fc44b0ec83d981a` |
+| `dim_cep5` | `346285b67463ee58bd2e27f30d46e59281cb9c6ef095c3d5e4389e5f7d884b56` |
+
+Na validação histórica executada, fonte normalizada, PRIMARY e REPLICA produziram os mesmos hashes.
+
+Isso comprova paridade geográfica naquele momento; não significa que os bancos inteiros sejam idênticos.
+
+## 11. Ingestão e staging
+
+Entrada controlada:
+
+```text
+cit_ingest(action, payload)
 ```
 
-Arquivos originais auditados:
+A implementação atual possui:
 
-| Arquivo | SHA-256 dos bytes |
-|---|---|
-| `COD_MUNICIPAL.zip` | `a5947915a7213cddde00682a51d0734ea6b6ec2307d237d1e7937edde6766b99` |
-| `CEP5.xlsx` | `74ad34907a4ee418ededa872d3530cc11ae89270ed666331a6879ea72cb8cf13` |
+- autenticação por sessão real;
+- grants explícitos;
+- staging por lote;
+- suporte a CSV, TSV e JSON;
+- hash calculado no servidor;
+- replay controlado;
+- limites de tamanho e quantidade;
+- validação territorial;
+- revisão manual com optimistic version;
+- justificativa obrigatória;
+- aliases somente com opt-in explícito.
 
-Os relatórios ODS do ZIP foram relidos nesta auditoria; suas linhas normalizadas coincidiram com os CSVs. O XLSX CEP5 também foi relido e resolvido contra a geografia original, usando somente os três aliases explícitos. Os quatro conjuntos resultantes coincidiram com os hashes calculados nos dois bancos.
+Limites técnicos definidos:
 
-### Protocolo de checksum desta auditoria
+- até 8 MiB;
+- até 100 mil linhas;
+- até 500 chunks.
 
-Nome: **`sha256-json-array-lines-v1`**.
+`VALIDATED` = staging validada. Não equivale a promoção automática ao domínio comercial.
 
-Para cada tabela: selecionar as colunas de dados na ordem definida; representar cada linha como array JSON com os tipos preservados; ordenar pela PK; concatenar linhas com LF, sem LF final; codificar em UTF-8; calcular SHA-256. No PostgreSQL, a representação utilizada é `jsonb_build_array(...)::text`.
+## 12. Autorização de ingestão
 
-`carga_id` e `atualizado_em` ficam fora do checksum de negócio. A exclusão é deliberada: metadados de execução não devem confundir comparação de conteúdo territorial. Eles continuam auditáveis separadamente.
+Papéis funcionais:
 
-| Tabela | Linhas | SHA-256, idêntico em fonte normalizada / PRIMARY / REPLICA |
-|---|---:|---|
-| `dim_municipio` | 5.571 | `44b2d93b700d03b11ddb81ca1688b2d2f599e7eeffef2d6b3ab2cb2fd57d70f3` |
-| `dim_distrito` | 10.751 | `5e3bfea56b4c8b82ca6f8a92f8ecd9f82ac4bfacc7c5825a8d5fdd5284dc3679` |
-| `dim_subdistrito` | 646 | `2c9aeef8a0df9882883ae042decea8cf799d7b0e516292c30fc44b0ec83d981a` |
-| `dim_cep5` | 24.905 | `346285b67463ee58bd2e27f30d46e59281cb9c6ef095c3d5e4389e5f7d884b56` |
+- `admin`
+- `operator`
+- `reviewer`
+- `viewer`
 
-Os checksums de 32 caracteres registrados nas cargas anteriores são **MD5 históricos**, não SHA-256. Não comparar algoritmos ou protocolos diferentes, nem sobrescrever retrospectivamente uma evidência histórica para parecer que ela foi produzida por outro método.
+O primeiro admin foi concedido no PRIMARY por grant auditável. A REPLICA permanece sem usuários finais e sem grants operacionais.
 
-Esta auditoria leu os bancos; não inseriu novos runs nem alterou estados de carga. Os novos hashes ficam documentados no repositório.
+## 13. Roles e usuários de replicação
 
-## 7. Cargas, qualidade e auditoria: três coisas diferentes
+### Group roles
 
-### `etl_cargas`
-
-Registra a existência e o resultado de cada carga. As duas cargas estão `concluida` nos dois bancos:
-
-| Dataset | carga_id | Registros gravados |
-|---|---|---:|
-| `geografia_dtb_2025` | `934dafbe-0d0c-4463-8600-3faf0e623026` | 16.968 |
-| `geografia_cep5` | `42229071-a0a3-4c0d-a8a8-14d7ead5895e` | 24.905 |
-
-### `audit_data_quality`
-
-Há dois checks registrados em cada ambiente: `e2e_dtb_2025` e `e2e_cep5`. Ambos estão aprovados. Apesar do nome, esses registros comprovam QA das cargas, **não um E2E da futura interface de upload/revisão/replicação automática**.
-
-### `audit_replication_runs`
-
-No PRIMARY há um run de CEP5 concluído, `7212a290-0884-4b2c-b7d0-6c49aac4033e`. Na REPLICA não há runs. Não foram encontrados runs individuais de replicação DTB nessa tabela.
-
-Consequência: **há paridade dos dados geográficos, mas a trilha de replicação ainda é parcial**. Não declarar que os bancos inteiros são cópias idênticas. O escopo de replicação dos metadados e a política de espelhamento da auditoria precisam ser formalizados. Um eventual backfill deve ser identificado como reconciliação posterior, nunca como evento histórico inventado.
-
-## 8. O pipeline: o que existe e o que falta
-
-| Etapa | Estado observado no CIT/Paper | O que falta para operação permanente |
-|---|---|---|
-| Fonte e contrato geográfico | Implementados e versionados | Guardar os arquivos originais em destino durável com acesso controlado e política de retenção. |
-| Normalização e resolução desta carga | Executadas e verificadas | Empacotar processo reproduzível e testado, sem depender de uma sessão de chat. |
-| PK, formato e FK | Constraints existentes | Validações de semântica/ambiguidade antes da gravação. |
-| Auditoria de cargas/qualidade | Tabelas existentes; dois eventos de cada tipo | Orquestrador que grave eventos com tratamento de falha. |
-| `validate-cod-municipal` | Sem implementação V2 versionada/homologada | Contrato de entrada/saída, autenticação, paginação e testes negativos. |
-| Staging e pendências | Ausentes | Preservar todas as colunas originais, linhas, versão e estado do lote. |
-| Exceções reutilizáveis | Ausentes | Escopo por fonte, responsável, motivo e homologação explícita. |
-| Revisão humana | Interface ausente | Modal funcional, autorização e persistência auditável. |
-| Replicação | Cópia pontual executada | Registry/allowlist, checkpoints, lotes idempotentes, retomada e autenticação entre ambientes. |
-| Reconciliação | Comparações pontuais realizadas | Rotina reutilizável, execução agendada se aprovada, alerta e estratégia de reparo. |
-| Publicação para consumo | Não implementada como gate | Impedir consumo de lote incompleto ou reprovado. |
-| E2E do pipeline completo | Não realizado | Upload → correção → promoção → réplica → reconciliação, incluindo falhas. |
-
-### Fluxo-alvo, não implementação atual
-
-```mermaid
-flowchart TB
-    A["Arquivo aprovado para ingestão"] --> B["Staging: preservar origem e lote"]
-    B --> C["Normalização de cabeçalhos e tipos"]
-    C --> D["Validação: código municipal, nome e UF"]
-    D --> E{"Relacionamento inequívoco?"}
-    E -->|"não"| F["Pendência: candidatos e revisão autorizada"]
-    F -->|"decisão auditada"| D
-    E -->|"sim"| G["Validar Município + CEP5 quando aplicável"]
-    G --> H["QA de 100% das linhas exigidas pelo contrato"]
-    H --> I["Promoção controlada no PRIMARY"]
-    I --> J["Replicação idempotente e paginada"]
-    J --> K["Contagem e checksum na REPLICA"]
-    K --> L["Reconciliação e liberação para consumo"]
+```text
+cit_replication_source
+cit_replication_target
 ```
 
-Diretrizes a preservar na implementação futura: saída normalizada com `COD_MUNICIPAL`; recuperação por Município + UF apenas quando inequívoca; fuzzy apenas sugere; homologação de exceções reutilizáveis deve ser opt-in; validação de 100% refere-se ao conjunto recebido, não à cobertura nacional.
+### Login principals
 
-Caso código válido e nome/UF apontem para municípios distintos, não escolher silenciosamente uma fonte. O contrato do serviço deve definir o tratamento do conflito antes de autorizar correção. CEP5 não serve como fuzzy numérico nem como substituto automático do município.
-
-## 9. Edge Functions, RPCs e serviços
-
-A árvore Git auditada não contém `supabase/functions/` nem implementações V2 de validação, revisão, replicação ou reconciliação. A listagem administrativa da REPLICA retornou **zero Edge Functions**. O catálogo completo de Edge Functions do backend gerenciado PRIMARY não foi obtido por acesso administrativo independente; portanto não se afirma ausência de todo e qualquer deploy fora do repositório.
-
-As consultas ao catálogo `public` de ambos os bancos não encontraram funções SQL próprias de aplicação. Os helpers `tmp_*` utilizados para carga não permanecem no escopo verificado.
-
-**Regra operacional:** sem código versionado, configuração de deploy, autenticação e teste HTTP/E2E, nenhum serviço deve ser apresentado como implementado/homologado. Ter uma extensão instalada, um SDK no package.json ou uma tabela de auditoria não cria esse serviço.
-
-A REPLICA é um banco separado alimentado por operações de aplicação; não há subscription PostgreSQL nem rotina `cron.job` instalada nos bancos auditados. A ausência de cron no banco não prova ausência de agendadores externos; nenhum agendador externo do pipeline foi identificado ou homologado nesta auditoria.
-
-## 10. Frontend e stack de código
-
-A base declarada em `package.json` é React/Vite/TypeScript. As versões declaradas incluem React `^18.3.1`, Vite `^5.4.19`, TypeScript `^5.8.3`, Tailwind `^3.4.17`, `@supabase/supabase-js` `^2.110.1` e `@tanstack/react-query` `^5.83.0`. São requisitos declarados, não medição do runtime publicado.
-
-| Caminho | Estado e significado |
-|---|---|
-| `src/main.tsx` | Bootstrap React. |
-| `src/App.tsx` | Tela estática de fundação; não consulta as dimensões. |
-| `src/components/ui/` | Componentes genéricos; um Dialog genérico não é a revisão municipal. |
-| `src/hooks/use-mobile.tsx`, `use-toast.ts` | Utilidades de interface, não regras comerciais. |
-| `src/lib/utils.ts` | Utilidade genérica. |
-| `src/integrations/supabase/client.ts` | SDK de runtime baseado em variáveis de ambiente. |
-| `src/integrations/supabase/previewAuthStorage.ts` | Infraestrutura de sessão/preview; não é política de autorização do produto. |
-| `src/integrations/supabase/types.ts` | Tipagem apenas das três tabelas técnicas; as quatro dimensões ainda estão ausentes. |
-| `src/index.css`, `tailwind.config.ts` | Estilos/tokens preservados, não design system V2 aprovado no Figma. |
-
-Há dependências históricas no manifesto, inclusive bibliotecas de mapas/exportação. Sua presença não significa que as funcionalidades comerciais tenham sido reativadas. Revisão de dependências e lockfile deve ocorrer em etapa própria.
-
-O texto atual de `App.tsx` ainda diz que não existe dataset de negócio e que o PRIMARY contém somente a fundação. **Esse texto está desatualizado em relação ao banco.** Foi documentado como pendência, sem alterar a interface nesta rodada.
-
-## 11. Autenticação e autorização
-
-| Elemento | PRIMARY | REPLICA | Interpretação |
-|---|---:|---:|---|
-| `auth.users` | 28 | 0 | Contas da plataforma foram preservadas no PRIMARY. |
-| `auth.identities` | 28 | 0 | Identidades existentes; nenhum dado pessoal foi reproduzido neste mapa. |
-| Tela de login V2 | Não implementada na tela atual | Não se aplica | SDK presente não equivale a login funcional. |
-| Perfis/permissões do produto | Não formalizados na V2 | Não se aplica | Necessário antes de expor revisão/carga/dados. |
-
-Não excluir essas contas como consequência automática de uma limpeza de negócio. Também não assumir que continuam autorizadas no produto V2. É preciso decidir quem administra cargas, quem revisa exceções e quem consome os dados.
-
-Provedores, signup público, MFA, políticas de senha, recuperação e sessões ativas não foram auditados. Não foi feito login real nem teste de autorização entre perfis.
-
-## 12. Segurança e infraestrutura preservada
-
-As sete tabelas estão com RLS ativo. Foi verificada a ausência de privilégios efetivos de tabela para `anon` e `authenticated`, inclusive SELECT e operações de escrita. A auditoria de segurança Supabase da REPLICA retornou sete avisos informativos de RLS sem policy; isso é compatível com o fechamento atual para usuários finais.
-
-Grants e RLS são controles diferentes: grants determinam acesso ao objeto, e policies RLS determinam linhas acessíveis. Quando o consumo for implementado, conceder somente os privilégios e policies necessários, sem desativar RLS como atalho. Referência técnica: https://supabase.com/docs/guides/api/securing-your-api
-
-Estado adicional observado:
-
-- zero buckets e zero objetos no Storage de ambos os ambientes;
-- zero funções SQL próprias de aplicação em `public`;
-- sem helpers `tmp_*` no escopo inspecionado;
-- extensão `http` ainda instalada no PRIMARY; não instalada na REPLICA;
-- demais extensões de plataforma preservadas.
-
-A extensão HTTP remanescente não prova uma conexão ativa nem um vazamento. Deve ser revisada para decidir se ainda tem finalidade. Nada foi removido nesta auditoria.
-
-Existe `.env` rastreado no Git. Seu conteúdo não foi aberto nem reproduzido nesta rodada. Isso é uma pendência de classificação de credenciais, não prova de que há segredo exposto. Se forem encontradas credenciais privilegiadas, será necessária rotação; apenas apagar o arquivo atual não elimina o histórico.
-
-## 13. GitHub, DDL e deploy
-
-Migrations canônicas presentes:
-
-| Arquivo | Papel | Conduta |
-|---|---|---|
-| `0000_reset_legacy.sql` | Registro reproduzível do reset de negócio | Não reaplicar sobre dados atuais como bootstrap de rotina. |
-| `0001_foundation.sql` | Três tabelas técnicas | Preservar e evoluir por migrations novas. |
-| `0002_geografia_dtb_2025_cep5.sql` | Quatro dimensões geográficas | Estrutura existente; não recriar do histórico legado. |
-
-`database/v2/` é a fonte oficial de DDL. As migrations antigas de negócio foram removidas da branch vigente. Metadados internos de migrations nos provedores podem continuar existindo e não reativam regras antigas.
-
-```mermaid
-flowchart LR
-    D["Decisão e contrato"] --> C["Código / DDL no GitHub"]
-    C --> T["Testes e revisão"]
-    T --> M["Commit na branch aprovada"]
-    M --> R["Sincronização do runtime"]
-    M --> B["Aplicação controlada da migration"]
-    R --> V["Verificar versão executada"]
-    B --> Q["QA PRIMARY e REPLICA"]
+```text
+cit_replication_source_login
+cit_replication_target_login
 ```
 
-**Commit de SQL não é evidência de migration aplicada. Commit de função não é evidência de deploy. Deploy não é evidência de teste.** Cada camada exige verificação separada.
+Características:
 
-Não enviar prompts ao agente do Lovable para implementar código. A operação técnica do banco precisa seguir SQL previamente versionado, escopo aprovado e evidência posterior. Nesta rodada de mapa, as consultas foram somente leitura e as alterações ficaram na documentação/repositório.
+- `LOGIN` habilitado apenas nos principals;
+- sem superuser;
+- sem createDB;
+- sem createRole;
+- sem `REPLICATION` nativo;
+- sem bypassRLS;
+- connection limit 2;
+- membership somente no grupo necessário.
 
-## 14. Testes e verificações realmente realizados
+Isso segue o princípio do menor privilégio.
 
-| Verificação | Resultado |
+## 14. Worker de replicação
+
+O worker foi construído para replicar apenas o escopo autorizado.
+
+Características:
+
+- direção PRIMARY → REPLICA;
+- allowlist das tabelas geográficas;
+- ordem município → distrito → subdistrito → CEP5;
+- snapshot consistente da origem;
+- lotes de 500 linhas;
+- staging no destino;
+- checkpoints;
+- replay após interrupção;
+- promoção atômica;
+- auditoria;
+- comparação por hash;
+- gate de deleções.
+
+Modos:
+
+```text
+check
+apply
+```
+
+`check` compara. `apply` pode reparar a REPLICA a partir do PRIMARY.
+
+`allow_deletions=false` é o padrão e deve permanecer assim até autorização explícita.
+
+## 15. CI e testes
+
+Existem workflows versionados e ativos:
+
+- `CIT verification`
+- `CIT database verification`
+- `CIT manual replication`
+
+Cobertura técnica atual inclui:
+
+- testes de banco isolado;
+- migrations 0001–0006 em fixture;
+- ingestão;
+- replicação interrompida;
+- replay;
+- gate de deleções;
+- entrega de auditoria;
+- preflight sanitizado;
+- testes para impedir vazamento de credenciais em logs.
+
+CI verde = código testado no cenário coberto. Não é evidência suficiente de conectividade real de produção.
+
+## 16. Segurança da conexão PostgreSQL
+
+A política escolhida é:
+
+```text
+sslmode=verify-full
+```
+
+O workflow instala o trust anchor a partir do secret:
+
+```text
+CIT_SUPABASE_CA_CERT
+```
+
+Certificado validado:
+
+```text
+Supabase Root 2021 CA
+```
+
+A primeira geração do preflight revelou falha de TLS nos dois lados. Após instalação da CA, a REPLICA passou completamente e o PRIMARY avançou até o pooler. Portanto o problema de certificado está resolvido.
+
+## 17. Estado real da REPLICA
+
+A REPLICA foi validada com:
+
+- host do Session Pooler em `sa-east-1`;
+- porta 5432;
+- IPv4;
+- `sslmode=verify-full`;
+- certificado correto;
+- autenticação do usuário técnico;
+- `current_user` correto;
+- database `postgres` correto;
+- membership em `cit_replication_target` correto.
+
+Estado: **conexão técnica concluída**.
+
+## 18. Estado real do PRIMARY
+
+### Validação interna
+
+No banco PRIMARY foram confirmados:
+
+- `cit_replication_source_login` existe;
+- `LOGIN = true`;
+- `CONNECT` no database = true;
+- `USAGE` necessário = true;
+- membership em `cit_replication_source` = true.
+
+Portanto o usuário técnico não está ausente do PostgreSQL.
+
+### Shared Pooler
+
+O endpoint inicialmente utilizado foi o Shared Pooler compatível com a região `us-east-1`.
+
+O preflight passou:
+
+- DNS;
+- IPv4;
+- rede;
+- porta;
+- SSL;
+- certificado.
+
+Mas recebeu:
+
+```text
+FATAL: (ENOTFOUND) tenant/user not found
+```
+
+Conclusão: o Supavisor não reconheceu a combinação de tenant/usuário apresentada. A falha ocorreu antes da autenticação chegar ao PostgreSQL.
+
+### Probe direto
+
+Foi então implementado um probe somente leitura para:
+
+```text
+db.<project-ref>.supabase.co:5432
+```
+
+O PR correspondente passou pelo CI e foi integrado. A execução real posterior falhou novamente, porém **o motivo exato dessa última falha ainda não foi analisado**.
+
+Não inferir se foi IPv6, DNS, autenticação, host, certificado ou outra limitação até ler essa execução.
+
+## 19. Sequência dos principais PRs da infraestrutura
+
+| PR | Objetivo |
 |---|---|
-| Leitura da árvore Git e arquivos centrais | Realizada no commit de referência. |
-| Contagens das sete tabelas nos dois bancos | Realizada. |
-| Schema: tipos, defaults, constraints, índices e RLS | Assinaturas iguais nas sete tabelas. |
-| Privilégios efetivos de `anon`/`authenticated` | Nenhum nas sete tabelas. |
-| Conteúdo das quatro dimensões | Fonte original normalizada = CSV = PRIMARY = REPLICA por SHA-256. |
-| FKs, hierarquia e CEP5 | Zero órfãos/erros nos checks consultados; nove prefixos compartilhados. |
-| Zero à esquerda | 4.495 registros confirmados; descrição antiga corrigida. |
-| Catálogo de funções da REPLICA | Zero Edge Functions. |
-| Figma | Identidade/time/assento confirmados; arquivo visual não identificado. |
-| Build, lint e testes do app | Não executados nesta auditoria. |
-| Navegação e login no runtime publicado | Não verificados. |
-| E2E de upload e revisão | Não realizado; funcionalidades ainda ausentes. |
-| Recuperação após falha de replicação | Não testada; pipeline permanente pendente. |
+| #2 | Foundation P01–P11 inicial, ingestão, replicação e CI. |
+| #3 | Hardening de credenciais de replicação. |
+| #4 | Preflight de conexão sanitizado. |
+| #5 | Instalação e validação da Supabase Root CA. |
+| #6 | Diagnóstico detalhado e sanitizado do PRIMARY. |
+| #7 | Probe seguro da conexão direta do PRIMARY. |
 
-Há configuração de Vitest/Playwright no repositório, mas o teste de exemplo inspecionado apenas verifica `expect(true).toBe(true)`. Isso não cobre regra de negócio nem paridade. Não foram encontrados workflows CI na árvore auditada. O clone local falhou por resolução DNS de `github.com`; não se deve converter essa falha em alegação de build aprovado.
+Os detalhes de cada alteração permanecem no histórico GitHub. O histórico serve como evidência; regras comerciais antigas não devem ser recuperadas dele por inferência.
 
-## 15. Figma e camada de UX
+## 20. O que ainda não está definido no domínio comercial
 
-O workspace oficial é o time CIT. A conexão consultada retornou plano Starter e assento View. `SIGMA` é nome antigo/incorreto informado pelo usuário, não um segundo produto.
+Não estão homologados:
 
-O link registrado é de time/workspace, não de arquivo Design/FigJam. Portanto não foram inspecionados frames, componentes, tokens ou fluxos do arquivo. Estar em um time não prova permissão de edição em um arquivo específico. O acesso depende do link e das permissões do conteúdo: https://developers.figma.com/docs/figma-mcp-server/rate-limits-access/
+- chave canônica de escola/cliente;
+- relação INEP × Protheus/ERP;
+- concorrência;
+- raio ou distância;
+- geometria;
+- papel exato do CEP5 na seleção comercial;
+- demografia;
+- market share;
+- mensalidade;
+- perfil socioeconômico;
+- potencial;
+- Melhor Oferta;
+- Zero Estoque;
+- proposta;
+- prospecção;
+- renovação.
 
-Nenhum arquivo visual novo foi criado para substituir o arquivo existente. Os diagramas deste mapa são Mermaid versionado no GitHub, não alterações no Figma. O próximo passo de UX é registrar o link direto/fileKey do arquivo correto e validar acesso antes de desenhar telas.
+Nenhuma dessas regras deve voltar automaticamente do histórico V1.
 
-## 16. Pendências priorizadas
+## 21. Estado por camada
 
-As prioridades abaixo são uma proposta de execução, não autorização para modificar produção automaticamente.
+| Camada | Estado em 16/09/2026 |
+|---|---|
+| Governança | Implementada |
+| Foundation | Implementada e aplicada |
+| DTB 2025 | Implementada, carregada e validada |
+| CEP5 | Implementado, carregado e validado |
+| Paridade geográfica histórica | Confirmada por contagem + SHA-256 |
+| Ingestão/staging | Implementada |
+| Grants e primeiro admin | Implementados no PRIMARY |
+| Roles técnicas | Implementadas nos dois ambientes |
+| Worker de replicação | Implementado e testado em CI |
+| CI | Implementado e funcional |
+| SSL/CA | Resolvido |
+| REPLICA externa | Conectividade validada |
+| PRIMARY interno | Usuário/roles validados |
+| PRIMARY externo | Bloqueado; última tentativa ainda não analisada |
+| Replicação permanente real | Pendente de conectividade PRIMARY |
+| E2E publicado | Pendente |
+| Figma fileKey | Pendente |
+| Extensão HTTP residual | Revisão pendente |
+| Regras comerciais | Pendente de especificação |
 
-| ID | Prioridade | Pendência | Critério objetivo de conclusão |
-|---|---|---|---|
-| P01 | Alta, antes de expor o produto | Classificar `.env` e credenciais | Inventário sem valores em logs; rotação quando necessária; política de versionamento. |
-| P02 | Alta, antes de UI conectada | Completar tipos das quatro dimensões | Tipos fiéis ao PRIMARY e typecheck executado. |
-| P03 | Alta, antes de ingestão autônoma | Implementar gate municipal/CEP5 e staging | Arquivo misto inválido bloqueado, campos preservados e correções auditadas. |
-| P04 | Alta, antes de uso por pessoas | Definir e implementar autenticação/autorização | Papéis aprovados, testes de acesso permitido/negado, contas preservadas tratadas explicitamente. |
-| P05 | Alta, antes de atualização recorrente | Replicação e reconciliação permanentes | Paginação, idempotência, retomada, exclusões, checksum e falha simulada testados. |
-| P06 | Média | Completar trilha de replicação | Política PRIMARY/REPLICA documentada e eventos novos completos; backfill identificado como posterior. |
-| P07 | Média | Corrigir textos da tela neutra | Texto reflete dados carregados sem reativar regras comerciais. |
-| P08 | Média | CI, build e testes reais | Execuções registradas, lockfile/gerenciador definidos e testes de integridade/serviços. |
-| P09 | Média | Fonte durável e reprocessamento | Originais recuperáveis por hash e procedimento reproduzível de carga/restauração. |
-| P10 | Média | Identificar arquivo Figma | fileKey e permissões confirmados, sem criar cópia desnecessária. |
-| P11 | Baixa | Rever extensão HTTP e dependências residuais | Remover só o que for comprovadamente dispensável, com commit e teste. |
+## 22. Glossário técnico para iniciantes
 
-## 17. Requisitos mínimos para o pipeline futuro
+| Termo | Explicação simples |
+|---|---|
+| Frontend | Parte visual que o usuário utiliza. |
+| Backend | Lógica executada por trás da interface. |
+| PostgreSQL | Sistema de banco de dados relacional. |
+| SQL | Linguagem para consultar e alterar o banco. |
+| DDL | SQL usado para criar ou alterar estrutura. |
+| Schema | Área lógica para organizar objetos dentro do banco. |
+| PK | Chave primária; identifica unicamente uma linha. |
+| FK | Chave estrangeira; cria relacionamento com outra tabela. |
+| Migration | Arquivo que registra uma mudança estrutural do banco. |
+| ETL | Extrair, transformar e carregar dados. |
+| Staging | Área temporária de validação antes de oficializar dados. |
+| Role | Identidade ou conjunto de permissões PostgreSQL. |
+| Grant | Permissão concedida explicitamente. |
+| RLS | Segurança que limita quais linhas podem ser acessadas. |
+| PRIMARY | Banco operacional principal e autoritativo. |
+| REPLICA | Cópia independente do PRIMARY. |
+| Replicação | Processo de copiar/sincronizar dados entre bancos. |
+| Branch | Linha paralela de desenvolvimento no Git. |
+| Commit | Estado salvo e identificado do código. |
+| PR | Pull Request; revisão antes de incorporar mudanças. |
+| Merge | Incorporação de uma branch na versão principal. |
+| CI | Testes automáticos de integração contínua. |
+| Workflow | Sequência automática executada pelo GitHub Actions. |
+| Runner | Máquina temporária usada para executar o workflow. |
+| Secret | Credencial protegida pelo GitHub. |
+| DSN | String que contém parâmetros de conexão do banco. |
+| Host | Endereço do servidor. |
+| Porta | Canal de rede do serviço; PostgreSQL normalmente usa 5432. |
+| SSL/TLS | Criptografia da comunicação. |
+| `verify-full` | Modo que valida criptografia, CA e hostname. |
+| CA | Autoridade/certificado usado como raiz de confiança. |
+| Pooler | Serviço intermediário que gerencia conexões ao banco. |
+| Supavisor | Pooler da Supabase. |
+| Tenant | Identificador de um projeto em infraestrutura compartilhada. |
+| DNS | Traduz hostname para endereço de rede. |
+| IPv4/IPv6 | Duas famílias de endereçamento de rede. |
+| Preflight | Checagem de conexão antes do processo principal. |
+| Hash | Impressão digital determinística de um conteúdo. |
+| Checksum | Valor usado para conferir integridade. |
+| Idempotência | Repetir a operação sem gerar duplicação indevida. |
+| Replay | Retomar/repetir uma execução de forma controlada. |
+| Paginação | Processar um conjunto grande em blocos. |
+| Transação | Grupo de operações que deve concluir ou ser revertido como unidade. |
+| E2E | Teste ponta a ponta do fluxo real. |
 
-Para evitar repetir operações pontuais difíceis de retomar, o pipeline deve possuir identidade de lote, hash da origem, versão de contrato, estado persistido e limite de tamanho. Um lote não deve ser promovido porque apenas o último bloco enviado passou: a aprovação precisa considerar o conjunto completo.
+## 23. Ponto exato de retomada
 
-A revisão humana deve registrar usuário autorizado, valor original, código escolhido, motivo e momento da decisão. A opção de memorizar correção precisa ser explícita e limitada à fonte aprovada. Códigos válidos mas conflitantes, cabeçalhos duplicados e CEP5 ambíguos precisam de comportamento definido e testado.
+Ao retornar ao trabalho técnico:
 
-A replicação deve restringir tabelas e colunas por allowlist, respeitar a ordem das FKs e usar o mesmo identificador de lote. Upsert sozinho não garante remoção de registros que deixaram de existir: a política de snapshot, exclusão lógica ou tombstones precisa constar no contrato. Repetir o mesmo lote não pode gerar duplicidade, eventos enganosos ou alteração silenciosa do conteúdo.
+1. abrir a execução mais recente do `CIT manual replication` já contendo o probe direto;
+2. ler o erro específico do `direct_probe`;
+3. não alterar secret, host ou senha antes de classificar essa falha;
+4. se a conexão direta for suportada/corrigível, formalizar a DSN correta;
+5. se não for, obter o endpoint/tenant oficialmente suportado pelo Lovable;
+6. executar novo `mode=check` com PRIMARY e REPLICA aprovados no preflight;
+7. conferir contagens e checksums;
+8. executar E2E login → upload → staging → validação → revisão → promoção → replicação;
+9. revisar extensão HTTP e Figma;
+10. iniciar a especificação dos domínios comerciais.
 
-A reconciliação deve comparar o mesmo escopo e a mesma versão do conjunto. Não deve declarar paridade entre uma origem mudando durante a leitura e um destino congelado. O desenho deve tratar checkpoints, concorrência, falhas de rede, divergência de schema e recuperação sempre a partir do PRIMARY.
+## 24. Regra de continuidade
 
-Esses são requisitos de engenharia para implementação futura; não aparecem como serviços concluídos neste mapa.
+Quando houver nova mudança estrutural, atualizar em conjunto:
 
-## 18. O que permanece deliberadamente sem definição
+- `README.md`;
+- `docs/architecture/mapa-cit-paper-v2.md`;
+- contratos de dados aplicáveis;
+- evidências/testes correspondentes.
 
-Não estão definidos os critérios comerciais de concorrência, distância/raio, ranking, segmentação, pesos ou metodologia demográfica. CEP5 é referência de relacionamento, não uma fórmula de concorrência pronta nem uma área geométrica conhecida.
+Isso reduz a distância entre o que o código realmente faz e o que a documentação afirma.
 
-Também não estão aprovadas a identidade escolar, a relação entre identificadores ERP e INEP, o esquema de escolas/clientes, adoção, oferta, estoque ou proposta. Nenhum desses domínios deve voltar do histórico por inferência.
-
-## 19. Roteiro de retomada
-
-1. Ler este mapa, `AGENTS.md`, o contrato geográfico e o snapshot de evidências.
-2. Confirmar o commit e o estado atual dos ambientes antes de continuar; este documento é datado.
-3. Preservar as quatro dimensões existentes; não repetir reset ou recarga por falta de memória.
-4. Decidir o próximo escopo: saneamento técnico, pipeline permanente ou novo contrato de dados.
-5. Implementar somente o escopo aprovado via GitHub/commit.
-6. Separar código escrito, deploy, teste e resultado em banco na comunicação final.
-7. Atualizar README, mapa e evidências quando houver mudança estrutural.
-
-**Ponto de retomada:** geografia e CEP5 íntegros e carregados; interface comercial neutralizada; serviços automáticos de ingestão/revisão/replicação ainda pendentes. As próximas ações devem partir daqui, não de uma suposição de plataforma totalmente pronta.
+**Resumo atual:** a V2 já possui fundação, geografia, ingestão, segurança básica, CI e worker de replicação; a REPLICA funciona; o bloqueio técnico atual está exclusivamente na rota externa de acesso ao PRIMARY Lovable, e a última tentativa ainda precisa de diagnóstico antes de qualquer nova alteração.
