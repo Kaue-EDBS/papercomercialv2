@@ -36,7 +36,7 @@ jobs:
           psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -c 'create database cit_ci_replica'
           REPLICA_URL="${CIT_TEST_DB_URL%/cit_ci}/cit_ci_replica"
           psql "$REPLICA_URL" -X -v ON_ERROR_STOP=1 -f database/tests/bootstrap.sql
-          for file in database/v2/0001_foundation.sql database/v2/0002_geografia_dtb_2025_cep5.sql database/v2/0003_cit_ingestion_access.sql database/v2/0004_replication_control.sql database/v2/0005_replication_roles.sql database/v2/0006_replication_login_principals.sql; do
+          for file in database/v2/0001_foundation.sql database/v2/0002_geografia_dtb_2025_cep5.sql database/v2/0003_cit_ingestion_access.sql database/v2/0004_replication_control.sql database/v2/0005_replication_roles.sql database/v2/0006_replication_login_principals.sql database/v2/0007_boa_esperanca_cep5_scope.sql; do
             psql "$REPLICA_URL" -X -v ON_ERROR_STOP=1 -f "$file"
           done
           psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f database/tests/replication-seed.sql
