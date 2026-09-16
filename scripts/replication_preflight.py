@@ -2,12 +2,14 @@
 """Sanitized production connection preflight for CIT/Paper replication.
 
 Never prints passwords or full DSNs. It validates expected project/user shapes,
-connects to each side independently, and reports only a coarse failure category.
+connects to each side independently, and reports only safe diagnostic metadata.
 """
 from __future__ import annotations
 
 import json
 import os
+import re
+import socket
 import sys
 from urllib.parse import unquote, urlparse, parse_qs
 
@@ -35,8 +37,20 @@ def classify_error(exc: Exception) -> str:
         return "AUTH"
     if any(x in msg for x in ("tenant or user not found", "unsupported or invalid secret format")):
         return "POOLER_AUTH"
+    if any(x in msg for x in ("tenant not found", "unknown tenant", "invalid tenant")):
+        return "POOLER_TENANT"
+    if any(x in msg for x in ("user not found", "unknown user")):
+        return "POOLER_USER"
+    if "no pg_hba.conf entry" in msg:
+        return "PG_HBA"
+    if any(x in msg for x in ("too many connections", "too many clients", "remaining connection slots")):
+        return "CAPACITY"
+    if any(x in msg for x in ("unsupported startup parameter", "invalid startup parameter")):
+        return "POOLER_PROTOCOL"
     if any(x in msg for x in ("certificate", "ssl", "tls")):
         return "SSL"
+    if "server closed the connection unexpectedly" in msg:
+        return "SERVER_CLOSED"
     if "connection refused" in msg:
         return "NETWORK_REFUSED"
     if any(x in msg for x in ("timeout", "timed out")):
@@ -44,6 +58,26 @@ def classify_error(exc: Exception) -> str:
     if any(x in msg for x in ("no route to host", "network is unreachable")):
         return "NETWORK"
     return "CONNECT"
+
+
+def sanitize_error(exc: Exception, cfg: dict, dsn: str) -> str:
+    """Return a short diagnostic that cannot expose credentials or full DSNs."""
+    text = " ".join(str(exc).split())
+    parsed = urlparse(dsn)
+    replacements = {
+        dsn: "<dsn>",
+        cfg.get("ref", ""): "<project_ref>",
+        cfg.get("role", ""): "<role>",
+        parsed.hostname or "": "<host>",
+        unquote(parsed.username or ""): "<user>",
+        unquote(parsed.password or ""): "<password>",
+    }
+    for value, replacement in sorted(replacements.items(), key=lambda item: len(item[0]), reverse=True):
+        if value:
+            text = text.replace(value, replacement)
+    text = re.sub(r"(?i)(password\s*[=:]\s*)\S+", r"\1<redacted>", text)
+    text = re.sub(r"(?i)postgres(?:ql)?://\S+", "<dsn>", text)
+    return text[:320]
 
 
 def inspect_dsn(dsn: str, expected_ref: str, expected_role: str) -> dict:
@@ -64,6 +98,19 @@ def inspect_dsn(dsn: str, expected_ref: str, expected_role: str) -> dict:
     }
 
 
+def dns_families(host: str, port: int) -> list[str]:
+    families: set[str] = set()
+    try:
+        for family, *_ in socket.getaddrinfo(host, port, type=socket.SOCK_STREAM):
+            if family == socket.AF_INET:
+                families.add("IPv4")
+            elif family == socket.AF_INET6:
+                families.add("IPv6")
+    except socket.gaierror:
+        return []
+    return sorted(families)
+
+
 def check_side(label: str, cfg: dict) -> dict:
     import psycopg
 
@@ -80,6 +127,7 @@ def check_side(label: str, cfg: dict) -> dict:
         "database": meta["database"],
         "user_shape_ok": meta["user_shape_ok"],
         "sslmode_ok": meta["sslmode_ok"],
+        "dns_families": dns_families(meta["host"], meta["port"]),
     }
     if not meta["scheme_ok"] or not meta["user_shape_ok"] or not meta["sslmode_ok"]:
         result["category"] = "DSN_CONTRACT"
@@ -105,6 +153,8 @@ def check_side(label: str, cfg: dict) -> dict:
     except Exception as exc:
         result["category"] = classify_error(exc)
         result["error_type"] = type(exc).__name__
+        result["sqlstate"] = getattr(exc, "sqlstate", None)
+        result["safe_detail"] = sanitize_error(exc, cfg, dsn)
         return result
 
 

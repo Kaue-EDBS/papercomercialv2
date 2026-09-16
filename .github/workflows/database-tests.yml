@@ -42,5 +42,7 @@ jobs:
           psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f database/tests/replication-seed.sql
       - name: Install pinned worker dependency
         run: python -m pip install -r scripts/requirements-worker.txt
+      - name: Verify sanitized preflight diagnostics
+        run: python -m unittest tests/test_replication_preflight.py
       - name: Verify interrupted transfer, replay, deletion gate and audit delivery
         run: python tests/integration_replication.py
