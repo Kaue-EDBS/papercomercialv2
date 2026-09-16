@@ -1,0 +1,79 @@
+{
+  "record_type": "summary_from_inspected_github_actions_job_log",
+  "repository": "Kaue-EDBS/papercomercialv2",
+  "implementation_pr": 11,
+  "tested_commit": "4e426bc1e95c17916a3b10e1642366c3164f3b2f",
+  "workflow": "CIT production connection verification",
+  "workflow_run_id": 35126088433,
+  "workflow_run_url": "https://github.com/Kaue-EDBS/papercomercialv2/actions/runs/35126088433",
+  "job_id": 104895353744,
+  "conclusion": "success",
+  "observed_at_utc": "2026-09-16T17:06:46.436790+00:00",
+  "timezone": "America/Sao_Paulo",
+  "environment": "cit-production-replication",
+  "primary_endpoint": {
+    "stored_host": "aws-0-us-east-1.pooler.supabase.com",
+    "effective_host": "aws-1-us-east-1.pooler.supabase.com",
+    "effective_port": 5432,
+    "sslmode": "verify-full",
+    "credentials_preserved": true,
+    "secret_modified": false
+  },
+  "preflight": {
+    "PRIMARY": {
+      "ok": true,
+      "dns_families": ["IPv4"],
+      "user_shape_ok": true,
+      "sslmode_ok": true,
+      "current_user_ok": true,
+      "database_ok": true,
+      "role_membership_ok": true,
+      "server_version_num": "170006",
+      "category": "OK"
+    },
+    "REPLICA": {
+      "ok": true,
+      "host": "aws-0-sa-east-1.pooler.supabase.com",
+      "port": 5432,
+      "dns_families": ["IPv4"],
+      "user_shape_ok": true,
+      "sslmode_ok": true,
+      "current_user_ok": true,
+      "database_ok": true,
+      "role_membership_ok": true,
+      "server_version_num": "170006",
+      "category": "OK"
+    }
+  },
+  "snapshot": {
+    "mode": "read_only_snapshot",
+    "persistent_writes": false,
+    "fingerprint_protocol": "sha256-json-array-lines-v1",
+    "total_rows_per_database": 41873,
+    "tables_verified_independently_on_both_sides": {
+      "dim_municipio": {"rows": 5571, "sha256": "44b2d93b700d03b11ddb81ca1688b2d2f599e7eeffef2d6b3ab2cb2fd57d70f3", "matches_approved_baseline": true},
+      "dim_distrito": {"rows": 10751, "sha256": "5e3bfea56b4c8b82ca6f8a92f8ecd9f82ac4bfacc7c5825a8d5fdd5284dc3679", "matches_approved_baseline": true},
+      "dim_subdistrito": {"rows": 646, "sha256": "2c9aeef8a0df9882883ae042decea8cf799d7b0e516292c30fc44b0ec83d981a", "matches_approved_baseline": true},
+      "dim_cep5": {"rows": 24905, "sha256": "346285b67463ee58bd2e27f30d46e59281cb9c6ef095c3d5e4389e5f7d884b56", "matches_approved_baseline": true}
+    },
+    "PRIMARY": {"ok": true, "identity_ok": true, "read_only": true, "migration_0007_ok": true},
+    "REPLICA": {"ok": true, "identity_ok": true, "read_only": true, "migration_0007_ok": true},
+    "ok": true
+  },
+  "ci": {
+    "normalization_unit_tests": {"tests": 14, "passed": 14},
+    "pull_request_application": {"run_id": 35125960805, "conclusion": "success"},
+    "pull_request_database": {"run_id": 35125960594, "conclusion": "success"},
+    "tested_main_application": {"run_id": 35126088367, "conclusion": "success"},
+    "tested_main_database": {"run_id": 35126088372, "conclusion": "success"}
+  },
+  "limits": [
+    "Stored GitHub secret remains unchanged; approved entry point normalizes host and port in process memory.",
+    "No replication check/apply was executed by this production connection workflow.",
+    "Geographic SHA-256 excludes carga_id and atualizado_em under the existing protocol.",
+    "Migration verification checked definitions; behavioral tests were performed in the preceding 0007 deployment validation, not repeated here.",
+    "Production reconciliation audit delivery, promotion/replay and published frontend E2E remain separate acceptance steps.",
+    "No scheduled replication or new ChatGPT automation was enabled.",
+    "No passwords, row-level business payloads or personal identities are included in this summary."
+  ]
+}
