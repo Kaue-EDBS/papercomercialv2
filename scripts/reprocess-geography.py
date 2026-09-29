@@ -13,7 +13,7 @@ import sys
 import xml.etree.ElementTree as ET
 import zipfile
 from openpyxl import load_workbook
-from replication import fingerprint, COLS, BASE
+from geography_fingerprint import fingerprint, COLS, BASE
 HASHES={'COD_MUNICIPAL.zip':'a5947915a7213cddde00682a51d0734ea6b6ec2307d237d1e7937edde6766b99','CEP5.xlsx':'74ad34907a4ee418ededa872d3530cc11ae89270ed666331a6879ea72cb8cf13'}
 UF=dict(zip(['11','12','13','14','15','16','17','21','22','23','24','25','26','27','28','29','31','32','33','35','41','42','43','50','51','52','53'],['RO','AC','AM','RR','PA','AP','TO','MA','PI','CE','RN','PB','PE','AL','SE','BA','MG','ES','RJ','SP','PR','SC','RS','MS','MT','GO','DF']))
 ALIASES={('RR','São Luiz'):'1400605',('RN','Arês'):'2401206',('RN','Açu'):'2400208'}

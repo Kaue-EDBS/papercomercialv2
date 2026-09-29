@@ -1,5 +1,7 @@
 # Replicação CIT/Paper — estado real e arquitetura-alvo
 
+> **HISTÓRICO — REPLICA descontinuada em 29/09/2026.** O projeto `vevmnoxbjdkibdwfygfn` foi apagado, os logins técnicos foram desativados pela `0009` e o worker, os workflows e os testes de replicação foram removidos do repositório. Este documento registra apenas o que existiu.
+
 > Revisão de evidências: **15/09/2026**.
 
 ## Direção oficial

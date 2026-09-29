@@ -1,5 +1,7 @@
 # PRIMARY: Session Pooler e prova de conexao
 
+> **HISTORICO — REPLICA descontinuada em 29/09/2026.** O login `cit_replication_source_login` foi desativado pela `0009`, os secrets de conexao foram removidos do GitHub e `scripts/primary_session.py` foi apagado. Este documento registra apenas o que existiu.
+
 > **Conectividade externa confirmada em 16/09/2026, 14:06 de Brasilia.** A execucao [35126088433](https://github.com/Kaue-EDBS/papercomercialv2/actions/runs/35126088433) terminou com sucesso no commit `4e426bc1e95c17916a3b10e1642366c3164f3b2f`. Evidencia consolidada: [primary-connection-2026-09-16.json](../testing/primary-connection-2026-09-16.json).
 
 ## Decisao e origem

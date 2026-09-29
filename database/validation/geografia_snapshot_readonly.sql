@@ -1,5 +1,5 @@
 -- CIT/Paper V2 - verificacao de snapshot, sem alterar dados.
--- Nao e migration. Executar separadamente no PRIMARY e na REPLICA.
+-- Nao e migration. Executar no PRIMARY (a REPLICA foi descontinuada em 29/09/2026).
 -- Protocolo: sha256-json-array-lines-v1.
 -- Array JSON por linha; colunas na ordem abaixo; PK ordenada; LF entre
 -- linhas, sem LF final; UTF-8; SHA-256. Exclui carga_id e atualizado_em.

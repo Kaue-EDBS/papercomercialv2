@@ -1,8 +1,8 @@
 name: CIT database verification
 on:
   push:
-    branches: [main, chore/cit-p01-p11, chore/cit-replication-credentials]
-    paths: ['database/**', 'supabase/migrations/**', 'scripts/**', 'tests/**', '.github/workflows/database-tests.yml']
+    branches: [main]
+    paths: ['database/**', 'supabase/migrations/**', 'scripts/test-db.sh', '.github/workflows/database-tests.yml']
   pull_request:
     branches: [main]
 permissions:
@@ -31,18 +31,3 @@ jobs:
           persist-credentials: false
       - name: Test isolated ingestion database
         run: bash scripts/test-db.sh
-      - name: Prepare independent replica fixture
-        run: |
-          psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -c 'create database cit_ci_replica'
-          REPLICA_URL="${CIT_TEST_DB_URL%/cit_ci}/cit_ci_replica"
-          psql "$REPLICA_URL" -X -v ON_ERROR_STOP=1 -f database/tests/bootstrap.sql
-          for file in database/v2/0001_foundation.sql database/v2/0002_geografia_dtb_2025_cep5.sql database/v2/0003_cit_ingestion_access.sql database/v2/0004_replication_control.sql database/v2/0005_replication_roles.sql database/v2/0006_replication_login_principals.sql database/v2/0007_boa_esperanca_cep5_scope.sql database/v2/0008_edbs_access_profiles.sql; do
-            psql "$REPLICA_URL" -X -v ON_ERROR_STOP=1 -f "$file"
-          done
-          psql "$CIT_TEST_DB_URL" -X -v ON_ERROR_STOP=1 -f database/tests/replication-seed.sql
-      - name: Install pinned worker dependency
-        run: python -m pip install -r scripts/requirements-worker.txt
-      - name: Verify sanitized preflight diagnostics
-        run: python -m unittest tests/test_replication_preflight.py
-      - name: Verify interrupted transfer, replay, deletion gate and audit delivery
-        run: python tests/integration_replication.py

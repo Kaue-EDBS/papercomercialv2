@@ -14,10 +14,8 @@ Toda mudança permanente nasce no GitHub e recebe commit antes de chegar ao runt
 6. Implementar via GitHub.
 7. Validar build/testes.
 8. Aplicar no PRIMARY.
-9. Validar o PRIMARY.
-10. Replicar para REPLICA quando aplicável.
-11. Comparar contagem + checksum.
-12. Documentar resultado.
+9. Validar o PRIMARY, com contagem + checksum quando houver dados.
+10. Documentar resultado.
 
 ## Interface
 
@@ -33,4 +31,4 @@ Exige inventário, SQL/código versionado, escopo explícito e validação poste
 
 ## Definition of Done
 
-A alteração precisa ter fonte/decisão documentada, código versionado, testes aplicáveis, QA objetivo de dados quando houver, ausência de segredos no diff e paridade PRIMARY/REPLICA quando aplicável.
+A alteração precisa ter fonte/decisão documentada, código versionado, testes aplicáveis, QA objetivo de dados quando houver, ausência de segredos no diff e validação no PRIMARY quando aplicável.

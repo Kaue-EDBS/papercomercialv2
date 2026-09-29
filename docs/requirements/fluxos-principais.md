@@ -154,4 +154,4 @@ Estado: **Pendente**. Única rota do perfil `viewer`; ainda não existe na inter
 
 ## F04 — Replicação PRIMARY → REPLICA
 
-Estado: **Descontinuado** em 29/09/2026 — decisão do responsável: o projeto não terá mais banco REPLICA. A implementação (`docs/replication/`, migrations 0004–0006, workflows e scripts) permanece no repositório como histórico até uma remoção planejada.
+Estado: **Descontinuado** em 29/09/2026 — decisão do responsável: o projeto não terá mais banco REPLICA. Worker, workflows e testes removidos do repositório; logins desativados no PRIMARY pela `0009`. Ficam como histórico as migrations 0004–0006 e `docs/replication/`. Pendente: remover as tabelas de controle e os papéis `cit_replication_*` numa migration futura.
