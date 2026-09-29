@@ -13,7 +13,7 @@ Antes de alterar qualquer coisa, leia `README.md`, `docs/architecture/README.md`
 3. Toda regra de negocio nova deve nascer de fonte/necessidade explicitada, contrato versionado, implementacao testavel e commit.
 4. Nao assumir chaves canonicas, ordem de dominios, faixas, formulas, criterios de concorrencia, market share, mensalidade, potencial, oferta ou qualquer comportamento legado. Usar somente os contratos V2 atualmente aprovados.
 5. Lovable Cloud e runtime e banco operacional PRIMARY. Alteracoes permanentes de codigo nao devem ser feitas por mensagens/prompts no agente do Lovable.
-6. Supabase externo `vevmnoxbjdkibdwfygfn` e a REPLICA confirmada. Fluxo automatico de dados e sempre PRIMARY -> REPLICA.
+6. **REPLICA descontinuada em 2026-09-29** por decisao do responsavel: o projeto nao tera mais banco REPLICA. O Supabase externo `vevmnoxbjdkibdwfygfn` era a REPLICA; nao replicar, nao aplicar migrations nele e nao usa-lo como fonte. A infraestrutura de replicacao ainda existe no repositorio e no PRIMARY ate uma remocao planejada; nao remove-la sem pedido explicito.
 7. `supabase/config.toml` aponta para `chwsmkdkgdgocnbcyvmq` e deve permanecer assim ate prova administrativa em contrario. Esse ID e consistente com o backend tecnico ligado ao Lovable/PRIMARY; nao substitui-lo pelo ID da REPLICA.
 8. O projeto `chwsmkdkgdgocnbcyvmq` nao e acessivel pela conexao Supabase externa atual, portanto sua natureza exata permanece como topologia inferida, nao fato administrativo confirmado.
 9. Toda mudanca de schema V2 deve existir primeiro em `database/v2/`. Dados de negocio exigem contrato em `docs/data-contracts/`. SQL em `database/validation/` e consulta de auditoria, nao migration.

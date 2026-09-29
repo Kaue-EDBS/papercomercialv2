@@ -6,6 +6,11 @@
 >
 > O produto comercial ainda **não foi reconstruído**. Isso é deliberado: primeiro a fundação precisa estar 100% estabelecida, testada e reproduzível.
 
+> **Atualização de 29/09/2026 — prevalece sobre o texto abaixo onde houver conflito:**
+>
+> - **Acesso (F01):** login somente Microsoft, domínios EDBS, perfis `admin` (5 contas técnicas) e `viewer` (demais contas EDBS, automático). Migration `0008` aplicada no PRIMARY e verificada. Detalhes em [docs/requirements/fluxos-principais.md](docs/requirements/fluxos-principais.md).
+> - **REPLICA descontinuada:** decisão do responsável em 29/09/2026 — o projeto não terá mais banco REPLICA. As seções sobre REPLICA, replicação e paridade abaixo ficam como **histórico**. A remoção da infraestrutura de replicação (workflows, scripts, roles/logins técnicos no PRIMARY, secrets do GitHub e o projeto Supabase `vevmnoxbjdkibdwfygfn`) ainda **não foi feita**.
+
 Leituras complementares: [AGENTS.md](AGENTS.md), [arquitetura](docs/architecture/README.md), [mapa de engenharia](docs/architecture/mapa-cit-paper-v2.md), [workflow de mudanças](docs/governance/change-workflow.md), [contrato geográfico](docs/data-contracts/geografia-dtb-2025-cep5.md), [contrato do Session Pooler](docs/replication/primary-session-pooler.md) e [evidência da conexão](docs/testing/primary-connection-2026-09-16.json).
 
 > **Atenção para documentação histórica:** alguns textos anteriores em `docs/architecture/` ainda registram o PRIMARY bloqueado ou o `check` como pendente. Esses estados foram superados em 16/09/2026. Para o estado operacional mais recente, este README e as evidências/runs citados abaixo prevalecem até a próxima consolidação documental.
@@ -194,7 +199,7 @@ Resumo:
 | `0005` | group roles da replicação | Aplicada |
 | `0006` | login principals técnicos | Aplicada |
 | `0007` | escopo especial de Boa Esperança do Norte | Aplicada e validada nos dois bancos |
-| `0008` | acesso EDBS: perfis `admin`/`viewer`, lista técnica, provisionamento automático | Versionada e testada em banco isolado (29/09/2026); **aplicação no PRIMARY pendente** — ver `docs/requirements/fluxos-principais.md`, F01 |
+| `0008` | acesso EDBS: perfis `admin`/`viewer`, lista técnica, provisionamento automático | Aplicada no PRIMARY em 29/09/2026 e verificada; não se aplica à REPLICA (descontinuada) — ver `docs/requirements/fluxos-principais.md`, F01 |
 
 ---
 

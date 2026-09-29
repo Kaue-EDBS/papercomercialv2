@@ -18,7 +18,7 @@ Regra de continuidade: ao decidir algo novo, atualizar este arquivo no mesmo com
 | Time comercial | Consultores comerciais do mercado privado; na prática, qualquer conta autenticada dos domínios EDBS que não esteja na lista técnica | `viewer` |
 | Microsoft Entra ID | Provedor de identidade (login Microsoft) | — |
 | PRIMARY | Banco operacional autoritativo (Lovable Cloud) | — |
-| Worker de replicação | Processo técnico PRIMARY → REPLICA via GitHub Actions | login técnico `cit_replication_*` |
+| Worker de replicação | Processo técnico PRIMARY → REPLICA via GitHub Actions — **descontinuado em 29/09/2026** (ver F04) | login técnico `cit_replication_*` |
 
 Não existem outros perfis. Os papéis `operator` e `reviewer` da `0003` foram removidos pela `0008` (ver F01, Implementação).
 
@@ -26,7 +26,7 @@ Não existem outros perfis. Os papéis `operator` e `reviewer` da `0003` foram r
 
 ## F01 — Acesso e autenticação
 
-Estado: **Decidido** em 29/09/2026. Implementação: **Versionada e testada em ambiente isolado; aplicação no PRIMARY pendente** — login Microsoft e UX pelo Lovable (commits `127135d`…`455582b`); perfis, provisionamento e rotas pela migration `0008` e pela interface (ver "Implementação").
+Estado: **Decidido** em 29/09/2026. Implementação: **Aplicada no PRIMARY e verificada** em 29/09/2026 — login Microsoft e UX pelo Lovable (commits `127135d`…`455582b`); perfis, provisionamento e rotas pela migration `0008` (commit `6189013`) e pela interface (ver "Implementação" e "Verificação no PRIMARY").
 
 ### Objetivo
 
@@ -106,10 +106,24 @@ O Lovable fez o login Microsoft e a UX (29/09/2026, commits `127135d`…`455582b
 
 Testes: `database/tests/ingestion.sql` (roda 0001–0007, as duas migrations do Lovable e a 0008, na mesma ordem do PRIMARY), `src/test/auth-gate.test.tsx`, `src/test/app.test.tsx`, `src/test/ingestion-console.test.tsx`. A `0008` também foi aplicada num banco sem as migrations do Lovable (cenário REPLICA).
 
+### Verificação no PRIMARY (29/09/2026)
+
+A `0008` foi colada inteira no editor SQL do Lovable Cloud pelo Kaue ("Query succeeded"; arquivo transacional, sem aplicação parcial). Consulta de verificação exportada em seguida:
+
+| Verificação | Esperado | Resultado |
+|---|---|---|
+| Contas técnicas em `admin_allowlist` | 5 | 5 |
+| Perfis em `access_grants` | `admin:1` (grant anterior do Kaue) | `admin:1` |
+| `public.user_roles` removida | true | true |
+| Contas em `auth.users` sem e-mail confirmado | — | 0 |
+
+Login do Kaue pela conta Microsoft funcionou após a aplicação. Não verificado ainda: login de uma conta comercial (deve cair em `/analise-geografica` com perfil `viewer`).
+
+Como a `0008` foi aplicada pelo editor SQL, e não pelo chat do Lovable, ela não aparece em `supabase/migrations/`. A fonte oficial continua sendo `database/v2/`; não aceitar sugestão do Lovable de recriar `user_roles`/`app_role`.
+
 ### Pendências
 
-- [ ] **Aplicar a `0008` no PRIMARY** pelo Lovable, sem alteração do arquivo, e confirmar pelo app: técnico cai em `/fundacao`, comercial em `/analise-geografica`.
-- [ ] **Confirmar `email_confirmed_at` nas contas Microsoft.** Se o login do Lovable não marcar o e-mail como confirmado, ninguém recebe perfil (falha fechada) e a regra precisa ser revista.
+- [ ] **Testar o login de uma conta comercial** e confirmar o perfil `viewer` e a rota `/analise-geografica`.
 - [ ] **Tenant do login Microsoft:** ainda não há tenant configurado (29/09/2026), então o login aceita contas de qualquer organização Microsoft e a checagem por domínio depende do e-mail informado por ela. Restringir ao tenant EDBS quando ele for configurado.
 - [ ] **Login por senha:** desligar o provedor e-mail/senha no Auth do PRIMARY, para que a Microsoft seja de fato o único caminho.
 - [ ] **Destino das 28 contas existentes no Auth do PRIMARY** (snapshot de 15/09/2026): levantar a lista e decidir se são mantidas, desabilitadas ou removidas; desligar o login por senha.
@@ -140,7 +154,4 @@ Estado: **Pendente**. Única rota do perfil `viewer`; ainda não existe na inter
 
 ## F04 — Replicação PRIMARY → REPLICA
 
-Estado: **Implementado** (`docs/replication/`, migrations 0004–0006); fluxo técnico, sem acesso dos perfis de negócio.
-
-- Ator: worker de replicação, disparado por `admin` via GitHub Actions.
-- A mapear no formato deste documento, se necessário.
+Estado: **Descontinuado** em 29/09/2026 — decisão do responsável: o projeto não terá mais banco REPLICA. A implementação (`docs/replication/`, migrations 0004–0006, workflows e scripts) permanece no repositório como histórico até uma remoção planejada.
