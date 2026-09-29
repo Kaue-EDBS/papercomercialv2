@@ -28,6 +28,21 @@ Não existem outros perfis. Os papéis `operator` e `reviewer` da `0003` foram r
 
 Estado: **Decidido** em 29/09/2026. Implementação: **Aplicada no PRIMARY e verificada** em 29/09/2026 — login Microsoft e UX pelo Lovable (commits `127135d`…`455582b`); perfis, provisionamento e rotas pela migration `0008` (commit `6189013`) e pela interface (ver "Implementação" e "Verificação no PRIMARY").
 
+### Resumo
+
+Mapeamento original do responsável. Perfil técnico ampliado de 1 para 5 contas em 29/09/2026.
+
+| Elemento | Regra |
+|---|---|
+| Quem acessa | Consultores comerciais do mercado privado + time técnico |
+| Autenticação | Microsoft Auth |
+| Domínios permitidos | `editoradobrasil.com.br` e `editoradobrasil1.onmicrosoft.com` |
+| Perfil técnico | As 5 contas da regra 3 |
+| Perfil comercial | Demais usuários autenticados dos domínios autorizados |
+| Técnico pode acessar | Todas as rotas da aplicação |
+| Comercial pode acessar | Somente a rota/módulo de **Análise Geográfica** |
+| Usuário externo | Acesso negado |
+
 ### Objetivo
 
 Garantir que somente pessoas da EDBS acessem o sistema, autenticadas pela conta Microsoft corporativa, e que cada uma veja apenas as rotas do seu perfil.
