@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      adocao_escolas: {
+        Row: {
+          carregado_em: string
+          CD_ESCOLA: string
+          escola: string
+          municipio: string | null
+          regiao: string | null
+          uf: string | null
+        }
+        Insert: {
+          carregado_em?: string
+          CD_ESCOLA: string
+          escola: string
+          municipio?: string | null
+          regiao?: string | null
+          uf?: string | null
+        }
+        Update: {
+          carregado_em?: string
+          CD_ESCOLA?: string
+          escola?: string
+          municipio?: string | null
+          regiao?: string | null
+          uf?: string | null
+        }
+        Relationships: []
+      }
+      adocao_materias: {
+        Row: {
+          familia_materia: string
+          familia_materia_label: string
+          materia: string
+          ordem_familia: number
+        }
+        Insert: {
+          familia_materia: string
+          familia_materia_label: string
+          materia: string
+          ordem_familia: number
+        }
+        Update: {
+          familia_materia?: string
+          familia_materia_label?: string
+          materia?: string
+          ordem_familia?: number
+        }
+        Relationships: []
+      }
       audit_data_quality: {
         Row: {
           carga_id: string | null
@@ -1174,6 +1222,27 @@ export type Database = {
           },
         ]
       }
+      dim_obra_literaria: {
+        Row: {
+          grupo_editorial: string | null
+          obra_id: string
+          status_identificacao: string
+          titulo_obra: string | null
+        }
+        Insert: {
+          grupo_editorial?: string | null
+          obra_id: string
+          status_identificacao: string
+          titulo_obra?: string | null
+        }
+        Update: {
+          grupo_editorial?: string | null
+          obra_id?: string
+          status_identificacao?: string
+          titulo_obra?: string | null
+        }
+        Relationships: []
+      }
       dim_subdistrito: {
         Row: {
           ano_dtb: number
@@ -1475,6 +1544,145 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      fato_adocao: {
+        Row: {
+          ano: number
+          carregado_em: string
+          CD_ESCOLA: string
+          chave_adocao: string
+          colecao_anterior: string | null
+          colecao_atual: string | null
+          estrategia: string | null
+          grupo_editorial_anterior: string | null
+          grupo_editorial_atual: string | null
+          materia: string
+          qt_adocoes_ano_anterior: number | null
+          qt_adocoes_ano_atual: number | null
+          qt_anos_adocao_colecao: number | null
+          segmento: string | null
+          tempo_contrato_sistema_ensino: number | null
+          tipo_material: string
+        }
+        Insert: {
+          ano: number
+          carregado_em?: string
+          CD_ESCOLA: string
+          chave_adocao: string
+          colecao_anterior?: string | null
+          colecao_atual?: string | null
+          estrategia?: string | null
+          grupo_editorial_anterior?: string | null
+          grupo_editorial_atual?: string | null
+          materia: string
+          qt_adocoes_ano_anterior?: number | null
+          qt_adocoes_ano_atual?: number | null
+          qt_anos_adocao_colecao?: number | null
+          segmento?: string | null
+          tempo_contrato_sistema_ensino?: number | null
+          tipo_material: string
+        }
+        Update: {
+          ano?: number
+          carregado_em?: string
+          CD_ESCOLA?: string
+          chave_adocao?: string
+          colecao_anterior?: string | null
+          colecao_atual?: string | null
+          estrategia?: string | null
+          grupo_editorial_anterior?: string | null
+          grupo_editorial_atual?: string | null
+          materia?: string
+          qt_adocoes_ano_anterior?: number | null
+          qt_adocoes_ano_atual?: number | null
+          qt_anos_adocao_colecao?: number | null
+          segmento?: string | null
+          tempo_contrato_sistema_ensino?: number | null
+          tipo_material?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fato_adocao_CD_ESCOLA_fkey"
+            columns: ["CD_ESCOLA"]
+            isOneToOne: false
+            referencedRelation: "adocao_escolas"
+            referencedColumns: ["CD_ESCOLA"]
+          },
+          {
+            foreignKeyName: "fato_adocao_materia_fkey"
+            columns: ["materia"]
+            isOneToOne: false
+            referencedRelation: "adocao_materias"
+            referencedColumns: ["materia"]
+          },
+        ]
+      }
+      fato_adocao_literatura: {
+        Row: {
+          ano: number
+          carregado_em: string
+          CD_ESCOLA: string
+          chave_adocao_literatura: string
+          estrategia: string | null
+          materia: string | null
+          obra_anterior_id: string | null
+          obra_atual_id: string
+          qt_adocoes_ano_anterior: number | null
+          qt_adocoes_ano_atual: number | null
+          qt_anos_adocao_obra: number | null
+          segmento: string | null
+        }
+        Insert: {
+          ano: number
+          carregado_em?: string
+          CD_ESCOLA: string
+          chave_adocao_literatura: string
+          estrategia?: string | null
+          materia?: string | null
+          obra_anterior_id?: string | null
+          obra_atual_id: string
+          qt_adocoes_ano_anterior?: number | null
+          qt_adocoes_ano_atual?: number | null
+          qt_anos_adocao_obra?: number | null
+          segmento?: string | null
+        }
+        Update: {
+          ano?: number
+          carregado_em?: string
+          CD_ESCOLA?: string
+          chave_adocao_literatura?: string
+          estrategia?: string | null
+          materia?: string | null
+          obra_anterior_id?: string | null
+          obra_atual_id?: string
+          qt_adocoes_ano_anterior?: number | null
+          qt_adocoes_ano_atual?: number | null
+          qt_anos_adocao_obra?: number | null
+          segmento?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fato_adocao_literatura_CD_ESCOLA_fkey"
+            columns: ["CD_ESCOLA"]
+            isOneToOne: false
+            referencedRelation: "adocao_escolas"
+            referencedColumns: ["CD_ESCOLA"]
+          },
+          {
+            foreignKeyName: "fato_adocao_literatura_obra_anterior_id_fkey"
+            columns: ["obra_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "dim_obra_literaria"
+            referencedColumns: ["obra_id"]
+          },
+          {
+            foreignKeyName: "fato_adocao_literatura_obra_atual_id_fkey"
+            columns: ["obra_atual_id"]
+            isOneToOne: false
+            referencedRelation: "dim_obra_literaria"
+            referencedColumns: ["obra_id"]
+          },
+        ]
       }
       profiles: {
         Row: {
