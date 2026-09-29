@@ -1,0 +1,1 @@
+REVOKE ALL ON public.densidade_demografica_cep5 FROM sandbox_exec;
