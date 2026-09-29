@@ -166,3 +166,6 @@ GRANT ALL ON public.densidade_demografica_cep5 TO service_role;
 -- Concessao temporaria ao papel de carga (revogada na 0013)
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.densidade_demografica_cep5 TO sandbox_exec;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO sandbox_exec;
+
+-- 0013 (aplicada em 2026-09-29): encerramento da concessao de carga
+-- REVOKE ALL ON public.densidade_demografica_cep5 FROM sandbox_exec;
