@@ -505,7 +505,22 @@ export type Database = {
           tp_localizacao_diferenciada?: number | null
           tp_situacao_funcionamento?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "censo_co_municipio_fkey"
+            columns: ["co_municipio"]
+            isOneToOne: false
+            referencedRelation: "dim_municipio"
+            referencedColumns: ["cod_municipal"]
+          },
+          {
+            foreignKeyName: "censo_co_municipio_fkey"
+            columns: ["co_municipio"]
+            isOneToOne: false
+            referencedRelation: "v_escola_por_protheus"
+            referencedColumns: ["cod_municipio"]
+          },
+        ]
       }
       dim_cep5: {
         Row: {
