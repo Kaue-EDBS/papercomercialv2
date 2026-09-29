@@ -166,6 +166,13 @@ export type Database = {
             referencedRelation: "dim_municipio"
             referencedColumns: ["cod_municipal"]
           },
+          {
+            foreignKeyName: "dim_cep5_cod_municipal_fkey"
+            columns: ["cod_municipal"]
+            isOneToOne: false
+            referencedRelation: "v_escola_por_protheus"
+            referencedColumns: ["cod_municipio"]
+          },
         ]
       }
       dim_distrito: {
@@ -217,6 +224,106 @@ export type Database = {
             referencedRelation: "dim_municipio"
             referencedColumns: ["cod_municipal"]
           },
+          {
+            foreignKeyName: "dim_distrito_cod_municipal_fkey"
+            columns: ["cod_municipal"]
+            isOneToOne: false
+            referencedRelation: "v_escola_por_protheus"
+            referencedColumns: ["cod_municipio"]
+          },
+        ]
+      }
+      dim_escola: {
+        Row: {
+          alunos_ef1: number | null
+          alunos_ef2: number | null
+          alunos_ei: number | null
+          alunos_em: number | null
+          alunos_total: number | null
+          atualizado_em: string
+          bairro: string | null
+          cep: string | null
+          cep5: string | null
+          cnpj_escola_censo: string | null
+          cod_inep: string | null
+          cod_municipio: string
+          complemento: string | null
+          dados_alunos_disponiveis: boolean
+          endereco: string | null
+          escola_id: string
+          latitude: number | null
+          longitude: number | null
+          nome_escola: string
+          numero: string | null
+          qtd_cadastros_protheus: number
+          tem_conflito_cadastro: boolean
+          tipo_escola: string | null
+        }
+        Insert: {
+          alunos_ef1?: number | null
+          alunos_ef2?: number | null
+          alunos_ei?: number | null
+          alunos_em?: number | null
+          alunos_total?: number | null
+          atualizado_em?: string
+          bairro?: string | null
+          cep?: string | null
+          cep5?: string | null
+          cnpj_escola_censo?: string | null
+          cod_inep?: string | null
+          cod_municipio: string
+          complemento?: string | null
+          dados_alunos_disponiveis?: boolean
+          endereco?: string | null
+          escola_id: string
+          latitude?: number | null
+          longitude?: number | null
+          nome_escola: string
+          numero?: string | null
+          qtd_cadastros_protheus?: number
+          tem_conflito_cadastro?: boolean
+          tipo_escola?: string | null
+        }
+        Update: {
+          alunos_ef1?: number | null
+          alunos_ef2?: number | null
+          alunos_ei?: number | null
+          alunos_em?: number | null
+          alunos_total?: number | null
+          atualizado_em?: string
+          bairro?: string | null
+          cep?: string | null
+          cep5?: string | null
+          cnpj_escola_censo?: string | null
+          cod_inep?: string | null
+          cod_municipio?: string
+          complemento?: string | null
+          dados_alunos_disponiveis?: boolean
+          endereco?: string | null
+          escola_id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nome_escola?: string
+          numero?: string | null
+          qtd_cadastros_protheus?: number
+          tem_conflito_cadastro?: boolean
+          tipo_escola?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dim_escola_cod_municipio_fkey"
+            columns: ["cod_municipio"]
+            isOneToOne: false
+            referencedRelation: "dim_municipio"
+            referencedColumns: ["cod_municipal"]
+          },
+          {
+            foreignKeyName: "dim_escola_cod_municipio_fkey"
+            columns: ["cod_municipio"]
+            isOneToOne: false
+            referencedRelation: "v_escola_por_protheus"
+            referencedColumns: ["cod_municipio"]
+          },
         ]
       }
       dim_municipio: {
@@ -233,8 +340,10 @@ export type Database = {
           data_base_dtb: string
           municipio: string
           nome_uf: string
+          regiao: string | null
           regiao_imediata: string
           regiao_intermediaria: string
+          uf: string | null
         }
         Insert: {
           ano_dtb: number
@@ -249,8 +358,10 @@ export type Database = {
           data_base_dtb: string
           municipio: string
           nome_uf: string
+          regiao?: string | null
           regiao_imediata: string
           regiao_intermediaria: string
+          uf?: string | null
         }
         Update: {
           ano_dtb?: number
@@ -265,8 +376,10 @@ export type Database = {
           data_base_dtb?: string
           municipio?: string
           nome_uf?: string
+          regiao?: string | null
           regiao_imediata?: string
           regiao_intermediaria?: string
+          uf?: string | null
         }
         Relationships: [
           {
@@ -336,6 +449,88 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "dim_municipio"
             referencedColumns: ["cod_municipal"]
+          },
+          {
+            foreignKeyName: "dim_subdistrito_cod_municipal_fkey"
+            columns: ["cod_municipal"]
+            isOneToOne: false
+            referencedRelation: "v_escola_por_protheus"
+            referencedColumns: ["cod_municipio"]
+          },
+        ]
+      }
+      escola_protheus: {
+        Row: {
+          adocao_inconsistente: boolean
+          adota_brasil: boolean
+          adota_did_apoio_brasil: boolean
+          adota_literatura_brasil: boolean
+          adota_sistema_brasil: boolean
+          atualizado_em: string
+          cd_escola: string | null
+          cnpj_protheus: string | null
+          cnpj_protheus_status: string
+          cod_protheus: string
+          escola_id: string
+          mensalidade_ef1: string | null
+          mensalidade_ef2: string | null
+          mensalidade_ei: string | null
+          mensalidade_em: string | null
+          tipo_contrato_brasil: string | null
+          tipos_adocao: string[]
+        }
+        Insert: {
+          adocao_inconsistente?: boolean
+          adota_brasil?: boolean
+          adota_did_apoio_brasil?: boolean
+          adota_literatura_brasil?: boolean
+          adota_sistema_brasil?: boolean
+          atualizado_em?: string
+          cd_escola?: string | null
+          cnpj_protheus?: string | null
+          cnpj_protheus_status: string
+          cod_protheus: string
+          escola_id: string
+          mensalidade_ef1?: string | null
+          mensalidade_ef2?: string | null
+          mensalidade_ei?: string | null
+          mensalidade_em?: string | null
+          tipo_contrato_brasil?: string | null
+          tipos_adocao: string[]
+        }
+        Update: {
+          adocao_inconsistente?: boolean
+          adota_brasil?: boolean
+          adota_did_apoio_brasil?: boolean
+          adota_literatura_brasil?: boolean
+          adota_sistema_brasil?: boolean
+          atualizado_em?: string
+          cd_escola?: string | null
+          cnpj_protheus?: string | null
+          cnpj_protheus_status?: string
+          cod_protheus?: string
+          escola_id?: string
+          mensalidade_ef1?: string | null
+          mensalidade_ef2?: string | null
+          mensalidade_ei?: string | null
+          mensalidade_em?: string | null
+          tipo_contrato_brasil?: string | null
+          tipos_adocao?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escola_protheus_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "dim_escola"
+            referencedColumns: ["escola_id"]
+          },
+          {
+            foreignKeyName: "escola_protheus_escola_id_fkey"
+            columns: ["escola_id"]
+            isOneToOne: false
+            referencedRelation: "v_escola_por_protheus"
+            referencedColumns: ["escola_id"]
           },
         ]
       }
@@ -431,7 +626,51 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_escola_por_protheus: {
+        Row: {
+          adocao_inconsistente: boolean | null
+          adota_brasil: boolean | null
+          adota_did_apoio_brasil: boolean | null
+          adota_literatura_brasil: boolean | null
+          adota_sistema_brasil: boolean | null
+          alunos_ef1: number | null
+          alunos_ef2: number | null
+          alunos_ei: number | null
+          alunos_em: number | null
+          alunos_total: number | null
+          bairro: string | null
+          cd_escola: string | null
+          cep: string | null
+          cep5: string | null
+          cnpj_escola_censo: string | null
+          cnpj_protheus: string | null
+          cnpj_protheus_status: string | null
+          cod_inep: string | null
+          cod_municipio: string | null
+          cod_protheus: string | null
+          complemento: string | null
+          dados_alunos_disponiveis: boolean | null
+          endereco: string | null
+          escola_id: string | null
+          latitude: number | null
+          longitude: number | null
+          mensalidade_ef1: string | null
+          mensalidade_ef2: string | null
+          mensalidade_ei: string | null
+          mensalidade_em: string | null
+          municipio: string | null
+          nome_escola: string | null
+          numero: string | null
+          qtd_cadastros_protheus: number | null
+          regiao: string | null
+          tem_conflito_cadastro: boolean | null
+          tipo_contrato_brasil: string | null
+          tipo_escola: string | null
+          tipos_adocao: string[] | null
+          uf: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       cit_ingest: { Args: { action: string; payload?: Json }; Returns: Json }
