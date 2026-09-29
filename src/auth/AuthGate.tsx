@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
+import { AccessContext, isRole, type Role } from './access';
 
 const DOMINIOS_PERMITIDOS = ['editoradobrasil.com.br', 'editoradobrasil1.onmicrosoft.com'];
 
@@ -17,6 +18,8 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
   const [bloqueado, setBloqueado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [entrando, setEntrando] = useState(false);
+  // undefined = still asking the server; null = no active profile.
+  const [perfil, setPerfil] = useState<Role | null | undefined>(undefined);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_evento, novaSessao) => {
@@ -46,6 +49,28 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // The profile is created or synced by the server on this call (cit_private.provision_grant).
+  // Keyed by user id: token refreshes replace the session object but must not remount the app.
+  const usuarioId = session?.user.id;
+  useEffect(() => {
+    let vivo = true;
+    setPerfil(undefined);
+    if (!usuarioId) return;
+    supabase.rpc('cit_ingest', { action: 'session', payload: {} }).then(({ data, error: falha }) => {
+      if (!vivo) return;
+      if (falha) {
+        setErro('Nao foi possivel verificar seu perfil de acesso. Tente novamente.');
+        setPerfil(null);
+        return;
+      }
+      const role = (data as { role?: unknown } | null)?.role;
+      setPerfil(isRole(role) ? role : null);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [usuarioId]);
+
   const entrar = async () => {
     setErro(null);
     setEntrando(true);
@@ -69,7 +94,38 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  if (session) return <>{children}</>;
+  if (session && perfil === undefined) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
+        <p>Verificando perfil...</p>
+      </main>
+    );
+  }
+
+  if (session && perfil) {
+    return (
+      <AccessContext.Provider value={{ role: perfil, email: session.user.email ?? '' }}>{children}</AccessContext.Provider>
+    );
+  }
+
+  if (session) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background px-6 py-12">
+        <section className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-sm">
+          <h1 className="text-xl font-bold text-foreground">Acesso nao liberado</h1>
+          <p className="mt-3 text-sm leading-6 text-muted-foreground">
+            {erro ?? 'Sua conta nao tem um perfil ativo no CIT. Procure o time tecnico.'}
+          </p>
+          <button
+            onClick={() => void supabase.auth.signOut()}
+            className="mt-6 w-full rounded-lg border px-4 py-3 font-semibold transition hover:bg-muted"
+          >
+            Sair
+          </button>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6 py-12">

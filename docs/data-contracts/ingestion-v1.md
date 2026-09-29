@@ -43,7 +43,7 @@ A saída usa `COD_MUNICIPAL`, `MUNICIPIO`, `UF` e `CEP5` quando aplicável. Cabe
 
 ## Revisão
 
-Somente admin/reviewer. Exige linha pendente, versão atual do lote, município canônico, justificativa e CEP5 válido quando presente/obrigatório. Troca de UF exige confirmação explícita. Um CEP fornecido na origem não pode ser apagado silenciosamente para contornar o gate.
+Somente admin (desde a `0008`). Exige linha pendente, versão atual do lote, município canônico, justificativa e CEP5 válido quando presente/obrigatório. Troca de UF exige confirmação explícita. Um CEP fornecido na origem não pode ser apagado silenciosamente para contornar o gate.
 
 Memorizar alias é opt-in. A regra não pode sobrescrever outra associação já homologada. Alias não é aprendido a partir de coluna ambígua ou troca de UF. O payload original é preservado, o normalizado fica separado e um evento append-only registra a decisão.
 
@@ -61,16 +61,16 @@ RLS habilitado, sem grants de tabela a anon/authenticated. Não incluir `cit_pri
 
 ## Papéis
 
+Atualizado em 29/09/2026 pela `database/v2/0008_edbs_access_profiles.sql` (decisão F01 em `docs/requirements/fluxos-principais.md`). Os papéis `operator` e `reviewer` não existem mais.
+
 | Papel | Pode importar | Pode revisar | Pode selar | Escopo de leitura |
 |---|---|---|---|---|
 | admin | Sim | Sim | Sim | Todos os lotes |
-| operator | Sim | Não | Sim | Próprios lotes |
-| reviewer | Não | Sim | Não | Lotes destinados à revisão |
-| viewer | Não | Não | Não | Apenas lotes próprios já existentes e lookup geográfico |
+| viewer | Não | Não | Não | Somente lookup geográfico de municípios; nenhum lote |
 
-A migração não promove automaticamente nenhuma das contas existentes. A validação consulta `auth.users`, `auth.sessions` e `access_grants` ao vivo. Claims editáveis `user_metadata` não autorizam operações. Conta sem aprovação, sessão revogada, conta anônima, excluída ou banida é bloqueada.
+O perfil não depende mais de aprovação manual: `cit_private.provision_grant` cria ou sincroniza o grant a cada chamada, a partir do e-mail confirmado em `auth.users` — `admin` para `cit_private.admin_allowlist`, `viewer` para as demais contas de `cit_private.allowed_email_domains`. Conta fora desses domínios não tem papel, mesmo com grant anterior. Grant revogado (`active=false`) não é reativado. A validação continua consultando `auth.users`, `auth.sessions` e `access_grants` ao vivo; claims editáveis `user_metadata` não autorizam operações. Sessão revogada, conta anônima, excluída ou banida é bloqueada.
 
-A interface usa login por senha de conta existente e não tem signup. Isso não é uma alteração da configuração global de signup/provedores do Supabase; mesmo uma conta criada por outra via continua sem autorização na V2.
+A interface entra somente pelo login Microsoft do `AuthGate`; o console não tem formulário de senha. O trigger `on_auth_user_created_corporate_check` recusa o cadastro de contas fora dos domínios EDBS. Desligar o provedor e-mail/senha no Auth do PRIMARY é configuração de plataforma, fora deste repositório.
 
 ## Verificação
 

@@ -32,15 +32,16 @@ describe('administrative review UI (mocked transport)',()=>{
   await waitFor(()=>expect(api.rpc).toHaveBeenCalledWith('cit_ingest',expect.objectContaining({action:'review',payload:expect.objectContaining({cod_municipal:'3545803',memorize:false,version:3})})));
   expect(await screen.findByText('mixed.csv: READY')).toBeInTheDocument();
  });
- it('does not give an existing account an implicit role',async()=>{
+ it('an account without a profile receives no controls',async()=>{
   api.role=null;render(<IngestionConsole/>);
-  expect(await screen.findByText(/Acesso aguardando aprovacao/)).toBeInTheDocument();
+  expect(await screen.findByText(/exclusiva do perfil tecnico/)).toBeInTheDocument();
   expect(screen.queryByRole('button',{name:'Enviar e validar'})).not.toBeInTheDocument();
   expect(api.rpc.mock.calls.some(c=>c[1].action==='list')).toBe(false);
  });
- it('a reviewer does not receive import controls',async()=>{
-  api.role='reviewer';render(<IngestionConsole/>);
-  await screen.findByRole('button',{name:'fixture / mixed.csv / REVIEW'});
+ it('a viewer receives no import controls and never lists batches',async()=>{
+  api.role='viewer';render(<IngestionConsole/>);
+  expect(await screen.findByText(/exclusiva do perfil tecnico/)).toBeInTheDocument();
   expect(screen.queryByRole('button',{name:'Enviar e validar'})).not.toBeInTheDocument();
+  expect(api.rpc.mock.calls.some(c=>c[1].action==='list')).toBe(false);
  });
 });

@@ -177,7 +177,10 @@ database/v2/0004_replication_control.sql
 database/v2/0005_replication_roles.sql
 database/v2/0006_replication_login_principals.sql
 database/v2/0007_boa_esperanca_cep5_scope.sql
+database/v2/0008_edbs_access_profiles.sql
 ```
+
+Em 29/09/2026 o Lovable também criou `supabase/migrations/20260929141947_*.sql` e `20260929142006_*.sql` (login Microsoft). Elas rodam antes da `0008`, que substitui o modelo de perfis delas.
 
 Resumo:
 
@@ -191,6 +194,7 @@ Resumo:
 | `0005` | group roles da replicação | Aplicada |
 | `0006` | login principals técnicos | Aplicada |
 | `0007` | escopo especial de Boa Esperança do Norte | Aplicada e validada nos dois bancos |
+| `0008` | acesso EDBS: perfis `admin`/`viewer`, lista técnica, provisionamento automático | Versionada e testada em banco isolado (29/09/2026); **aplicação no PRIMARY pendente** — ver `docs/requirements/fluxos-principais.md`, F01 |
 
 ---
 
