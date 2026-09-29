@@ -39,10 +39,10 @@ adicionados como colunas nulaveis em `dim_municipio` e preenchidos apenas para o
 | CPF descartado (`cnpj_protheus` nulo) | 177 | 177 |
 | Sem dados de alunos | 8.400 (metrica do manifesto) | 8.354 (`dados_alunos_disponiveis = false` no JSON de origem) |
 
-A divergencia de `sem dados de alunos` foi conferida contra o proprio
-`dim_escola.json`: a origem contem 8.354 registros com `dados_alunos_disponiveis =
-false`. O valor 8.400 do manifesto refere-se a outra contagem e nao foi reconciliado.
-Item registrado como pendencia de auditoria, nao como erro de carga.
+Reconciliado em 2026-09-29: o manifesto conta **cadastros Protheus** (8.400 em
+`escola_protheus` ligados a escola com `dados_alunos_disponiveis = false`), enquanto
+8.354 e a contagem de **escolas fisicas** em `dim_escola`. A diferenca de 46 vem de
+INEPs repetidos no CRM. Nao ha divergencia de carga.
 
 ## Dominios controlados
 
