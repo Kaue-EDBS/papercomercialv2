@@ -60,7 +60,7 @@ Garantir que somente pessoas da EDBS acessem o sistema, autenticadas pela conta 
 4. **Perfil comercial (`viewer`) — automático:** toda conta de domínio permitido que não esteja na lista técnica recebe `viewer` no primeiro acesso aprovado pelo Auth. A regra anterior de liberação manual (grant explícito antes de qualquer acesso) foi **descartada** em 29/09/2026.
 5. **Rotas:**
    - `admin`: todas as rotas;
-   - `viewer`: somente a rota de análise geográfica (ver F03).
+   - `viewer`: somente a rota de análise geográfica (ver F02).
 6. **Autorização é decidida no servidor.** A interface esconde o que o perfil não pode usar, mas quem nega é o PRIMARY, consultando `auth.users` e `cit_private.access_grants` ao vivo. Claims editáveis (`user_metadata`) nunca autorizam nada — regra já vigente em `docs/data-contracts/ingestion-v1.md`.
 7. Comparação de e-mail e domínio sem diferenciar maiúsculas/minúsculas.
 
@@ -142,28 +142,121 @@ Como a `0008` foi aplicada pelo editor SQL, e não pelo chat do Lovable, ela nã
 - [ ] **Tenant do login Microsoft:** ainda não há tenant configurado (29/09/2026), então o login aceita contas de qualquer organização Microsoft e a checagem por domínio depende do e-mail informado por ela. Restringir ao tenant EDBS quando ele for configurado.
 - [ ] **Login por senha:** desligar o provedor e-mail/senha no Auth do PRIMARY, para que a Microsoft seja de fato o único caminho.
 - [ ] **Destino das 28 contas existentes no Auth do PRIMARY** (snapshot de 15/09/2026): levantar a lista e decidir se são mantidas, desabilitadas ou removidas; desligar o login por senha.
-- [ ] Caminho `/analise-geografica` é provisório; confirmar ao mapear F03.
+- [ ] Caminho `/analise-geografica` é provisório; confirmar no F02 (pendência "Nome do módulo").
 - [ ] Validar os textos das telas `BLOQUEADO_DOMINIO` ("Acesso nao autorizado…") e `REVOGADO` ("Acesso nao liberado…").
 - [ ] Desligamento de colaborador: a conta desabilitada no Entra ID impede novo login, mas uma sessão já aberta dura até expirar. Decidir se isso é aceitável ou se precisa de revogação ativa.
 
 ---
 
-## F02 — Ingestão de dados
+## F02 — Análise Geográfica
 
-Estado: **Implementado** para geografia (`docs/data-contracts/ingestion-v1.md`); mapeamento de fluxo **Pendente** de validação com os perfis novos.
+Estado: **Em mapeamento** desde 29/09/2026. Decisões do responsável registradas abaixo; nada implementado além da rota provisória `/analise-geografica`. Os indicadores ainda estão sendo avaliados: o fluxo é desenhado para funcionar com **blocos de dados** que serão definidos depois, sem depender de quais são.
 
-- Ator: somente `admin` (após F01).
-- Estados já implementados: `UPLOADING → REVIEW → READY → VALIDATED`, com saída `REJECTED`.
-- A mapear: entradas, saídas e transições no formato deste documento.
+### Resumo
+
+| Elemento | Regra |
+|---|---|
+| Quem usa | Consultor comercial (`viewer`) e time técnico (`admin`) |
+| Entrada | Código da escola: `COD_PROTHEUS`, `COD_INEP` ou `CD_ESCOLA` |
+| Chave da escola | Principal: `COD_PROTHEUS`. Secundária: `COD_INEP`. `CD_ESCOLA` só como meio de busca |
+| Recorte | Consultor: somente as escolas da sua carteira. Técnico: todas as escolas |
+| Território da escola | CEP5 da escola, resolvido pela geografia oficial (`dim_cep5`) |
+| Dados exibidos | Mescla de dados educacionais e demográficos (blocos a definir); o demográfico é do **CEP5** da escola |
+| Saída | Análise na tela e PDF, para apresentar à escola na visita |
+| Usuário sem perfil | Acesso negado (F01) |
+
+### Regras
+
+1. **Identificação da escola.**
+   - `COD_PROTHEUS` é a chave principal da escola no sistema.
+   - `COD_INEP` é a chave secundária.
+   - `CD_ESCOLA` vem da Intranet, sistema em desligamento, e é aceito só como forma de busca, porque o consultor ainda o consulta.
+   - Nem toda escola tem os três códigos.
+2. **Duplicidade conhecida.** Uma mesma escola pode aparecer com mais de um `COD_PROTHEUS`; isso é erro de origem. O sistema não escolhe um silenciosamente: a duplicidade (ex.: o mesmo `COD_INEP` em mais de um `COD_PROTHEUS`) é apontada na carga e na tela.
+3. **Carteira.** O login Microsoft identifica o consultor pelo e-mail. O e-mail leva ao `COD_PROTHEUS` do consultor, e esse código leva às escolas da carteira dele. O `COD_PROTHEUS` do consultor e o da escola são códigos diferentes e não se misturam.
+4. **Recorte no servidor.** A restrição à carteira é aplicada pelo PRIMARY, não só pela interface. Um consultor não consegue abrir uma escola fora da carteira nem digitando o código.
+5. **Território.** O demográfico usa o CEP5 da escola dentro do município dela (`dim_cep5` tem chave `cod_municipal + cep5`). Nunca inventar ou emprestar CEP5. Para `5101837` (Boa Esperança do Norte/MT) vale a regra homologada de município inteiro (`docs/data-contracts/boa-esperanca-do-norte-cep5.md`).
+6. **Dado ausente não vira zero.** Bloco sem dado para a escola ou o CEP5 aparece como "indisponível", na tela e no PDF.
+
+### Atores
+
+| Ator | Papel no fluxo |
+|---|---|
+| Consultor comercial | Informa o código, consulta a análise da escola da sua carteira, gera o PDF e apresenta na visita |
+| Time técnico | O mesmo, para qualquer escola; também carrega e corrige as bases (fluxo F03) |
+| PRIMARY | Resolve o código, aplica o recorte da carteira, resolve o território e entrega os blocos |
+| Bases de origem | Escolas; consultores; carteira (ver Dependências) |
+
+### Entradas
+
+- Código digitado pelo usuário, que pode ser `COD_PROTHEUS`, `COD_INEP` ou `CD_ESCOLA`.
+- Identidade do usuário (e-mail do login) e perfil (F01).
+- Escolha da escola, quando o código corresponde a mais de uma (regra 2).
+- Comando "Gerar PDF".
+
+### Saídas
+
+- **Tela da análise:** identificação da escola (nome e códigos), território (UF, município, CEP5), blocos educacionais e blocos demográficos.
+- **PDF** com o mesmo conteúdo, pronto para apresentar à escola.
+- **Mensagens de bloqueio:** código não encontrado; escola fora da carteira; escola sem território resolvido; bloco indisponível.
+
+### Estados (proposta para validar)
+
+| Estado | Significado |
+|---|---|
+| `AGUARDANDO_CODIGO` | Tela inicial, campo de busca vazio. |
+| `BUSCANDO` | Código enviado ao servidor. |
+| `NAO_ENCONTRADA` | Nenhuma escola com esse código dentro do recorte do usuário. |
+| `MULTIPLAS_ESCOLAS` | O código corresponde a mais de uma escola do recorte (duplicidade da regra 2); o usuário escolhe. |
+| `ESCOLA_SELECIONADA` | Uma escola resolvida, na carteira do usuário. |
+| `SEM_TERRITORIO` | A escola não tem CEP5 válido no município dela: blocos demográficos indisponíveis, educacionais seguem. |
+| `ANALISE_PRONTA` | Blocos carregados; cada bloco com dado ou "indisponível". |
+| `GERANDO_PDF` → `PDF_PRONTO` | Documento gerado a partir da análise na tela. |
+
+### Transições (proposta para validar)
+
+| De | Evento | Condição | Para |
+|---|---|---|---|
+| `AGUARDANDO_CODIGO` | Enviar código | — | `BUSCANDO` |
+| `BUSCANDO` | Resposta | Nenhuma escola no recorte | `NAO_ENCONTRADA` |
+| `BUSCANDO` | Resposta | Mais de uma escola no recorte | `MULTIPLAS_ESCOLAS` |
+| `BUSCANDO` | Resposta | Exatamente uma escola | `ESCOLA_SELECIONADA` |
+| `MULTIPLAS_ESCOLAS` | Escolher uma | — | `ESCOLA_SELECIONADA` |
+| `ESCOLA_SELECIONADA` | Resolver território | CEP5 válido no município | `ANALISE_PRONTA` |
+| `ESCOLA_SELECIONADA` | Resolver território | Sem CEP5 válido | `SEM_TERRITORIO` → `ANALISE_PRONTA` (demográfico indisponível) |
+| `ANALISE_PRONTA` | Gerar PDF | — | `GERANDO_PDF` → `PDF_PRONTO` |
+| Qualquer | Nova busca | — | `AGUARDANDO_CODIGO` |
+
+### Dependências (cada base exige contrato em `docs/data-contracts/` antes de carregar)
+
+| Base | Campos previstos | Situação |
+|---|---|---|
+| Escolas | `COD_PROTHEUS` (escola), `COD_INEP`, `CD_ESCOLA`, nome, endereço/CEP, município | A subir pelo responsável |
+| Consultores | `COD_PROTHEUS` (consultor), nome, e-mail | Em atualização na origem |
+| Carteira | `COD_PROTHEUS` (escola) + consultor | A subir; ver pendência de chave |
+| Blocos educacionais e demográficos | A definir | Responsável avaliando os dados |
+
+### Pendências
+
+- [ ] **Chave da carteira:** confirmar que a base de carteira traz o `COD_PROTHEUS` do **consultor**, e não só o nome. Ligar escola e consultor pelo nome quebra com homônimos e grafias diferentes.
+- [ ] **E-mail do consultor:** o e-mail da base de consultores deve ser o mesmo do login Microsoft. Decidir o que acontece se não bater (consultor autenticado sem carteira).
+- [ ] **Escola fora da carteira:** mostrar a mesma mensagem de "não encontrada", sem revelar que a escola existe, ou dizer que ela pertence a outra carteira?
+- [ ] **Duplicidade de `COD_PROTHEUS`:** quem corrige (origem ou time técnico) e se as duas linhas ficam visíveis até a correção.
+- [ ] **Formato dos códigos:** padrão de cada um (dígitos, tamanho), para o sistema reconhecer o tipo digitado ou pedir que o usuário escolha.
+- [ ] **CEP da escola:** confirmar que a base de escolas traz o CEP de 8 dígitos (o CEP5 sai do prefixo).
+- [ ] **Blocos de dados:** quais indicadores educacionais e demográficos, de quais fontes, e em que ordem entram.
+- [ ] **PDF:** conteúdo e identidade visual; se registra quem gerou e quando.
+- [ ] **Nome do módulo:** a entrada é por escola; confirmar se continua "Análise Geográfica" e a rota `/analise-geografica`.
 
 ---
 
-## F03 — Análise geográfica
+## F03 — Entrada de dados (ingestão)
 
-Estado: **Pendente**. Única rota do perfil `viewer`; ainda não existe na interface.
+Estado: **Implementado** para geografia (`docs/data-contracts/ingestion-v1.md`); mapeamento de fluxo **Pendente**. Será o caminho das bases de escolas, consultores e carteira do F02.
 
-- Atores: `admin` e `viewer`.
-- A mapear: entradas, saídas, estados e transições.
+- Ator: somente `admin` (após F01).
+- Estados já implementados: `UPLOADING → REVIEW → READY → VALIDATED`, com saída `REJECTED`.
+- A mapear: entradas, saídas e transições no formato deste documento, incluindo a promoção do lote validado para a tabela oficial.
 
 ---
 
