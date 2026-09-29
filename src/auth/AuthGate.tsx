@@ -106,9 +106,6 @@ export const AuthGate = ({ children }: { children: ReactNode }) => {
           {entrando ? 'Abrindo Microsoft...' : 'Entrar com conta Microsoft'}
         </button>
 
-        <p className="mt-6 text-xs leading-5 text-muted-foreground">
-          Somente contas @editoradobrasil.com.br e @editoradobrasil1.onmicrosoft.com sao aceitas.
-        </p>
       </section>
     </main>
   );
