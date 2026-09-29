@@ -1242,6 +1242,108 @@ export type Database = {
           },
         ]
       }
+      enem_medias_municipio: {
+        Row: {
+          ano: number
+          carregado_em: string
+          "COD MUNICIPIO": string
+          media_ciencias_humanas: number | null
+          media_ciencias_natureza: number | null
+          media_linguagens: number | null
+          media_matematica: number | null
+          media_redacao_comp1: number | null
+          media_redacao_comp2: number | null
+          media_redacao_comp3: number | null
+          media_redacao_comp4: number | null
+          media_redacao_comp5: number | null
+          media_redacao_final: number | null
+          municipio: string
+          n_ciencias_humanas: number
+          n_ciencias_natureza: number
+          n_linguagens: number
+          n_matematica: number
+          n_redacao_comp1: number
+          n_redacao_comp2: number
+          n_redacao_comp3: number
+          n_redacao_comp4: number
+          n_redacao_comp5: number
+          n_redacao_final: number
+          participantes_total: number
+          uf: string
+        }
+        Insert: {
+          ano: number
+          carregado_em?: string
+          "COD MUNICIPIO": string
+          media_ciencias_humanas?: number | null
+          media_ciencias_natureza?: number | null
+          media_linguagens?: number | null
+          media_matematica?: number | null
+          media_redacao_comp1?: number | null
+          media_redacao_comp2?: number | null
+          media_redacao_comp3?: number | null
+          media_redacao_comp4?: number | null
+          media_redacao_comp5?: number | null
+          media_redacao_final?: number | null
+          municipio: string
+          n_ciencias_humanas: number
+          n_ciencias_natureza: number
+          n_linguagens: number
+          n_matematica: number
+          n_redacao_comp1: number
+          n_redacao_comp2: number
+          n_redacao_comp3: number
+          n_redacao_comp4: number
+          n_redacao_comp5: number
+          n_redacao_final: number
+          participantes_total: number
+          uf: string
+        }
+        Update: {
+          ano?: number
+          carregado_em?: string
+          "COD MUNICIPIO"?: string
+          media_ciencias_humanas?: number | null
+          media_ciencias_natureza?: number | null
+          media_linguagens?: number | null
+          media_matematica?: number | null
+          media_redacao_comp1?: number | null
+          media_redacao_comp2?: number | null
+          media_redacao_comp3?: number | null
+          media_redacao_comp4?: number | null
+          media_redacao_comp5?: number | null
+          media_redacao_final?: number | null
+          municipio?: string
+          n_ciencias_humanas?: number
+          n_ciencias_natureza?: number
+          n_linguagens?: number
+          n_matematica?: number
+          n_redacao_comp1?: number
+          n_redacao_comp2?: number
+          n_redacao_comp3?: number
+          n_redacao_comp4?: number
+          n_redacao_comp5?: number
+          n_redacao_final?: number
+          participantes_total?: number
+          uf?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enem_municipio_fk"
+            columns: ["COD MUNICIPIO"]
+            isOneToOne: false
+            referencedRelation: "dim_municipio"
+            referencedColumns: ["cod_municipal"]
+          },
+          {
+            foreignKeyName: "enem_municipio_fk"
+            columns: ["COD MUNICIPIO"]
+            isOneToOne: false
+            referencedRelation: "v_escola_por_protheus"
+            referencedColumns: ["cod_municipio"]
+          },
+        ]
+      }
       escola_protheus: {
         Row: {
           adocao_inconsistente: boolean
