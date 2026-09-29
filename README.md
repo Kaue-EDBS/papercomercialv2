@@ -9,7 +9,7 @@
 > **Atualização de 29/09/2026 — prevalece sobre o texto abaixo onde houver conflito:**
 >
 > - **Acesso (F01):** login somente Microsoft, domínios EDBS, perfis `admin` (5 contas técnicas) e `viewer` (demais contas EDBS, automático). Migration `0008` aplicada no PRIMARY e verificada. Detalhes em [docs/requirements/fluxos-principais.md](docs/requirements/fluxos-principais.md).
-> - **REPLICA descontinuada:** decisão do responsável em 29/09/2026 — o projeto não terá mais banco REPLICA. As seções sobre REPLICA, replicação e paridade abaixo ficam como **histórico**. A remoção da infraestrutura de replicação (workflows, scripts, roles/logins técnicos no PRIMARY, secrets do GitHub e o projeto Supabase `vevmnoxbjdkibdwfygfn`) ainda **não foi feita**.
+> - **REPLICA descontinuada:** decisão do responsável em 29/09/2026 — o projeto não terá mais banco REPLICA. As seções sobre REPLICA, replicação e paridade abaixo ficam como **histórico**. Já feito em 29/09/2026: projeto Supabase `vevmnoxbjdkibdwfygfn` apagado pelo responsável; logins técnicos desativados no PRIMARY pela `0009`; remoção dos secrets `CIT_PRIMARY_DATABASE_URL`, `CIT_REPLICA_DATABASE_URL` e `CIT_SUPABASE_CA_CERT` do GitHub orientada ao responsável. **Pendente:** remover do repositório os workflows, scripts e testes de replicação; decidir o destino das tabelas de controle/histórico da replicação no PRIMARY.
 
 Leituras complementares: [AGENTS.md](AGENTS.md), [arquitetura](docs/architecture/README.md), [mapa de engenharia](docs/architecture/mapa-cit-paper-v2.md), [workflow de mudanças](docs/governance/change-workflow.md), [contrato geográfico](docs/data-contracts/geografia-dtb-2025-cep5.md), [contrato do Session Pooler](docs/replication/primary-session-pooler.md) e [evidência da conexão](docs/testing/primary-connection-2026-09-16.json).
 
@@ -201,7 +201,7 @@ Resumo:
 | `0006` | login principals técnicos | Aplicada |
 | `0007` | escopo especial de Boa Esperança do Norte | Aplicada e validada nos dois bancos |
 | `0008` | acesso EDBS: perfis `admin`/`viewer`, lista técnica, provisionamento automático | Aplicada no PRIMARY em 29/09/2026 e verificada; não se aplica à REPLICA (descontinuada) — ver `docs/requirements/fluxos-principais.md`, F01 |
-| `0009` | desativa os logins técnicos da replicação (sem LOGIN, sem senha, 0 conexões, fora dos grupos) | Versionada e testada em banco isolado, inclusive como usuário não-superusuário (29/09/2026); **aplicação no PRIMARY pendente** |
+| `0009` | desativa os logins técnicos da replicação (sem LOGIN, sem senha, 0 conexões, fora dos grupos) | Aplicada no PRIMARY em 29/09/2026 e verificada: os 4 papéis `cit_replication_*` sem LOGIN e sem grupos; os 2 logins com limite de 0 conexões |
 
 ---
 
