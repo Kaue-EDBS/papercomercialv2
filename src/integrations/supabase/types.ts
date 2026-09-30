@@ -1684,6 +1684,366 @@ export type Database = {
           },
         ]
       }
+      populacao_renda_faixa_etaria_cep5: {
+        Row: {
+          camada_total: number | null
+          cep5: string
+          id: number
+          municipio: string
+          pop_renda_a_p_15_19: number | null
+          pop_renda_a_p_5_14: number | null
+          pop_renda_a_p_ate_4: number | null
+          pop_renda_a_pp_15_19: number | null
+          pop_renda_a_pp_5_14: number | null
+          pop_renda_a_pp_ate_4: number | null
+          pop_renda_b1_15_19: number | null
+          pop_renda_b1_5_14: number | null
+          pop_renda_b1_ate_4: number | null
+          pop_renda_b2_15_19: number | null
+          pop_renda_b2_5_14: number | null
+          pop_renda_b2_ate_4: number | null
+          pop_renda_c1_15_19: number | null
+          pop_renda_c1_5_14: number | null
+          pop_renda_c1_ate_4: number | null
+          pop_renda_c2_15_19: number | null
+          pop_renda_c2_5_14: number | null
+          pop_renda_c2_ate_4: number | null
+          pop_renda_d_15_19: number | null
+          pop_renda_d_5_14: number | null
+          pop_renda_d_ate_4: number | null
+          pop_renda_e_15_19: number | null
+          pop_renda_e_5_14: number | null
+          pop_renda_e_ate_4: number | null
+        }
+        Insert: {
+          camada_total?: number | null
+          cep5: string
+          id?: never
+          municipio: string
+          pop_renda_a_p_15_19?: number | null
+          pop_renda_a_p_5_14?: number | null
+          pop_renda_a_p_ate_4?: number | null
+          pop_renda_a_pp_15_19?: number | null
+          pop_renda_a_pp_5_14?: number | null
+          pop_renda_a_pp_ate_4?: number | null
+          pop_renda_b1_15_19?: number | null
+          pop_renda_b1_5_14?: number | null
+          pop_renda_b1_ate_4?: number | null
+          pop_renda_b2_15_19?: number | null
+          pop_renda_b2_5_14?: number | null
+          pop_renda_b2_ate_4?: number | null
+          pop_renda_c1_15_19?: number | null
+          pop_renda_c1_5_14?: number | null
+          pop_renda_c1_ate_4?: number | null
+          pop_renda_c2_15_19?: number | null
+          pop_renda_c2_5_14?: number | null
+          pop_renda_c2_ate_4?: number | null
+          pop_renda_d_15_19?: number | null
+          pop_renda_d_5_14?: number | null
+          pop_renda_d_ate_4?: number | null
+          pop_renda_e_15_19?: number | null
+          pop_renda_e_5_14?: number | null
+          pop_renda_e_ate_4?: number | null
+        }
+        Update: {
+          camada_total?: number | null
+          cep5?: string
+          id?: never
+          municipio?: string
+          pop_renda_a_p_15_19?: number | null
+          pop_renda_a_p_5_14?: number | null
+          pop_renda_a_p_ate_4?: number | null
+          pop_renda_a_pp_15_19?: number | null
+          pop_renda_a_pp_5_14?: number | null
+          pop_renda_a_pp_ate_4?: number | null
+          pop_renda_b1_15_19?: number | null
+          pop_renda_b1_5_14?: number | null
+          pop_renda_b1_ate_4?: number | null
+          pop_renda_b2_15_19?: number | null
+          pop_renda_b2_5_14?: number | null
+          pop_renda_b2_ate_4?: number | null
+          pop_renda_c1_15_19?: number | null
+          pop_renda_c1_5_14?: number | null
+          pop_renda_c1_ate_4?: number | null
+          pop_renda_c2_15_19?: number | null
+          pop_renda_c2_5_14?: number | null
+          pop_renda_c2_ate_4?: number | null
+          pop_renda_d_15_19?: number | null
+          pop_renda_d_5_14?: number | null
+          pop_renda_d_ate_4?: number | null
+          pop_renda_e_15_19?: number | null
+          pop_renda_e_5_14?: number | null
+          pop_renda_e_ate_4?: number | null
+        }
+        Relationships: []
+      }
+      populacao_renda_faixa_etaria_municipio: {
+        Row: {
+          cod_municipal: string
+          pop_renda_a_p_15_19: number | null
+          pop_renda_a_p_20_24: number | null
+          pop_renda_a_p_25_34: number | null
+          pop_renda_a_p_35_44: number | null
+          pop_renda_a_p_45_49: number | null
+          pop_renda_a_p_5_14: number | null
+          pop_renda_a_p_50_59: number | null
+          pop_renda_a_p_60_mais: number | null
+          pop_renda_a_p_ate_4: number | null
+          pop_renda_a_p_total: number | null
+          pop_renda_a_pp_15_19: number | null
+          pop_renda_a_pp_20_24: number | null
+          pop_renda_a_pp_25_34: number | null
+          pop_renda_a_pp_35_44: number | null
+          pop_renda_a_pp_45_49: number | null
+          pop_renda_a_pp_5_14: number | null
+          pop_renda_a_pp_50_59: number | null
+          pop_renda_a_pp_60_mais: number | null
+          pop_renda_a_pp_ate_4: number | null
+          pop_renda_a_pp_total: number | null
+          pop_renda_b1_15_19: number | null
+          pop_renda_b1_20_24: number | null
+          pop_renda_b1_25_34: number | null
+          pop_renda_b1_35_44: number | null
+          pop_renda_b1_45_49: number | null
+          pop_renda_b1_5_14: number | null
+          pop_renda_b1_50_59: number | null
+          pop_renda_b1_60_mais: number | null
+          pop_renda_b1_ate_4: number | null
+          pop_renda_b1_total: number | null
+          pop_renda_b2_15_19: number | null
+          pop_renda_b2_20_24: number | null
+          pop_renda_b2_25_34: number | null
+          pop_renda_b2_35_44: number | null
+          pop_renda_b2_45_49: number | null
+          pop_renda_b2_5_14: number | null
+          pop_renda_b2_50_59: number | null
+          pop_renda_b2_60_mais: number | null
+          pop_renda_b2_ate_4: number | null
+          pop_renda_b2_total: number | null
+          pop_renda_c1_15_19: number | null
+          pop_renda_c1_20_24: number | null
+          pop_renda_c1_25_34: number | null
+          pop_renda_c1_35_44: number | null
+          pop_renda_c1_45_49: number | null
+          pop_renda_c1_5_14: number | null
+          pop_renda_c1_50_59: number | null
+          pop_renda_c1_60_mais: number | null
+          pop_renda_c1_ate_4: number | null
+          pop_renda_c1_total: number | null
+          pop_renda_c2_15_19: number | null
+          pop_renda_c2_20_24: number | null
+          pop_renda_c2_25_34: number | null
+          pop_renda_c2_35_44: number | null
+          pop_renda_c2_45_49: number | null
+          pop_renda_c2_5_14: number | null
+          pop_renda_c2_50_59: number | null
+          pop_renda_c2_60_mais: number | null
+          pop_renda_c2_ate_4: number | null
+          pop_renda_c2_total: number | null
+          pop_renda_d_15_19: number | null
+          pop_renda_d_20_24: number | null
+          pop_renda_d_25_34: number | null
+          pop_renda_d_35_44: number | null
+          pop_renda_d_45_49: number | null
+          pop_renda_d_5_14: number | null
+          pop_renda_d_50_59: number | null
+          pop_renda_d_60_mais: number | null
+          pop_renda_d_ate_4: number | null
+          pop_renda_d_total: number | null
+          pop_renda_e_15_19: number | null
+          pop_renda_e_20_24: number | null
+          pop_renda_e_25_34: number | null
+          pop_renda_e_35_44: number | null
+          pop_renda_e_45_49: number | null
+          pop_renda_e_5_14: number | null
+          pop_renda_e_50_59: number | null
+          pop_renda_e_60_mais: number | null
+          pop_renda_e_ate_4: number | null
+          pop_renda_e_total: number | null
+        }
+        Insert: {
+          cod_municipal: string
+          pop_renda_a_p_15_19?: number | null
+          pop_renda_a_p_20_24?: number | null
+          pop_renda_a_p_25_34?: number | null
+          pop_renda_a_p_35_44?: number | null
+          pop_renda_a_p_45_49?: number | null
+          pop_renda_a_p_5_14?: number | null
+          pop_renda_a_p_50_59?: number | null
+          pop_renda_a_p_60_mais?: number | null
+          pop_renda_a_p_ate_4?: number | null
+          pop_renda_a_p_total?: number | null
+          pop_renda_a_pp_15_19?: number | null
+          pop_renda_a_pp_20_24?: number | null
+          pop_renda_a_pp_25_34?: number | null
+          pop_renda_a_pp_35_44?: number | null
+          pop_renda_a_pp_45_49?: number | null
+          pop_renda_a_pp_5_14?: number | null
+          pop_renda_a_pp_50_59?: number | null
+          pop_renda_a_pp_60_mais?: number | null
+          pop_renda_a_pp_ate_4?: number | null
+          pop_renda_a_pp_total?: number | null
+          pop_renda_b1_15_19?: number | null
+          pop_renda_b1_20_24?: number | null
+          pop_renda_b1_25_34?: number | null
+          pop_renda_b1_35_44?: number | null
+          pop_renda_b1_45_49?: number | null
+          pop_renda_b1_5_14?: number | null
+          pop_renda_b1_50_59?: number | null
+          pop_renda_b1_60_mais?: number | null
+          pop_renda_b1_ate_4?: number | null
+          pop_renda_b1_total?: number | null
+          pop_renda_b2_15_19?: number | null
+          pop_renda_b2_20_24?: number | null
+          pop_renda_b2_25_34?: number | null
+          pop_renda_b2_35_44?: number | null
+          pop_renda_b2_45_49?: number | null
+          pop_renda_b2_5_14?: number | null
+          pop_renda_b2_50_59?: number | null
+          pop_renda_b2_60_mais?: number | null
+          pop_renda_b2_ate_4?: number | null
+          pop_renda_b2_total?: number | null
+          pop_renda_c1_15_19?: number | null
+          pop_renda_c1_20_24?: number | null
+          pop_renda_c1_25_34?: number | null
+          pop_renda_c1_35_44?: number | null
+          pop_renda_c1_45_49?: number | null
+          pop_renda_c1_5_14?: number | null
+          pop_renda_c1_50_59?: number | null
+          pop_renda_c1_60_mais?: number | null
+          pop_renda_c1_ate_4?: number | null
+          pop_renda_c1_total?: number | null
+          pop_renda_c2_15_19?: number | null
+          pop_renda_c2_20_24?: number | null
+          pop_renda_c2_25_34?: number | null
+          pop_renda_c2_35_44?: number | null
+          pop_renda_c2_45_49?: number | null
+          pop_renda_c2_5_14?: number | null
+          pop_renda_c2_50_59?: number | null
+          pop_renda_c2_60_mais?: number | null
+          pop_renda_c2_ate_4?: number | null
+          pop_renda_c2_total?: number | null
+          pop_renda_d_15_19?: number | null
+          pop_renda_d_20_24?: number | null
+          pop_renda_d_25_34?: number | null
+          pop_renda_d_35_44?: number | null
+          pop_renda_d_45_49?: number | null
+          pop_renda_d_5_14?: number | null
+          pop_renda_d_50_59?: number | null
+          pop_renda_d_60_mais?: number | null
+          pop_renda_d_ate_4?: number | null
+          pop_renda_d_total?: number | null
+          pop_renda_e_15_19?: number | null
+          pop_renda_e_20_24?: number | null
+          pop_renda_e_25_34?: number | null
+          pop_renda_e_35_44?: number | null
+          pop_renda_e_45_49?: number | null
+          pop_renda_e_5_14?: number | null
+          pop_renda_e_50_59?: number | null
+          pop_renda_e_60_mais?: number | null
+          pop_renda_e_ate_4?: number | null
+          pop_renda_e_total?: number | null
+        }
+        Update: {
+          cod_municipal?: string
+          pop_renda_a_p_15_19?: number | null
+          pop_renda_a_p_20_24?: number | null
+          pop_renda_a_p_25_34?: number | null
+          pop_renda_a_p_35_44?: number | null
+          pop_renda_a_p_45_49?: number | null
+          pop_renda_a_p_5_14?: number | null
+          pop_renda_a_p_50_59?: number | null
+          pop_renda_a_p_60_mais?: number | null
+          pop_renda_a_p_ate_4?: number | null
+          pop_renda_a_p_total?: number | null
+          pop_renda_a_pp_15_19?: number | null
+          pop_renda_a_pp_20_24?: number | null
+          pop_renda_a_pp_25_34?: number | null
+          pop_renda_a_pp_35_44?: number | null
+          pop_renda_a_pp_45_49?: number | null
+          pop_renda_a_pp_5_14?: number | null
+          pop_renda_a_pp_50_59?: number | null
+          pop_renda_a_pp_60_mais?: number | null
+          pop_renda_a_pp_ate_4?: number | null
+          pop_renda_a_pp_total?: number | null
+          pop_renda_b1_15_19?: number | null
+          pop_renda_b1_20_24?: number | null
+          pop_renda_b1_25_34?: number | null
+          pop_renda_b1_35_44?: number | null
+          pop_renda_b1_45_49?: number | null
+          pop_renda_b1_5_14?: number | null
+          pop_renda_b1_50_59?: number | null
+          pop_renda_b1_60_mais?: number | null
+          pop_renda_b1_ate_4?: number | null
+          pop_renda_b1_total?: number | null
+          pop_renda_b2_15_19?: number | null
+          pop_renda_b2_20_24?: number | null
+          pop_renda_b2_25_34?: number | null
+          pop_renda_b2_35_44?: number | null
+          pop_renda_b2_45_49?: number | null
+          pop_renda_b2_5_14?: number | null
+          pop_renda_b2_50_59?: number | null
+          pop_renda_b2_60_mais?: number | null
+          pop_renda_b2_ate_4?: number | null
+          pop_renda_b2_total?: number | null
+          pop_renda_c1_15_19?: number | null
+          pop_renda_c1_20_24?: number | null
+          pop_renda_c1_25_34?: number | null
+          pop_renda_c1_35_44?: number | null
+          pop_renda_c1_45_49?: number | null
+          pop_renda_c1_5_14?: number | null
+          pop_renda_c1_50_59?: number | null
+          pop_renda_c1_60_mais?: number | null
+          pop_renda_c1_ate_4?: number | null
+          pop_renda_c1_total?: number | null
+          pop_renda_c2_15_19?: number | null
+          pop_renda_c2_20_24?: number | null
+          pop_renda_c2_25_34?: number | null
+          pop_renda_c2_35_44?: number | null
+          pop_renda_c2_45_49?: number | null
+          pop_renda_c2_5_14?: number | null
+          pop_renda_c2_50_59?: number | null
+          pop_renda_c2_60_mais?: number | null
+          pop_renda_c2_ate_4?: number | null
+          pop_renda_c2_total?: number | null
+          pop_renda_d_15_19?: number | null
+          pop_renda_d_20_24?: number | null
+          pop_renda_d_25_34?: number | null
+          pop_renda_d_35_44?: number | null
+          pop_renda_d_45_49?: number | null
+          pop_renda_d_5_14?: number | null
+          pop_renda_d_50_59?: number | null
+          pop_renda_d_60_mais?: number | null
+          pop_renda_d_ate_4?: number | null
+          pop_renda_d_total?: number | null
+          pop_renda_e_15_19?: number | null
+          pop_renda_e_20_24?: number | null
+          pop_renda_e_25_34?: number | null
+          pop_renda_e_35_44?: number | null
+          pop_renda_e_45_49?: number | null
+          pop_renda_e_5_14?: number | null
+          pop_renda_e_50_59?: number | null
+          pop_renda_e_60_mais?: number | null
+          pop_renda_e_ate_4?: number | null
+          pop_renda_e_total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "populacao_renda_faixa_etaria_municipio_cod_municipal_fkey"
+            columns: ["cod_municipal"]
+            isOneToOne: true
+            referencedRelation: "dim_municipio"
+            referencedColumns: ["cod_municipal"]
+          },
+          {
+            foreignKeyName: "populacao_renda_faixa_etaria_municipio_cod_municipal_fkey"
+            columns: ["cod_municipal"]
+            isOneToOne: true
+            referencedRelation: "v_escola_por_protheus"
+            referencedColumns: ["cod_municipio"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           ativo: boolean
